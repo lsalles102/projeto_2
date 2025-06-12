@@ -137,7 +137,7 @@ export class PostgresStorage implements IStorage {
   async getLicenseByKey(key: string): Promise<License | undefined> {
     try {
       const result = await db.query.licenses.findFirst({
-        where: eq(licenses.licenseKey, key)
+        where: eq(licenses.key, key)
       });
       return result;
     } catch (error) {
@@ -272,7 +272,7 @@ export class PostgresStorage implements IStorage {
   async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
     try {
       const [result] = await db.update(passwordResetTokens)
-        .set({ isUsed: true })
+        .set({ used: true })
         .where(eq(passwordResetTokens.token, token))
         .returning();
       return result;
