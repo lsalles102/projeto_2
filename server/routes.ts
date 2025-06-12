@@ -452,7 +452,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user in our database
       const user = await storage.createUser({
         email,
-        username: email.split('@')[0], // Use email prefix as username
         firstName,
         lastName,
         googleId: authData.user.id // Store Supabase user ID as googleId for compatibility
@@ -487,7 +486,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         user = await storage.createUser({
           email: authData.user.email!,
-          username: authData.user.email!.split('@')[0],
           firstName: authData.user.user_metadata?.first_name || '',
           lastName: authData.user.user_metadata?.last_name || '',
           googleId: authData.user.id
