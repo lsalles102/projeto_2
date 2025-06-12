@@ -49,9 +49,7 @@ export async function setupAuth(app: Express) {
     }
   ));
 
-  // Google Strategy - temporarily disabled due to credentials
-  // Will be enabled when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are provided
-  console.log("Google Auth: CLIENT_ID and CLIENT_SECRET required for Google authentication");
+
 
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
