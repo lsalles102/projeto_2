@@ -9,6 +9,7 @@ import {
   type PasswordResetToken,
   type InsertPasswordResetToken
 } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User operations
@@ -53,6 +54,51 @@ export class MemStorage implements IStorage {
   private nextDownloadId = 1;
   private nextActivationKeyId = 1;
   private nextPasswordResetTokenId = 1;
+
+  constructor() {
+    this.initializeTestData();
+  }
+
+  private async initializeTestData() {
+    // Create test user with hashed password
+    const hashedPassword = await bcrypt.hash('capajack', 10);
+    
+    const testUser: User = {
+      id: 1,
+      email: 'lsalles102@gmail.com',
+      password: hashedPassword,
+      firstName: 'Lucas',
+      lastName: 'Salles',
+      profileImageUrl: null,
+      googleId: null,
+      hwid: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.users.push(testUser);
+    this.nextUserId = 2;
+
+    // Create some test activation keys
+    const testKeys = [
+      { key: 'FOVD-TEST-7DAY-001', plan: '7days' as const },
+      { key: 'FOVD-TEST-15DAY-001', plan: '15days' as const },
+      { key: 'FOVD-DEMO-7DAY-001', plan: '7days' as const },
+    ];
+
+    for (const keyData of testKeys) {
+      const activationKey: ActivationKey = {
+        id: this.nextActivationKeyId++,
+        key: keyData.key,
+        plan: keyData.plan,
+        isUsed: false,
+        usedBy: null,
+        usedAt: null,
+        createdAt: new Date(),
+      };
+      this.activationKeys.push(activationKey);
+    }
+  }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
