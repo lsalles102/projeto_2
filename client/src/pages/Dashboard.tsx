@@ -1,0 +1,409 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getHWID } from "@/lib/authUtils";
+import { activateKeySchema } from "@shared/schema";
+import { 
+  Key, 
+  Download, 
+  Shield, 
+  Clock, 
+  User, 
+  Monitor, 
+  RefreshCw, 
+  Settings, 
+  Headphones,
+  Archive,
+  FileText,
+  Activity
+} from "lucide-react";
+import type { z } from "zod";
+
+type ActivateKeyFormData = z.infer<typeof activateKeySchema>;
+
+export default function Dashboard() {
+  const { toast } = useToast();
+  const [showActivateForm, setShowActivateForm] = useState(false);
+
+  // Fetch dashboard data
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/dashboard"],
+  });
+
+  const user = data?.user;
+  const license = data?.license;
+  const downloads = data?.downloads || [];
+  const stats = data?.stats || {};
+
+  // Activate key form
+  const form = useForm<ActivateKeyFormData>({
+    resolver: zodResolver(activateKeySchema),
+    defaultValues: {
+      key: "",
+      hwid: getHWID(),
+    },
+  });
+
+  // Activate license mutation
+  const activateMutation = useMutation({
+    mutationFn: (data: ActivateKeyFormData) => apiRequest("POST", "/api/licenses/activate", data),
+    onSuccess: () => {
+      toast({
+        title: "Licença ativada",
+        description: "Sua licença foi ativada com sucesso!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      setShowActivateForm(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro na ativação",
+        description: error.message || "Falha ao ativar licença",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Download cheat mutation
+  const downloadMutation = useMutation({
+    mutationFn: () => apiRequest("GET", "/api/download/cheat"),
+    onSuccess: (data) => {
+      toast({
+        title: "Download autorizado",
+        description: `${data.fileName} está pronto para download!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      // In a real app, you would trigger the actual file download here
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Download negado",
+        description: error.message || "Licença inválida ou expirada",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onActivateSubmit = (data: ActivateKeyFormData) => {
+    activateMutation.mutate(data);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-6 py-20 max-w-6xl">
+        <div className="space-y-8">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+            <div className="space-y-8">
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isLicenseActive = license?.status === "active" && new Date(license.expiresAt) > new Date();
+
+  return (
+    <div className="container mx-auto px-6 py-20 max-w-6xl">
+      {/* Welcome Header */}
+      <Card className="glass-effect border-glass-border mb-8">
+        <CardContent className="p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-orbitron font-bold text-glow mb-2">
+                Bem-vindo, <span className="text-neon-green">{user?.firstName}</span>
+              </h1>
+              <p className="text-gray-400">Painel de controle FovDark Premium</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-400">Status da Licença</div>
+              <div className="flex items-center mt-1">
+                {isLicenseActive ? (
+                  <>
+                    <span className="w-3 h-3 bg-neon-green rounded-full mr-2 animate-pulse"></span>
+                    <span className="text-neon-green font-semibold">ATIVA</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                    <span className="text-red-500 font-semibold">
+                      {license ? "EXPIRADA" : "INATIVA"}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* License Info */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl font-orbitron">
+                <Key className="text-neon-green mr-3" />
+                Informações da Licença
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {license ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-dark-surface rounded-lg p-4">
+                    <div className="text-sm text-gray-400 mb-1">Chave de Ativação</div>
+                    <div className="font-mono text-lg break-all">{license.key}</div>
+                  </div>
+                  
+                  <div className="bg-dark-surface rounded-lg p-4">
+                    <div className="text-sm text-gray-400 mb-1">HWID Registrado</div>
+                    <div className="font-mono text-sm break-all">{license.hwid || "Não definido"}</div>
+                  </div>
+                  
+                  <div className="bg-dark-surface rounded-lg p-4">
+                    <div className="text-sm text-gray-400 mb-1">Válida até</div>
+                    <div className="text-lg">
+                      {new Date(license.expiresAt).toLocaleDateString("pt-BR")}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-dark-surface rounded-lg p-4">
+                    <div className="text-sm text-gray-400 mb-1">Tipo de Plano</div>
+                    <Badge variant="secondary" className="text-neon-yellow bg-yellow-500/20">
+                      {license.plan.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400 mb-4">Você ainda não possui uma licença ativa.</p>
+                  <Button
+                    onClick={() => setShowActivateForm(!showActivateForm)}
+                    className="bg-neon-green text-black hover:bg-neon-green/90"
+                  >
+                    <Key className="w-4 h-4 mr-2" />
+                    Ativar Licença
+                  </Button>
+                </div>
+              )}
+
+              {/* Activate Key Form */}
+              {showActivateForm && (
+                <div className="mt-6 border-t border-glass-border pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Ativar Chave de Licença</h3>
+                  <form onSubmit={form.handleSubmit(onActivateSubmit)} className="space-y-4">
+                    <div>
+                      <Label htmlFor="key">Chave de Ativação</Label>
+                      <Input
+                        id="key"
+                        placeholder="FOVD-XXXX-XXXX-XXXX"
+                        className="bg-dark-surface border-glass-border focus:border-neon-green"
+                        {...form.register("key")}
+                      />
+                      {form.formState.errors.key && (
+                        <p className="text-sm text-red-500 mt-1">{form.formState.errors.key.message}</p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="hwid">HWID (Hardware ID)</Label>
+                      <Input
+                        id="hwid"
+                        value={form.watch("hwid")}
+                        readOnly
+                        className="bg-dark-surface border-glass-border font-mono text-sm"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Este ID será vinculado à sua licença automaticamente.
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-4">
+                      <Button
+                        type="submit"
+                        disabled={activateMutation.isPending}
+                        className="bg-neon-green text-black hover:bg-neon-green/90"
+                      >
+                        {activateMutation.isPending ? "Ativando..." : "Ativar Licença"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setShowActivateForm(false)}
+                        className="glass-effect"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Download Section */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl font-orbitron">
+                <Download className="text-neon-purple mr-3" />
+                Downloads
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between bg-dark-surface rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Archive className="text-neon-green text-xl mr-4" />
+                    <div>
+                      <div className="font-semibold">FovDark Cheat v2.4.1</div>
+                      <div className="text-sm text-gray-400">Última atualização: há 2 horas</div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => downloadMutation.mutate()}
+                    disabled={!isLicenseActive || downloadMutation.isPending}
+                    className="bg-neon-green text-black hover:bg-neon-green/90 neon-glow"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {downloadMutation.isPending ? "Baixando..." : "Download"}
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between bg-dark-surface rounded-lg p-4">
+                  <div className="flex items-center">
+                    <FileText className="text-neon-yellow text-xl mr-4" />
+                    <div>
+                      <div className="font-semibold">Manual de Configuração</div>
+                      <div className="text-sm text-gray-400">Guia completo de instalação</div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" className="glass-effect">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Ver
+                  </Button>
+                </div>
+
+                {!isLicenseActive && (
+                  <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-lg p-4">
+                    <p className="text-yellow-400 text-sm">
+                      <Shield className="w-4 h-4 inline mr-2" />
+                      Você precisa de uma licença ativa para fazer downloads.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-8">
+          {/* Quick Actions */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="text-xl font-orbitron">Ações Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Renovar Licença
+              </Button>
+              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+                <Settings className="w-4 h-4 mr-2" />
+                Configurações
+              </Button>
+              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+                <Headphones className="w-4 h-4 mr-2" />
+                Suporte
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Stats */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="text-xl font-orbitron">Estatísticas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Total de Downloads</span>
+                <span className="font-bold text-neon-green">{stats.totalDownloads || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Último Download</span>
+                <span className="text-sm">
+                  {stats.lastDownload ? 
+                    new Date(stats.lastDownload).toLocaleDateString("pt-BR") : 
+                    "Nunca"
+                  }
+                </span>
+              </div>
+              <Separator className="border-glass-border" />
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Conta criada em</span>
+                <span className="text-sm">
+                  {user?.createdAt ? 
+                    new Date(user.createdAt).toLocaleDateString("pt-BR") : 
+                    "N/A"
+                  }
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="text-xl font-orbitron">Atividade Recente</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {downloads.slice(0, 3).map((download: any, index: number) => (
+                <div key={index} className="flex items-center text-sm">
+                  <span className="w-2 h-2 bg-neon-green rounded-full mr-3"></span>
+                  <span>Download: {download.fileName}</span>
+                </div>
+              ))}
+              
+              {license && (
+                <div className="flex items-center text-sm">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                  <span>Login efetuado</span>
+                </div>
+              )}
+              
+              {license && license.activatedAt && (
+                <div className="flex items-center text-sm">
+                  <span className="w-2 h-2 bg-neon-yellow rounded-full mr-3"></span>
+                  <span>Licença ativada</span>
+                </div>
+              )}
+
+              {downloads.length === 0 && !license && (
+                <p className="text-gray-400 text-sm">Nenhuma atividade recente</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

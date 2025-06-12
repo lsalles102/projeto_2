@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 4%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 6%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(240, 10%, 6%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(142, 100%, 50%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --accent: hsl(270, 95%, 75%);
+  --accent-foreground: hsl(0, 0%, 0%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --ring: hsl(142, 100%, 50%);
+  --radius: 0.5rem;
+  
+  /* Custom gaming colors */
+  --neon-green: hsl(142, 100%, 50%);
+  --neon-purple: hsl(270, 95%, 75%);
+  --neon-yellow: hsl(60, 100%, 50%);
+  --dark-bg: hsl(0, 0%, 4%);
+  --dark-surface: hsl(240, 10%, 10%);
+  --glass: hsla(0, 0%, 100%, 0.1);
+  --glass-border: hsla(0, 0%, 100%, 0.2);
+}
+
+.dark {
+  --background: hsl(0, 0%, 4%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 6%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(240, 10%, 6%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(142, 100%, 50%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --accent: hsl(270, 95%, 75%);
+  --accent-foreground: hsl(0, 0%, 0%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --ring: hsl(142, 100%, 50%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-rajdhani antialiased bg-dark-bg text-foreground min-h-screen;
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .font-orbitron {
+    font-family: 'Orbitron', sans-serif;
+  }
+  .font-rajdhani {
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .glass-effect {
+    @apply bg-glass backdrop-blur-lg border border-glass-border;
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 20px var(--neon-green);
+    transition: all 0.3s ease;
+  }
+  
+  .neon-glow:hover {
+    box-shadow: 0 0 30px var(--neon-green), 0 0 40px var(--neon-green);
+    transform: translateY(-2px);
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px var(--neon-yellow);
+  }
+  
+  .bg-gradient-gaming {
+    background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-surface) 50%, var(--dark-bg) 100%);
+  }
+  
+  .hero-bg {
+    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                url('https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080') center/cover;
+  }
+  
+  .pricing-bg {
+    background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
+                url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=400') center/cover;
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  .animate-slideIn {
+    animation: slideIn 0.5s ease-out;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes glow {
+    from { box-shadow: 0 0 20px var(--neon-green); }
+    to { box-shadow: 0 0 30px var(--neon-green), 0 0 40px var(--neon-green); }
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .bg-dark-bg {
+    background-color: var(--dark-bg);
+  }
+  
+  .bg-dark-surface {
+    background-color: var(--dark-surface);
+  }
+  
+  .text-neon-green {
+    color: var(--neon-green);
+  }
+  
+  .text-neon-purple {
+    color: var(--neon-purple);
+  }
+  
+  .text-neon-yellow {
+    color: var(--neon-yellow);
+  }
+  
+  .bg-neon-green {
+    background-color: var(--neon-green);
+  }
+  
+  .bg-neon-purple {
+    background-color: var(--neon-purple);
+  }
+  
+  .border-neon-green {
+    border-color: var(--neon-green);
+  }
+}
