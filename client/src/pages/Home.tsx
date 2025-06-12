@@ -47,11 +47,11 @@ export default function Home() {
         <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
           <div className="animate-slideIn">
             <h1 className="text-5xl md:text-7xl font-orbitron font-black mb-6 text-glow">
-              DOMINE O <span className="text-neon-green">BLOODSTRIKE</span>
+              CHEATS <span className="text-neon-green">BLOODSTRIKE</span> PREMIUM
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-300">
-              Cheats premium com detecção zero. Aimbot avançado e recursos exclusivos.
-            </p>
+            <h2 className="text-xl md:text-2xl mb-8 text-gray-300 font-rajdhani">
+              Aimbot indetectável, anti-cheat bypass e sistema premium brasileiro. Domine todas as partidas com precisão perfeita.
+            </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/pricing">
                 <Button className="px-8 py-4 bg-neon-green text-black rounded-lg neon-glow font-bold text-lg hover:scale-105 transition-all duration-300">
@@ -82,16 +82,20 @@ export default function Home() {
       <section className="py-20 bg-gradient-gaming">
         <div className="container mx-auto px-6">
           <h2 className="text-4xl font-orbitron font-bold text-center mb-16 text-glow">
-            RECURSOS PREMIUM
+            RECURSOS AVANÇADOS BLOODSTRIKE
           </h2>
+          <p className="text-center text-gray-300 mb-12 text-lg max-w-3xl mx-auto">
+            Sistema completo de cheats para BloodStrike com tecnologia anti-detecção avançada. 
+            Desenvolvido especialmente para jogadores brasileiros que buscam dominar o jogo.
+          </p>
           
           <div className="grid md:grid-cols-3 gap-8">
             {/* Feature 1 */}
             <Card className="glass-effect border-glass-border hover:bg-glass-border transition-all duration-300 group">
               <CardContent className="p-8 text-center">
                 <Crosshair className="text-neon-green text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-xl font-bold mb-4">AIMBOT AVANÇADO</h3>
-                <p className="text-gray-300">Sistema de mira automática com configurações personalizáveis para máxima precisão e suavidade.</p>
+                <h3 className="text-xl font-bold mb-4">AIMBOT INDETECTÁVEL</h3>
+                <p className="text-gray-300">Mira automática profissional para BloodStrike com smooth aim, FOV configurável e bypass de anti-cheat garantido.</p>
               </CardContent>
             </Card>
 
