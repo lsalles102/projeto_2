@@ -107,19 +107,7 @@ export default function Pricing() {
           ))}
         </div>
 
-        {/* Features Comparison */}
-        <Card className="glass-effect border-glass-border mb-16">
-          <CardHeader>
-            <h2 className="text-2xl font-orbitron font-bold text-center">
-              Comparação de Recursos
-            </h2>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center text-gray-400">
-              Tabela de comparação detalhada dos recursos disponíveis em cada plano.
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Payment Methods */}
         <div className="text-center mb-16">
