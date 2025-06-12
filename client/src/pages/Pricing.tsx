@@ -157,9 +157,9 @@ export default function Pricing() {
               </div>
               
               <div>
-                <h4 className="font-semibold mb-2">Há garantia de reembolso?</h4>
+                <h4 className="font-semibold mb-2">Como funciona o pagamento?</h4>
                 <p className="text-gray-400 text-sm">
-                  Oferecemos garantia de 7 dias para reembolso total, sem perguntas.
+                  Pagamento único por período selecionado. Todas as vendas são finais - não há reembolsos.
                 </p>
               </div>
               

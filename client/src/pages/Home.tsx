@@ -85,7 +85,7 @@ export default function Home() {
             RECURSOS AVANÇADOS BLOODSTRIKE
           </h2>
           <p className="text-center text-gray-300 mb-12 text-lg max-w-3xl mx-auto">
-            Sistema completo de cheats para BloodStrike com tecnologia anti-detecção avançada. 
+            Sistema de cheats para BloodStrike com tecnologia anti-detecção avançada. 
             Desenvolvido especialmente para jogadores brasileiros que buscam dominar o jogo.
           </p>
           
@@ -95,7 +95,7 @@ export default function Home() {
               <CardContent className="p-8 text-center">
                 <Crosshair className="text-neon-green text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
                 <h3 className="text-xl font-bold mb-4">AIMBOT INDETECTÁVEL</h3>
-                <p className="text-gray-300">Mira automática profissional para BloodStrike com smooth aim, FOV configurável e bypass de anti-cheat garantido.</p>
+                <p className="text-gray-300">Mira automática através da cor para BloodStrike com smooth aim, FOV configurável e de anti-cheat garantido.</p>
               </CardContent>
             </Card>
 
@@ -116,7 +116,7 @@ export default function Home() {
               <CardContent className="p-8 text-center">
                 <Shield className="text-neon-yellow text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
                 <h3 className="text-xl font-bold mb-4">ANTI-DETECÇÃO PREMIUM</h3>
-                <p className="text-gray-300">Sistema anti-cheat bypass exclusivo com atualizações em tempo real para garantir 100% de segurança no BloodStrike.</p>
+                <p className="text-gray-300">Sistema anti-cheat com atualizações em tempo real para garantir 100% de segurança no BloodStrike.</p>
               </CardContent>
             </Card>
           </div>

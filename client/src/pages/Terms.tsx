@@ -93,7 +93,7 @@ export default function Terms() {
                   <strong>3.3 Renovação:</strong> Licenças expiradas devem ser renovadas para continuar o acesso aos serviços.
                 </p>
                 <p>
-                  <strong>3.4 Reembolsos:</strong> Oferecemos reembolso total em até 7 dias após a compra, sujeito à análise.
+                  <strong>3.4 Política de Vendas:</strong> Todas as vendas são finais. Não oferecemos reembolsos ou cancelamentos após a compra.
                 </p>
                 <p>
                   <strong>3.5 HWID Lock:</strong> Cada licença é vinculada a um HWID específico por motivos de segurança.
