@@ -123,12 +123,15 @@ export default function Pricing() {
 
         {/* Payment Methods */}
         <div className="text-center mb-16">
-          <h3 className="text-2xl font-orbitron font-bold mb-8">Métodos de Pagamento</h3>
-          <div className="flex justify-center space-x-8 text-4xl">
-            <i className="fab fa-cc-visa text-blue-600"></i>
-            <i className="fab fa-cc-mastercard text-red-600"></i>
-            <i className="fab fa-cc-paypal text-blue-400"></i>
-            <i className="fab fa-pix text-neon-green"></i>
+          <h3 className="text-2xl font-orbitron font-bold mb-8">Método de Pagamento</h3>
+          <div className="flex justify-center items-center">
+            <div className="bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg p-6 border border-neon-green/30">
+              <div className="text-6xl text-neon-green mb-4">
+                💳
+              </div>
+              <h4 className="text-2xl font-bold text-neon-green mb-2">PIX</h4>
+              <p className="text-gray-300">Pagamento instantâneo e seguro</p>
+            </div>
           </div>
         </div>
 
