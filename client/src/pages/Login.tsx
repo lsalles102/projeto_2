@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { loginSchema } from "@shared/schema";
 import { Crosshair, Eye, EyeOff } from "lucide-react";
 import type { z } from "zod";
@@ -20,6 +19,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormData>({
@@ -30,24 +30,7 @@ export default function Login() {
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: (data: LoginFormData) => apiRequest("POST", "/api/auth/login", data),
-    onSuccess: () => {
-      toast({
-        title: "Login realizado",
-        description: "Bem-vindo de volta ao FovDark!",
-      });
-      navigate("/dashboard");
-      window.location.reload(); // Refresh to update auth state
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro no login",
-        description: error.message || "Credenciais inválidas",
-        variant: "destructive",
-      });
-    },
-  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const onSubmit = (data: LoginFormData) => {
     loginMutation.mutate(data);

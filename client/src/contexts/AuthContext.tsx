@@ -11,6 +11,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<any>;
@@ -20,6 +22,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isLoading: true,
+  isAuthenticated: false,
   signUp: async () => {},
   signIn: async () => {},
   signOut: async () => {},
@@ -101,6 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     loading,
+    isLoading: loading,
+    isAuthenticated: !!user,
     signUp,
     signIn,
     signOut,
