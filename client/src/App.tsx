@@ -4,7 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
-import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -53,12 +53,12 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
-        <SupabaseAuthProvider>
+        <AuthProvider>
           <TooltipProvider>
             <Toaster />
             <Router />
           </TooltipProvider>
-        </SupabaseAuthProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
