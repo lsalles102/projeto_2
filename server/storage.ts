@@ -5,7 +5,9 @@ import {
   type InsertLicense,
   type ActivationKey,
   type InsertActivationKey,
-  type DownloadLog
+  type DownloadLog,
+  type PasswordResetToken,
+  type InsertPasswordResetToken
 } from "@shared/schema";
 
 export interface IStorage {
