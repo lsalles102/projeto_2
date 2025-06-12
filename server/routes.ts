@@ -254,11 +254,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { email } = forgotPasswordSchema.parse(req.body);
+      console.log(`[FORGOT PASSWORD] Processing request for: ${email}`);
       
       // Check if user exists
       const user = await storage.getUserByEmail(email);
+      console.log(`[FORGOT PASSWORD] User found: ${!!user}`);
+      
       if (!user) {
-        // Don't reveal if user exists or not for security
+        console.log(`[FORGOT PASSWORD] User not found, returning standard message`);
         return res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
       }
 
