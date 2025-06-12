@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated, generateToken, hashPassword } from "./auth"
 import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import { supabaseAdmin } from "./supabase";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
