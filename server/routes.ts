@@ -22,11 +22,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Hash password and create user
-      const hashedPassword = await hashPassword(userData.password);
+      // Create user with plain password
       const user = await storage.createUser({
         ...userData,
-        password: hashedPassword,
+        password: userData.password,
       });
 
       // Generate JWT token
@@ -130,9 +129,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid or already used activation key" });
       }
 
-      // Create license
+      // Create license with correct duration
       const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month from now
+      if (activationKey.plan === "7days") {
+        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+      } else if (activationKey.plan === "15days") {
+        expiresAt.setDate(expiresAt.getDate() + 15); // 15 days from now
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + 7); // default to 7 days
+      }
 
       const license = await storage.createLicense({
         userId: user.id,
@@ -223,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { plan, count = 1 } = req.body;
       
-      if (!["basic", "premium", "vip"].includes(plan)) {
+      if (!["7days", "15days"].includes(plan)) {
         return res.status(400).json({ message: "Invalid plan type" });
       }
 

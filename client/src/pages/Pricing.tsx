@@ -7,22 +7,26 @@ import { Check, X, Crown, Star, Gem } from "lucide-react";
 export default function Pricing() {
   const plans = [
     {
-      name: "BASIC",
+      name: "7 DIAS",
       price: "R$ 19,90",
+      duration: "7 dias",
       icon: <Star className="text-orange-500 text-4xl" />,
       features: [
-        { name: "Aimbot básico", included: true },
-        { name: "ESP simples", included: true },
-        { name: "Suporte por email", included: true },
-        { name: "Radar hack", included: false },
-        { name: "Configurações avançadas", included: false },
+        { name: "Aimbot avançado", included: true },
+        { name: "ESP completo", included: true },
+        { name: "Radar hack", included: true },
+        { name: "Suporte prioritário", included: true },
+        { name: "Configurações personalizadas", included: true },
+        { name: "Recursos exclusivos", included: true },
+        { name: "Atualizações automáticas", included: true },
       ],
-      buttonText: "Escolher Plano",
+      buttonText: "Escolher 7 Dias",
       buttonVariant: "ghost" as const,
     },
     {
-      name: "PREMIUM",
-      price: "R$ 29,90",
+      name: "15 DIAS",
+      price: "R$ 34,90",
+      duration: "15 dias",
       icon: <Crown className="text-neon-yellow text-4xl" />,
       popular: true,
       features: [
@@ -31,23 +35,13 @@ export default function Pricing() {
         { name: "Radar hack", included: true },
         { name: "Suporte prioritário", included: true },
         { name: "Configurações personalizadas", included: true },
-      ],
-      buttonText: "Escolher Premium",
-      buttonVariant: "default" as const,
-    },
-    {
-      name: "VIP",
-      price: "R$ 49,90",
-      icon: <Gem className="text-neon-purple text-4xl" />,
-      features: [
-        { name: "Todos os recursos Premium", included: true },
         { name: "Recursos exclusivos", included: true },
-        { name: "Atualizações beta", included: true },
+        { name: "Atualizações automáticas", included: true },
         { name: "Suporte 24/7", included: true },
         { name: "Configuração personalizada", included: true },
       ],
-      buttonText: "Escolher VIP",
-      buttonVariant: "secondary" as const,
+      buttonText: "Escolher 15 Dias",
+      buttonVariant: "default" as const,
     },
   ];
 
@@ -81,7 +75,7 @@ export default function Pricing() {
                 <div className="mx-auto mb-4">{plan.icon}</div>
                 <h3 className="text-2xl font-orbitron font-bold mb-2">{plan.name}</h3>
                 <div className="text-4xl font-bold text-neon-green mb-1">{plan.price}</div>
-                <p className="text-gray-400">por mês</p>
+                <p className="text-gray-400">por {plan.duration}</p>
               </CardHeader>
 
               <CardContent className="px-8 pb-8">
@@ -132,28 +126,28 @@ export default function Pricing() {
                 <thead>
                   <tr className="border-b border-glass-border">
                     <th className="text-left py-3">Recurso</th>
-                    <th className="text-center py-3">Basic</th>
-                    <th className="text-center py-3">Premium</th>
-                    <th className="text-center py-3">VIP</th>
+                    <th className="text-center py-3">7 Dias</th>
+                    <th className="text-center py-3">15 Dias</th>
                   </tr>
                 </thead>
                 <tbody className="space-y-2">
                   {[
-                    ["Aimbot", "Básico", "Avançado", "Completo"],
-                    ["ESP/Wallhack", "Simples", "Completo", "Completo"],
-                    ["Radar Hack", "❌", "✅", "✅"],
-                    ["No Recoil", "❌", "✅", "✅"],
-                    ["Trigger Bot", "❌", "✅", "✅"],
-                    ["Configurações", "Limitadas", "Avançadas", "Ilimitadas"],
-                    ["Suporte", "Email", "Prioritário", "24/7 VIP"],
-                    ["Atualizações Beta", "❌", "❌", "✅"],
-                    ["Recursos Exclusivos", "❌", "❌", "✅"],
-                  ].map(([feature, basic, premium, vip], index) => (
+                    ["Aimbot Avançado", "✅", "✅"],
+                    ["ESP/Wallhack Completo", "✅", "✅"],
+                    ["Radar Hack", "✅", "✅"],
+                    ["No Recoil", "✅", "✅"],
+                    ["Trigger Bot", "✅", "✅"],
+                    ["Configurações Personalizadas", "✅", "✅"],
+                    ["Recursos Exclusivos", "✅", "✅"],
+                    ["Atualizações Automáticas", "✅", "✅"],
+                    ["Suporte Prioritário", "✅", "✅"],
+                    ["Suporte 24/7", "❌", "✅"],
+                    ["Configuração Personalizada", "❌", "✅"],
+                  ].map(([feature, plan7, plan15], index) => (
                     <tr key={index} className="border-b border-glass-border/50">
                       <td className="py-3 font-medium">{feature}</td>
-                      <td className="text-center py-3">{basic}</td>
-                      <td className="text-center py-3 text-neon-green">{premium}</td>
-                      <td className="text-center py-3 text-neon-purple">{vip}</td>
+                      <td className="text-center py-3 text-orange-400">{plan7}</td>
+                      <td className="text-center py-3 text-neon-green">{plan15}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,9 +185,9 @@ export default function Pricing() {
               </div>
               
               <div>
-                <h4 className="font-semibold mb-2">Os planos são mensais?</h4>
+                <h4 className="font-semibold mb-2">Como funcionam os planos de dias?</h4>
                 <p className="text-gray-400 text-sm">
-                  Sim, todos os planos são cobrados mensalmente. Você pode cancelar a qualquer momento.
+                  Oferecemos planos de 7 e 15 dias. Após o período, você pode renovar ou escolher outro plano.
                 </p>
               </div>
               
