@@ -32,8 +32,24 @@ export default function Login() {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const onSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data);
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await signIn(data.email, data.password);
+      toast({
+        title: "Login realizado",
+        description: "Bem-vindo de volta ao FovDark!",
+      });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Erro no login",
+        description: error.message || "Credenciais inválidas",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -106,9 +122,9 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
-                disabled={loginMutation.isPending}
+                disabled={isLoading}
               >
-                {loginMutation.isPending ? (
+                {isLoading ? (
                   "ENTRANDO..."
                 ) : (
                   <>
