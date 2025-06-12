@@ -276,31 +276,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create reset URL
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
 
-      // Configure email transporter (for development, use console)
+      // Configure email transporter (SMTP)
       const transporter = nodemailer.createTransport({
-        streamTransport: true,
-        newline: 'unix',
-        buffer: true
+        host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false
+        },
+        debug: true, // Enable debug output
+        logger: true // Log information in console
       });
+
+      // Verify SMTP connection
+      try {
+        await transporter.verify();
+        console.log('SMTP server ready to accept messages');
+      } catch (verifyError) {
+        console.error('SMTP verification failed:', verifyError);
+      }
 
       // Send email
       const mailOptions = {
-        from: 'noreply@fovdark.com',
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: email,
         subject: 'Redefinição de senha - FovDark',
         html: `
-          <h2>Redefinição de senha</h2>
-          <p>Você solicitou a redefinição de sua senha.</p>
-          <p>Clique no link abaixo para redefinir sua senha:</p>
-          <a href="${resetUrl}">${resetUrl}</a>
-          <p>Este link expira em 15 minutos.</p>
-          <p>Se você não solicitou esta redefinição, ignore este email.</p>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Redefinição de senha</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #1a1a1a; color: #00ff88; padding: 20px; text-align: center; }
+              .content { background: #f9f9f9; padding: 30px; }
+              .button { display: inline-block; background: #00ff88; color: #000; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+              .footer { background: #e9e9e9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>FovDark</h1>
+              </div>
+              <div class="content">
+                <h2>Redefinição de senha</h2>
+                <p>Olá,</p>
+                <p>Você solicitou a redefinição de sua senha. Clique no botão abaixo para redefinir sua senha:</p>
+                <a href="${resetUrl}" class="button">Redefinir Senha</a>
+                <p>Ou copie e cole este link no seu navegador:</p>
+                <p style="word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 3px;">${resetUrl}</p>
+                <p><strong>Este link expira em 15 minutos.</strong></p>
+                <p>Se você não solicitou esta redefinição, ignore este email com segurança.</p>
+              </div>
+              <div class="footer">
+                <p>Este é um email automático, não responda.</p>
+              </div>
+            </div>
+          </body>
+          </html>
         `
       };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`Password reset email would be sent to: ${email}`);
-      console.log(`Reset URL: ${resetUrl}`);
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to: ${email}`);
+        console.log(`Message ID: ${info.messageId}`);
+        console.log(`Reset URL: ${resetUrl}`);
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // Still return success to not reveal if email exists
+      }
 
       res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
     } catch (error) {
