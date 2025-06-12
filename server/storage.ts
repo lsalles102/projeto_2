@@ -10,6 +10,7 @@ import {
   type InsertPasswordResetToken
 } from "@shared/schema";
 import bcrypt from "bcrypt";
+import { db } from "./db";
 
 export interface IStorage {
   // User operations
@@ -274,7 +275,313 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// PostgreSQL storage implementation using Drizzle
+export class PostgresStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM users WHERE id = $1`, [id]);
+      return result.rows[0] as User | undefined;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM users WHERE email = $1`, [email]);
+      return result.rows[0] as User | undefined;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM users WHERE google_id = $1`, [googleId]);
+      return result.rows[0] as User | undefined;
+    } catch (error) {
+      console.error('Error getting user by google id:', error);
+      return undefined;
+    }
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    try {
+      const result = await db.execute(`
+        INSERT INTO users (email, password, first_name, last_name, profile_image_url, google_id, hwid)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [
+        userData.email,
+        userData.password || null,
+        userData.firstName || null,
+        userData.lastName || null,
+        userData.profileImageUrl || null,
+        userData.googleId || null,
+        userData.hwid || null
+      ]);
+      return result.rows[0] as User;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    try {
+      const setParts = [];
+      const values = [];
+      let paramIndex = 1;
+
+      for (const [key, value] of Object.entries(updates)) {
+        if (key !== 'id') {
+          const dbKey = key === 'firstName' ? 'first_name' : 
+                       key === 'lastName' ? 'last_name' :
+                       key === 'profileImageUrl' ? 'profile_image_url' :
+                       key === 'googleId' ? 'google_id' :
+                       key === 'createdAt' ? 'created_at' :
+                       key === 'updatedAt' ? 'updated_at' : key;
+          setParts.push(`${dbKey} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+
+      setParts.push(`updated_at = CURRENT_TIMESTAMP`);
+      values.push(id);
+
+      const result = await db.execute(`
+        UPDATE users SET ${setParts.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `, values);
+      
+      return result.rows[0] as User;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
+
+  // License operations
+  async getLicense(id: number): Promise<License | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM licenses WHERE id = $1`, [id]);
+      return result.rows[0] as License | undefined;
+    } catch (error) {
+      console.error('Error getting license:', error);
+      return undefined;
+    }
+  }
+
+  async getLicenseByUserId(userId: number): Promise<License | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM licenses WHERE user_id = $1`, [userId]);
+      return result.rows[0] as License | undefined;
+    } catch (error) {
+      console.error('Error getting license by user id:', error);
+      return undefined;
+    }
+  }
+
+  async getLicenseByKey(key: string): Promise<License | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM licenses WHERE key = $1`, [key]);
+      return result.rows[0] as License | undefined;
+    } catch (error) {
+      console.error('Error getting license by key:', error);
+      return undefined;
+    }
+  }
+
+  async createLicense(licenseData: InsertLicense): Promise<License> {
+    try {
+      const result = await db.execute(`
+        INSERT INTO licenses (user_id, key, plan, status, hwid, expires_at, activated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [
+        licenseData.userId,
+        licenseData.key,
+        licenseData.plan,
+        licenseData.status || 'active',
+        licenseData.hwid || null,
+        licenseData.expiresAt,
+        licenseData.activatedAt || new Date()
+      ]);
+      return result.rows[0] as License;
+    } catch (error) {
+      console.error('Error creating license:', error);
+      throw error;
+    }
+  }
+
+  async updateLicense(id: number, updates: Partial<License>): Promise<License> {
+    try {
+      const setParts = [];
+      const values = [];
+      let paramIndex = 1;
+
+      for (const [key, value] of Object.entries(updates)) {
+        if (key !== 'id') {
+          const dbKey = key === 'userId' ? 'user_id' :
+                       key === 'expiresAt' ? 'expires_at' :
+                       key === 'activatedAt' ? 'activated_at' : key;
+          setParts.push(`${dbKey} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+
+      values.push(id);
+
+      const result = await db.execute(`
+        UPDATE licenses SET ${setParts.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `, values);
+      
+      return result.rows[0] as License;
+    } catch (error) {
+      console.error('Error updating license:', error);
+      throw error;
+    }
+  }
+
+  // Activation key operations
+  async getActivationKey(key: string): Promise<ActivationKey | undefined> {
+    try {
+      const result = await db.execute(`SELECT * FROM activation_keys WHERE key = $1`, [key]);
+      return result.rows[0] as ActivationKey | undefined;
+    } catch (error) {
+      console.error('Error getting activation key:', error);
+      return undefined;
+    }
+  }
+
+  async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
+    try {
+      const result = await db.execute(`
+        INSERT INTO activation_keys (key, plan, is_used, used_by, used_at)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [
+        activationKeyData.key,
+        activationKeyData.plan,
+        activationKeyData.isUsed || false,
+        activationKeyData.usedBy || null,
+        activationKeyData.usedAt || null
+      ]);
+      return result.rows[0] as ActivationKey;
+    } catch (error) {
+      console.error('Error creating activation key:', error);
+      throw error;
+    }
+  }
+
+  async markActivationKeyAsUsed(key: string, userId: number): Promise<ActivationKey> {
+    try {
+      const result = await db.execute(`
+        UPDATE activation_keys 
+        SET is_used = true, used_by = $1, used_at = CURRENT_TIMESTAMP
+        WHERE key = $2
+        RETURNING *
+      `, [userId, key]);
+      return result.rows[0] as ActivationKey;
+    } catch (error) {
+      console.error('Error marking activation key as used:', error);
+      throw error;
+    }
+  }
+
+  // Download operations
+  async logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog> {
+    try {
+      const result = await db.execute(`
+        INSERT INTO download_logs (user_id, license_id, file_name)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `, [userId, licenseId, fileName]);
+      return result.rows[0] as DownloadLog;
+    } catch (error) {
+      console.error('Error logging download:', error);
+      throw error;
+    }
+  }
+
+  async getUserDownloads(userId: number): Promise<DownloadLog[]> {
+    try {
+      const result = await db.execute(`
+        SELECT * FROM download_logs 
+        WHERE user_id = $1 
+        ORDER BY downloaded_at DESC
+      `, [userId]);
+      return result.rows as DownloadLog[];
+    } catch (error) {
+      console.error('Error getting user downloads:', error);
+      return [];
+    }
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    try {
+      const result = await db.execute(`
+        INSERT INTO password_reset_tokens (user_id, token, expires_at)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `, [tokenData.userId, tokenData.token, tokenData.expiresAt]);
+      return result.rows[0] as PasswordResetToken;
+    } catch (error) {
+      console.error('Error creating password reset token:', error);
+      throw error;
+    }
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    try {
+      const result = await db.execute(`
+        SELECT * FROM password_reset_tokens 
+        WHERE token = $1 AND used = false AND expires_at > CURRENT_TIMESTAMP
+      `, [token]);
+      return result.rows[0] as PasswordResetToken | undefined;
+    } catch (error) {
+      console.error('Error getting password reset token:', error);
+      return undefined;
+    }
+  }
+
+  async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
+    try {
+      const result = await db.execute(`
+        UPDATE password_reset_tokens 
+        SET used = true
+        WHERE token = $1
+        RETURNING *
+      `, [token]);
+      return result.rows[0] as PasswordResetToken;
+    } catch (error) {
+      console.error('Error marking password reset token as used:', error);
+      throw error;
+    }
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    try {
+      await db.execute(`
+        DELETE FROM password_reset_tokens 
+        WHERE expires_at < CURRENT_TIMESTAMP OR used = true
+      `);
+    } catch (error) {
+      console.error('Error deleting expired password reset tokens:', error);
+    }
+  }
+}
+
+export const storage = new PostgresStorage();
 
 // Add some test activation keys for development
 (async () => {
