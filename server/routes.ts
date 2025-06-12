@@ -7,6 +7,7 @@ import { setupAuth, isAuthenticated, generateToken, hashPassword } from "./auth"
 import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import { supabaseAdmin } from "./supabase";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -428,7 +429,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Supabase Auth Integration Routes
+  app.post("/api/auth/supabase/register", async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
 
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName
+        }
+      });
+
+      if (authError) {
+        console.error("Supabase auth error:", authError);
+        return res.status(400).json({ message: authError.message });
+      }
+
+      // Create user in our database
+      const user = await storage.createUser({
+        email,
+        firstName,
+        lastName,
+        googleId: authData.user.id // Store Supabase user ID as googleId for compatibility
+      });
+
+      res.json({ user: { ...user, password: undefined }, supabaseUser: authData.user });
+    } catch (error) {
+      console.error("Supabase registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/supabase/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      // Authenticate with Supabase
+      const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        console.error("Supabase login error:", authError);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Find user in our database using Supabase user ID
+      let user = await storage.getUserByGoogleId(authData.user.id);
+      
+      // If user doesn't exist in our DB, create them
+      if (!user) {
+        user = await storage.createUser({
+          email: authData.user.email!,
+          firstName: authData.user.user_metadata?.first_name || '',
+          lastName: authData.user.user_metadata?.last_name || '',
+          googleId: authData.user.id
+        });
+      }
+
+      // Generate JWT token for our system
+      const token = generateToken(user.id);
+      
+      // Log the user in to our session
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.json({ 
+          user: { ...user, password: undefined }, 
+          token,
+          supabaseSession: authData.session 
+        });
+      });
+    } catch (error) {
+      console.error("Supabase login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/supabase/logout", async (req, res) => {
+    try {
+      const { accessToken } = req.body;
+
+      if (accessToken) {
+        // Sign out from Supabase
+        const { error } = await supabaseAdmin.auth.admin.signOut(accessToken);
+        if (error) {
+          console.error("Supabase logout error:", error);
+        }
+      }
+
+      // Logout from our session
+      req.logout((err) => {
+        if (err) {
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        res.json({ message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.get("/api/auth/supabase/user", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: "No authorization header" });
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      
+      // Verify Supabase token
+      const { data: userData, error } = await supabaseAdmin.auth.getUser(token);
+      
+      if (error || !userData.user) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      // Get user from our database
+      const user = await storage.getUserByGoogleId(userData.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found in database" });
+      }
+
+      res.json({ user: { ...user, password: undefined } });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
