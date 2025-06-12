@@ -29,10 +29,10 @@ export default function Home() {
     };
 
     const timer = setTimeout(() => {
-      animateCounter(15000, (value) => setStats(prev => ({ ...prev, users: value })));
-      animateCounter(99, (value) => setStats(prev => ({ ...prev, detection: value })));
-      animateCounter(24, (value) => setStats(prev => ({ ...prev, support: value })));
-      animateCounter(500, (value) => setStats(prev => ({ ...prev, updates: value })));
+      animateCounter(865, (value) => setStats(prev => ({ ...prev, users: value })));
+      animateCounter(89, (value) => setStats(prev => ({ ...prev, detection: value })));
+      animateCounter(1, (value) => setStats(prev => ({ ...prev, support: value })));
+      animateCounter(8, (value) => setStats(prev => ({ ...prev, updates: value })));
     }, 1000);
 
     return () => clearTimeout(timer);
@@ -141,9 +141,9 @@ export default function Home() {
             </div>
             <div>
               <div className="text-4xl font-orbitron font-bold text-neon-green mb-2">
-                {stats.support}/7
+                {stats.support}/2
               </div>
-              <p className="text-gray-400">Suporte 24/7</p>
+              <p className="text-gray-400">Suporte 1/2</p>
             </div>
             <div>
               <div className="text-4xl font-orbitron font-bold text-neon-green mb-2">
