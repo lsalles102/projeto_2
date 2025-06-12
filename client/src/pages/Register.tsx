@@ -64,9 +64,7 @@ export default function Register() {
     registerMutation.mutate(data);
   };
 
-  const handleGoogleRegister = () => {
-    window.location.href = "/api/auth/google";
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center py-20">
@@ -187,25 +185,7 @@ export default function Register() {
               </Button>
             </form>
 
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full border-glass-border" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-dark-bg text-gray-400">OU</span>
-                </div>
-              </div>
 
-              <Button
-                onClick={handleGoogleRegister}
-                variant="ghost"
-                className="w-full mt-4 py-3 glass-effect rounded-lg font-semibold hover:bg-glass-border transition-all duration-300"
-              >
-                <i className="fab fa-google mr-2 text-red-500"></i>
-                Continuar com Google
-              </Button>
-            </div>
 
             <p className="text-center text-sm text-gray-400 mt-6">
               Já tem uma conta?{" "}

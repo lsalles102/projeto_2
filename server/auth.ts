@@ -1,6 +1,5 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -9,8 +8,6 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-change-in-production";
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 
 export function getSession() {
   return session({
