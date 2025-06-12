@@ -12,12 +12,11 @@ export default function Pricing() {
       duration: "7 dias",
       icon: <Star className="text-orange-500 text-4xl" />,
       features: [
-        { name: "Aimbot avançado", included: true },
-        { name: "Smooth aim configurável", included: true },
+        { name: "Aimbot Color", included: true },
+        { name: "Smooth aim configuravel", included: true },
         { name: "FOV customizável", included: true },
-        { name: "Suporte prioritário", included: true },
         { name: "Configurações personalizadas", included: true },
-        { name: "Anti-detecção avançado", included: true },
+        { name: "Anti-detecção", included: true },
         { name: "Atualizações automáticas", included: true },
       ],
       buttonText: "Escolher 7 Dias",
@@ -30,15 +29,12 @@ export default function Pricing() {
       icon: <Crown className="text-neon-yellow text-4xl" />,
       popular: true,
       features: [
-        { name: "Aimbot avançado", included: true },
+        { name: "Aimbot Color", included: true },
         { name: "Smooth aim configurável", included: true },
         { name: "FOV customizável", included: true },
-        { name: "Trigger bot", included: true },
-        { name: "No recoil", included: true },
         { name: "Configurações personalizadas", included: true },
-        { name: "Anti-detecção avançado", included: true },
+        { name: "Anti-detecção", included: true },
         { name: "Atualizações automáticas", included: true },
-        { name: "Suporte 24/7", included: true },
       ],
       buttonText: "Escolher 15 Dias",
       buttonVariant: "default" as const,
@@ -117,43 +113,6 @@ export default function Pricing() {
         <Card className="glass-effect border-glass-border mb-16">
           <CardHeader>
             <h2 className="text-2xl font-orbitron font-bold text-center">
-              Comparação Detalhada de Recursos
-            </h2>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-glass-border">
-                    <th className="text-left py-3">Recurso</th>
-                    <th className="text-center py-3">7 Dias</th>
-                    <th className="text-center py-3">15 Dias</th>
-                  </tr>
-                </thead>
-                <tbody className="space-y-2">
-                  {[
-                    ["Aimbot Avançado", "✅", "✅"],
-                    ["Smooth Aim Configurável", "✅", "✅"],
-                    ["FOV Customizável", "✅", "✅"],
-                    ["No Recoil", "❌", "✅"],
-                    ["Trigger Bot", "❌", "✅"],
-                    ["Anti-Detecção Avançado", "✅", "✅"],
-                    ["Atualizações Automáticas", "✅", "✅"],
-                    ["Suporte Prioritário", "✅", "✅"],
-                    ["Suporte 24/7", "❌", "✅"],
-                    ["ESP/Wallhack", "🔧", "🔧"],
-                  ].map(([feature, plan7, plan15], index) => (
-                    <tr key={index} className="border-b border-glass-border/50">
-                      <td className="py-3 font-medium">{feature}</td>
-                      <td className="text-center py-3 text-orange-400">{plan7}</td>
-                      <td className="text-center py-3 text-neon-green">{plan15}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Payment Methods */}
         <div className="text-center mb-16">
