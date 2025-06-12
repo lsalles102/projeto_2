@@ -75,16 +75,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })(req, res, next);
   });
 
-  app.get("/api/auth/google", passport.authenticate("google", {
-    scope: ["profile", "email"]
-  }));
+  // Google auth routes disabled - requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+  app.get("/api/auth/google", (req, res) => {
+    res.status(503).json({ message: "Google authentication not configured" });
+  });
 
-  app.get("/api/auth/google/callback", 
-    passport.authenticate("google", { failureRedirect: "/login?error=google" }),
-    (req, res) => {
-      res.redirect("/dashboard");
-    }
-  );
+  app.get("/api/auth/google/callback", (req, res) => {
+    res.redirect("/login?error=google_not_configured");
+  });
 
   app.post("/api/auth/logout", (req, res) => {
     req.logout((err) => {

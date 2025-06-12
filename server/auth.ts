@@ -2,7 +2,6 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
-import MemoryStore from "memorystore";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { Express, RequestHandler } from "express";
@@ -14,21 +13,14 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const memoryStore = MemoryStore(session);
-  const sessionStore = new memoryStore({
-    checkPeriod: sessionTtl,
-  });
-  
   return session({
     secret: process.env.SESSION_SECRET || "your-session-secret-change-in-production",
-    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: sessionTtl,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
     },
   });
 }
@@ -60,45 +52,9 @@ export async function setupAuth(app: Express) {
     }
   ));
 
-  // Google Strategy
-  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
-    passport.use(new GoogleStrategy({
-      clientID: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback"
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await storage.getUserByGoogleId(profile.id);
-        
-        if (!user) {
-          // Check if user exists with same email
-          user = await storage.getUserByEmail(profile.emails?.[0]?.value || "");
-          
-          if (user) {
-            // Link Google account to existing user
-            user = await storage.updateUser(user.id, {
-              googleId: profile.id,
-              profileImageUrl: profile.photos?.[0]?.value,
-            });
-          } else {
-            // Create new user
-            user = await storage.createUser({
-              email: profile.emails?.[0]?.value || "",
-              googleId: profile.id,
-              firstName: profile.name?.givenName || "",
-              lastName: profile.name?.familyName || "",
-              profileImageUrl: profile.photos?.[0]?.value,
-            });
-          }
-        }
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    }));
-  }
+  // Google Strategy - temporarily disabled due to credentials
+  // Will be enabled when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are provided
+  console.log("Google Auth: CLIENT_ID and CLIENT_SECRET required for Google authentication");
 
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
@@ -107,6 +63,9 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        return done(null, false);
+      }
       done(null, user);
     } catch (error) {
       done(error);
