@@ -183,3 +183,24 @@ export class MemStorage implements IStorage {
 }
 
 export const storage = new MemStorage();
+
+// Add some test activation keys for development
+(async () => {
+  await storage.createActivationKey({
+    key: "FOVD-TEST-7DAY-001",
+    plan: "7days",
+    isUsed: false,
+  });
+  
+  await storage.createActivationKey({
+    key: "FOVD-TEST-15DAY-001", 
+    plan: "15days",
+    isUsed: false,
+  });
+  
+  await storage.createActivationKey({
+    key: "FOVD-DEMO-7DAY-002",
+    plan: "7days", 
+    isUsed: false,
+  });
+})();

@@ -22,10 +22,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Create user with plain password
+      // Hash password before storing
+      const hashedPassword = await hashPassword(userData.password);
       const user = await storage.createUser({
         ...userData,
-        password: userData.password,
+        password: hashedPassword,
       });
 
       // Generate JWT token
