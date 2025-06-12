@@ -33,6 +33,12 @@ export interface IStorage {
   // Download operations
   logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog>;
   getUserDownloads(userId: number): Promise<DownloadLog[]>;
+  
+  // Password reset operations
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
 }
 
 // In-memory storage implementation
@@ -41,10 +47,12 @@ export class MemStorage implements IStorage {
   private licenses: License[] = [];
   private activationKeys: ActivationKey[] = [];
   private downloadLogs: DownloadLog[] = [];
+  private passwordResetTokens: PasswordResetToken[] = [];
   private nextUserId = 1;
   private nextLicenseId = 1;
   private nextDownloadId = 1;
   private nextActivationKeyId = 1;
+  private nextPasswordResetTokenId = 1;
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
@@ -181,6 +189,41 @@ export class MemStorage implements IStorage {
 
   async getUserDownloads(userId: number): Promise<DownloadLog[]> {
     return this.downloadLogs.filter(log => log.userId === userId);
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const token: PasswordResetToken = {
+      id: this.nextPasswordResetTokenId++,
+      userId: tokenData.userId,
+      token: tokenData.token,
+      expiresAt: tokenData.expiresAt,
+      used: false,
+      createdAt: new Date(),
+    };
+    this.passwordResetTokens.push(token);
+    return token;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    return this.passwordResetTokens.find(t => t.token === token && !t.used && t.expiresAt > new Date());
+  }
+
+  async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
+    const tokenIndex = this.passwordResetTokens.findIndex(t => t.token === token);
+    if (tokenIndex === -1) {
+      throw new Error("Token não encontrado");
+    }
+    this.passwordResetTokens[tokenIndex] = {
+      ...this.passwordResetTokens[tokenIndex],
+      used: true,
+    };
+    return this.passwordResetTokens[tokenIndex];
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    const now = new Date();
+    this.passwordResetTokens = this.passwordResetTokens.filter(t => t.expiresAt > now);
   }
 }
 

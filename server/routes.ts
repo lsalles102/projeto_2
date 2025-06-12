@@ -4,8 +4,9 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken, hashPassword } from "./auth";
-import { registerSchema, loginSchema, activateKeySchema } from "@shared/schema";
+import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -246,6 +247,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Key generation error:", error);
       res.status(500).json({ message: "Key generation failed" });
+    }
+  });
+
+  // Password reset routes
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store reset token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // Create reset URL
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+
+      // Configure email transporter (for development, use console)
+      const transporter = nodemailer.createTransport({
+        streamTransport: true,
+        newline: 'unix',
+        buffer: true
+      });
+
+      // Send email
+      const mailOptions = {
+        from: 'noreply@fovdark.com',
+        to: email,
+        subject: 'Redefinição de senha - FovDark',
+        html: `
+          <h2>Redefinição de senha</h2>
+          <p>Você solicitou a redefinição de sua senha.</p>
+          <p>Clique no link abaixo para redefinir sua senha:</p>
+          <a href="${resetUrl}">${resetUrl}</a>
+          <p>Este link expira em 15 minutos.</p>
+          <p>Se você não solicitou esta redefinição, ignore este email.</p>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Password reset email would be sent to: ${email}`);
+      console.log(`Reset URL: ${resetUrl}`);
+
+      res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Email inválido", errors: error.errors });
+      }
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = resetPasswordSchema.parse(req.body);
+      
+      // Verify reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
+
+      // Get user
+      const user = await storage.getUser(resetToken.userId);
+      if (!user) {
+        return res.status(400).json({ message: "Usuário não encontrado" });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(password);
+
+      // Update user password
+      await storage.updateUser(user.id, { password: hashedPassword });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(token);
+
+      // Clean up expired tokens
+      await storage.deleteExpiredPasswordResetTokens();
+
+      res.json({ message: "Senha redefinida com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
 
