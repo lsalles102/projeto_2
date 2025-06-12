@@ -13,11 +13,11 @@ export default function Pricing() {
       icon: <Star className="text-orange-500 text-4xl" />,
       features: [
         { name: "Aimbot avançado", included: true },
-        { name: "ESP completo", included: true },
-        { name: "Radar hack", included: true },
+        { name: "Smooth aim configurável", included: true },
+        { name: "FOV customizável", included: true },
         { name: "Suporte prioritário", included: true },
         { name: "Configurações personalizadas", included: true },
-        { name: "Recursos exclusivos", included: true },
+        { name: "Anti-detecção avançado", included: true },
         { name: "Atualizações automáticas", included: true },
       ],
       buttonText: "Escolher 7 Dias",
@@ -31,14 +31,14 @@ export default function Pricing() {
       popular: true,
       features: [
         { name: "Aimbot avançado", included: true },
-        { name: "ESP completo", included: true },
-        { name: "Radar hack", included: true },
-        { name: "Suporte prioritário", included: true },
+        { name: "Smooth aim configurável", included: true },
+        { name: "FOV customizável", included: true },
+        { name: "Trigger bot", included: true },
+        { name: "No recoil", included: true },
         { name: "Configurações personalizadas", included: true },
-        { name: "Recursos exclusivos", included: true },
+        { name: "Anti-detecção avançado", included: true },
         { name: "Atualizações automáticas", included: true },
         { name: "Suporte 24/7", included: true },
-        { name: "Configuração personalizada", included: true },
       ],
       buttonText: "Escolher 15 Dias",
       buttonVariant: "default" as const,
@@ -133,16 +133,15 @@ export default function Pricing() {
                 <tbody className="space-y-2">
                   {[
                     ["Aimbot Avançado", "✅", "✅"],
-                    ["ESP/Wallhack Completo", "✅", "✅"],
-                    ["Radar Hack", "✅", "✅"],
-                    ["No Recoil", "✅", "✅"],
-                    ["Trigger Bot", "✅", "✅"],
-                    ["Configurações Personalizadas", "✅", "✅"],
-                    ["Recursos Exclusivos", "✅", "✅"],
+                    ["Smooth Aim Configurável", "✅", "✅"],
+                    ["FOV Customizável", "✅", "✅"],
+                    ["No Recoil", "❌", "✅"],
+                    ["Trigger Bot", "❌", "✅"],
+                    ["Anti-Detecção Avançado", "✅", "✅"],
                     ["Atualizações Automáticas", "✅", "✅"],
                     ["Suporte Prioritário", "✅", "✅"],
                     ["Suporte 24/7", "❌", "✅"],
-                    ["Configuração Personalizada", "❌", "✅"],
+                    ["ESP/Wallhack", "🔧", "🔧"],
                   ].map(([feature, plan7, plan15], index) => (
                     <tr key={index} className="border-b border-glass-border/50">
                       <td className="py-3 font-medium">{feature}</td>
@@ -199,10 +198,18 @@ export default function Pricing() {
               </div>
               
               <div>
-                <h4 className="font-semibold mb-2">Qual a diferença entre os aimbots?</h4>
+                <h4 className="font-semibold mb-2">Qual a diferença entre os planos?</h4>
                 <p className="text-gray-400 text-sm">
-                  O Basic tem configurações limitadas, Premium oferece opções avançadas como smooth aim e FOV customizável, 
-                  e o VIP inclui aimbot completamente personalizado com todas as opções.
+                  O plano de 7 dias inclui aimbot avançado com configurações básicas. 
+                  O plano de 15 dias adiciona recursos como trigger bot, no recoil e suporte 24/7.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-2">ESP e Wallhack estão disponíveis?</h4>
+                <p className="text-gray-400 text-sm">
+                  ESP e Wallhack estão atualmente em desenvolvimento e manutenção. 
+                  Serão lançados em breve com sistema anti-detecção aprimorado.
                 </p>
               </div>
             </div>

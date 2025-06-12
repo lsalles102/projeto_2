@@ -50,7 +50,7 @@ export default function Home() {
               DOMINE O <span className="text-neon-green">BLOODSTRIKE</span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-gray-300">
-              Cheats premium com detecção zero. Aimbot, wallhack, ESP e muito mais.
+              Cheats premium com detecção zero. Aimbot avançado e recursos exclusivos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/pricing">
@@ -90,17 +90,20 @@ export default function Home() {
             <Card className="glass-effect border-glass-border hover:bg-glass-border transition-all duration-300 group">
               <CardContent className="p-8 text-center">
                 <Crosshair className="text-neon-green text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-xl font-bold mb-4">AIMBOT PRECISO</h3>
-                <p className="text-gray-300">Sistema de mira automática com configurações personalizáveis para máxima precisão.</p>
+                <h3 className="text-xl font-bold mb-4">AIMBOT AVANÇADO</h3>
+                <p className="text-gray-300">Sistema de mira automática com configurações personalizáveis para máxima precisão e suavidade.</p>
               </CardContent>
             </Card>
 
             {/* Feature 2 */}
-            <Card className="glass-effect border-glass-border hover:bg-glass-border transition-all duration-300 group">
+            <Card className="glass-effect border-glass-border hover:bg-glass-border transition-all duration-300 group opacity-60">
               <CardContent className="p-8 text-center">
-                <Eye className="text-neon-purple text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-xl font-bold mb-4">WALLHACK ESP</h3>
-                <p className="text-gray-300">Veja inimigos através das paredes com informações detalhadas em tempo real.</p>
+                <Eye className="text-gray-500 text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
+                <h3 className="text-xl font-bold mb-4 text-gray-500">ESP & WALLHACK</h3>
+                <p className="text-gray-500">Em desenvolvimento - Disponível em breve</p>
+                <div className="mt-2">
+                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded">EM MANUTENÇÃO</span>
+                </div>
               </CardContent>
             </Card>
 

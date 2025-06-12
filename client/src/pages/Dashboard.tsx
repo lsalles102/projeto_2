@@ -260,6 +260,53 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
+          {/* Features Status */}
+          <Card className="glass-effect border-glass-border">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl font-orbitron">
+                <Settings className="text-neon-blue mr-3" />
+                Status dos Recursos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass-effect p-4 rounded-lg border border-glass-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="text-neon-green text-xl" />
+                    <span className="font-medium">Aimbot</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-400">Ativo</Badge>
+                </div>
+
+                <div className="glass-effect p-4 rounded-lg border border-glass-border opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Monitor className="text-gray-500 text-xl" />
+                    <span className="font-medium text-gray-500">ESP</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">Em Desenvolvimento</Badge>
+                </div>
+
+                <div className="glass-effect p-4 rounded-lg border border-glass-border opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Eye className="text-gray-500 text-xl" />
+                    <span className="font-medium text-gray-500">Wallhack</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">Em Desenvolvimento</Badge>
+                </div>
+
+                <div className="glass-effect p-4 rounded-lg border border-glass-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <RefreshCw className="text-neon-blue text-xl" />
+                    <span className="font-medium">No Recoil</span>
+                  </div>
+                  <Badge variant="secondary" className={license?.plan === "15days" ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}>
+                    {license?.plan === "15days" ? "Ativo" : "Requer Plano 15 Dias"}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Download Section */}
           <Card className="glass-effect border-glass-border">
             <CardHeader>
