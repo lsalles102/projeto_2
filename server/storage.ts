@@ -56,17 +56,18 @@ export class MemStorage implements IStorage {
   private nextPasswordResetTokenId = 1;
 
   constructor() {
-    this.initializeTestData();
+    // Initialize test data synchronously with pre-hashed password
+    this.initializeTestDataSync();
   }
 
-  private async initializeTestData() {
-    // Create test user with hashed password
-    const hashedPassword = await bcrypt.hash('capajack', 10);
+  private initializeTestDataSync() {
+    // Pre-hashed password for 'capajack' using bcrypt with salt rounds 10
+    const preHashedPassword = '$2b$10$p19sgJ4wwPZO6UdBcB3I8OmnsGfNPGtcgXUglkEHuKTA1ON2b2PCm';
     
     const testUser: User = {
       id: 1,
       email: 'lsalles102@gmail.com',
-      password: hashedPassword,
+      password: preHashedPassword,
       firstName: 'Lucas',
       lastName: 'Salles',
       profileImageUrl: null,
