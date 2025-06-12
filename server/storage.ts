@@ -42,6 +42,7 @@ export class MemStorage implements IStorage {
   private nextUserId = 1;
   private nextLicenseId = 1;
   private nextDownloadId = 1;
+  private nextActivationKeyId = 1;
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
@@ -136,7 +137,9 @@ export class MemStorage implements IStorage {
 
   async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
     const activationKey: ActivationKey = {
-      ...activationKeyData,
+      id: this.nextActivationKeyId++,
+      key: activationKeyData.key,
+      plan: activationKeyData.plan,
       createdAt: new Date(),
       isUsed: false,
       usedBy: null,

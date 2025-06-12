@@ -94,9 +94,7 @@ export default function Pricing() {
                   className={`w-full py-3 font-bold transition-all duration-300 ${
                     plan.buttonVariant === "default"
                       ? "bg-neon-green text-black neon-glow hover:scale-105"
-                      : plan.buttonVariant === "secondary"
-                      ? "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
-                      : "glass-effect hover:bg-glass-border"
+                      : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
                   }`}
                   variant={plan.buttonVariant}
                 >
@@ -113,6 +111,15 @@ export default function Pricing() {
         <Card className="glass-effect border-glass-border mb-16">
           <CardHeader>
             <h2 className="text-2xl font-orbitron font-bold text-center">
+              Comparação de Recursos
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center text-gray-400">
+              Tabela de comparação detalhada dos recursos disponíveis em cada plano.
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Payment Methods */}
         <div className="text-center mb-16">
