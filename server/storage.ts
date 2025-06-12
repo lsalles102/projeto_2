@@ -11,6 +11,8 @@ import {
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { db } from "./db";
+import { users, licenses, activationKeys, downloadLogs, passwordResetTokens } from "@shared/schema";
+import { eq, and, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
