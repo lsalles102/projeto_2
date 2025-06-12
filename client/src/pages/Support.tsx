@@ -5,15 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Mail, 
-  MessageCircle, 
-  ChevronDown, 
+import {
+  Mail,
+  MessageCircle,
+  ChevronDown,
   ChevronUp,
   Send,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 
 interface ContactFormData {
@@ -48,28 +54,34 @@ export default function Support() {
   const faqItems = [
     {
       question: "Como ativar minha licença?",
-      answer: "Após a compra, você receberá uma chave de ativação por email. Entre no painel do usuário e cole a chave no campo indicado. Seu HWID será automaticamente vinculado à licença."
+      answer:
+        "Após a compra, você receberá uma chave de ativação por email. Entre no painel do usuário e cole a chave no campo indicado. ou Seu HWID será automaticamente vinculado à licença.",
     },
     {
       question: "O cheat é detectável?",
-      answer: "Nosso sistema anti-detecção é atualizado constantemente com as últimas técnicas de proteção. Mantemos uma taxa de detecção praticamente zero através de atualizações automáticas e monitoramento 24/7."
+      answer:
+        "Nosso sistema anti-detecção é atualizado constantemente . Mantemos uma taxa de detecção praticamente zero através de atualizações automáticas.",
     },
     {
       question: "Posso usar em múltiplos PCs?",
-      answer: "Cada licença é vinculada a um HWID específico por questões de segurança. Para usar em outro PC, você pode resetar seu HWID através do painel de usuário uma vez por mês."
+      answer:
+        "Cada licença é vinculada a um HWID específico por questões de segurança. Para usar em outro PC, você pode resetar seu HWID através do painel de usuário uma vez por mês.",
     },
     {
       question: "Como funciona o sistema de reembolso?",
-      answer: "Oferecemos garantia de 7 dias para reembolso total. Após esse período, avaliamos caso a caso. Entre em contato conosco através do suporte para solicitar reembolso."
+      answer:
+        "Não existe politica de reembolso, todos os produtos são testados periodicamente, tenha ciêcia disto ao finalizar a compra.",
     },
     {
       question: "Que configurações são recomendadas?",
-      answer: "Recomendamos começar com as configurações padrão e ajustar gradualmente. O manual de configuração disponível no painel tem guias detalhados para cada recurso."
+      answer:
+        "Recomendamos começar com as configurações padrão e ajustar gradualmente. O manual de configuração disponível no painel tem guias detalhados para cada recurso.",
     },
     {
       question: "O cheat é atualizado automaticamente?",
-      answer: "Sim, o cheat verifica e baixa atualizações automaticamente. Usuários VIP recebem acesso prioritário às atualizações beta antes do lançamento oficial."
-    }
+      answer:
+        "Sim, o cheat verifica e baixa atualizações automaticamente. Usuários VIP recebem acesso prioritário às atualizações beta antes do lançamento oficial.",
+    },
   ];
 
   const toggleFaq = (index: number) => {
@@ -81,7 +93,9 @@ export default function Support() {
       <div className="container mx-auto px-6 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-orbitron font-bold text-glow mb-4">SUPORTE</h1>
+          <h1 className="text-5xl font-orbitron font-bold text-glow mb-4">
+            SUPORTE
+          </h1>
           <p className="text-xl text-gray-300">Estamos aqui para ajudar você</p>
         </div>
 
@@ -95,7 +109,10 @@ export default function Support() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-semibold">
                     Nome
@@ -107,7 +124,7 @@ export default function Support() {
                     {...form.register("name", { required: true })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-semibold">
                     Email
@@ -120,25 +137,33 @@ export default function Support() {
                     {...form.register("email", { required: true })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="subject" className="text-sm font-semibold">
                     Assunto
                   </Label>
-                  <Select onValueChange={(value) => form.setValue("subject", value)}>
+                  <Select
+                    onValueChange={(value) => form.setValue("subject", value)}
+                  >
                     <SelectTrigger className="bg-dark-surface border-glass-border focus:border-neon-green">
                       <SelectValue placeholder="Selecione o assunto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="technical">Problema técnico</SelectItem>
-                      <SelectItem value="license">Dúvida sobre licença</SelectItem>
-                      <SelectItem value="refund">Solicitação de reembolso</SelectItem>
+                      <SelectItem value="technical">
+                        Problema técnico
+                      </SelectItem>
+                      <SelectItem value="license">
+                        Dúvida sobre licença
+                      </SelectItem>
+                      <SelectItem value="refund">
+                        Solicitação de reembolso
+                      </SelectItem>
                       <SelectItem value="suggestion">Sugestão</SelectItem>
                       <SelectItem value="other">Outro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="message" className="text-sm font-semibold">
                     Mensagem
@@ -151,7 +176,7 @@ export default function Support() {
                     {...form.register("message", { required: true })}
                   />
                 </div>
-                
+
                 <Button
                   type="submit"
                   className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
@@ -210,7 +235,7 @@ export default function Support() {
               </Button>
             </CardContent>
           </Card>
-          
+
           <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
             <CardContent className="p-6">
               <i className="fab fa-telegram text-blue-500 text-4xl mb-4"></i>
@@ -221,7 +246,7 @@ export default function Support() {
               </Button>
             </CardContent>
           </Card>
-          
+
           <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
             <CardContent className="p-6">
               <Mail className="text-neon-green text-4xl mx-auto mb-4" />
@@ -250,11 +275,16 @@ export default function Support() {
                 { service: "API de Licenças", status: "online" },
                 { service: "Suporte ao Cliente", status: "online" },
               ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-2">
+                <div
+                  key={index}
+                  className="flex items-center justify-between py-2"
+                >
                   <span className="font-medium">{item.service}</span>
                   <div className="flex items-center">
                     <span className="w-3 h-3 bg-neon-green rounded-full mr-2 animate-pulse"></span>
-                    <span className="text-neon-green font-semibold">ONLINE</span>
+                    <span className="text-neon-green font-semibold">
+                      ONLINE
+                    </span>
                   </div>
                 </div>
               ))}

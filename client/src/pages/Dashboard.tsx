@@ -26,7 +26,8 @@ import {
   Archive,
   FileText,
   Activity,
-  Eye
+  Eye,
+  ExternalLink
 } from "lucide-react";
 import type { z } from "zod";
 
@@ -98,6 +99,39 @@ export default function Dashboard() {
 
   const onActivateSubmit = (data: ActivateKeyFormData) => {
     activateMutation.mutate(data);
+  };
+
+  // Quick action handlers
+  const handleRenewLicense = () => {
+    toast({
+      title: "Renovação de Licença",
+      description: "Redirecionando para a página de preços...",
+    });
+    window.open("/pricing", "_blank");
+  };
+
+  const handleSettings = () => {
+    toast({
+      title: "Configurações",
+      description: "Funcionalidade em desenvolvimento",
+    });
+  };
+
+  const handleSupport = () => {
+    toast({
+      title: "Suporte",
+      description: "Redirecionando para o suporte...",
+    });
+    window.open("/support", "_blank");
+  };
+
+  const handleViewManual = () => {
+    toast({
+      title: "Manual",
+      description: "Abrindo manual de configuração...",
+    });
+    // In a real app, this would open a PDF or documentation page
+    window.open("https://docs.fovdark.com/manual", "_blank");
   };
 
   if (isLoading) {
@@ -344,7 +378,11 @@ export default function Dashboard() {
                       <div className="text-sm text-gray-400">Guia completo de instalação</div>
                     </div>
                   </div>
-                  <Button variant="ghost" className="glass-effect">
+                  <Button 
+                    variant="ghost" 
+                    className="glass-effect"
+                    onClick={handleViewManual}
+                  >
                     <FileText className="w-4 h-4 mr-2" />
                     Ver
                   </Button>
@@ -371,15 +409,27 @@ export default function Dashboard() {
               <CardTitle className="text-xl font-orbitron">Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+              <Button 
+                variant="ghost" 
+                className="w-full glass-effect hover:bg-glass-border"
+                onClick={handleRenewLicense}
+              >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Renovar Licença
               </Button>
-              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+              <Button 
+                variant="ghost" 
+                className="w-full glass-effect hover:bg-glass-border"
+                onClick={handleSettings}
+              >
                 <Settings className="w-4 h-4 mr-2" />
                 Configurações
               </Button>
-              <Button variant="ghost" className="w-full glass-effect hover:bg-glass-border">
+              <Button 
+                variant="ghost" 
+                className="w-full glass-effect hover:bg-glass-border"
+                onClick={handleSupport}
+              >
                 <Headphones className="w-4 h-4 mr-2" />
                 Suporte
               </Button>
