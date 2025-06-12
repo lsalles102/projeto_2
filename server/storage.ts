@@ -1,8 +1,4 @@
 import {
-  users,
-  licenses,
-  activationKeys,
-  downloadLogs,
   type User,
   type InsertUser,
   type License,
@@ -11,8 +7,6 @@ import {
   type InsertActivationKey,
   type DownloadLog
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -39,122 +33,150 @@ export interface IStorage {
   getUserDownloads(userId: number): Promise<DownloadLog[]>;
 }
 
-export class DatabaseStorage implements IStorage {
+// In-memory storage implementation
+export class MemStorage implements IStorage {
+  private users: User[] = [];
+  private licenses: License[] = [];
+  private activationKeys: ActivationKey[] = [];
+  private downloadLogs: DownloadLog[] = [];
+  private nextUserId = 1;
+  private nextLicenseId = 1;
+  private nextDownloadId = 1;
+
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return this.users.find(user => user.id === id);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    return this.users.find(user => user.email === email);
   }
 
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
-    return user;
+    return this.users.find(user => user.googleId === googleId);
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        updatedAt: new Date(),
-      })
-      .returning();
+    const user: User = {
+      id: this.nextUserId++,
+      email: userData.email,
+      password: userData.password || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      googleId: userData.googleId || null,
+      hwid: userData.hwid || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.push(user);
     return user;
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
-      .returning();
-    return user;
+    const userIndex = this.users.findIndex(user => user.id === id);
+    if (userIndex === -1) {
+      throw new Error('User not found');
+    }
+    
+    this.users[userIndex] = {
+      ...this.users[userIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.users[userIndex];
   }
 
   // License operations
   async getLicense(id: number): Promise<License | undefined> {
-    const [license] = await db.select().from(licenses).where(eq(licenses.id, id));
-    return license;
+    return this.licenses.find(license => license.id === id);
   }
 
   async getLicenseByUserId(userId: number): Promise<License | undefined> {
-    const [license] = await db.select().from(licenses).where(eq(licenses.userId, userId));
-    return license;
+    return this.licenses.find(license => license.userId === userId);
   }
 
   async getLicenseByKey(key: string): Promise<License | undefined> {
-    const [license] = await db.select().from(licenses).where(eq(licenses.key, key));
-    return license;
+    return this.licenses.find(license => license.key === key);
   }
 
   async createLicense(licenseData: InsertLicense): Promise<License> {
-    const [license] = await db
-      .insert(licenses)
-      .values(licenseData)
-      .returning();
+    const license: License = {
+      id: this.nextLicenseId++,
+      userId: licenseData.userId,
+      key: licenseData.key,
+      plan: licenseData.plan,
+      status: licenseData.status || "inactive",
+      hwid: licenseData.hwid || null,
+      expiresAt: licenseData.expiresAt,
+      activatedAt: licenseData.activatedAt || null,
+      createdAt: new Date(),
+    };
+    this.licenses.push(license);
     return license;
   }
 
   async updateLicense(id: number, updates: Partial<License>): Promise<License> {
-    const [license] = await db
-      .update(licenses)
-      .set(updates)
-      .where(eq(licenses.id, id))
-      .returning();
-    return license;
+    const licenseIndex = this.licenses.findIndex(license => license.id === id);
+    if (licenseIndex === -1) {
+      throw new Error('License not found');
+    }
+    
+    this.licenses[licenseIndex] = {
+      ...this.licenses[licenseIndex],
+      ...updates,
+    };
+    return this.licenses[licenseIndex];
   }
 
   // Activation key operations
   async getActivationKey(key: string): Promise<ActivationKey | undefined> {
-    const [activationKey] = await db.select().from(activationKeys).where(eq(activationKeys.key, key));
-    return activationKey;
+    return this.activationKeys.find(ak => ak.key === key);
   }
 
   async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
-    const [activationKey] = await db
-      .insert(activationKeys)
-      .values(activationKeyData)
-      .returning();
+    const activationKey: ActivationKey = {
+      ...activationKeyData,
+      createdAt: new Date(),
+      isUsed: false,
+      usedBy: null,
+      usedAt: null,
+    };
+    this.activationKeys.push(activationKey);
     return activationKey;
   }
 
   async markActivationKeyAsUsed(key: string, userId: number): Promise<ActivationKey> {
-    const [activationKey] = await db
-      .update(activationKeys)
-      .set({
-        isUsed: true,
-        usedBy: userId,
-        usedAt: new Date(),
-      })
-      .where(eq(activationKeys.key, key))
-      .returning();
-    return activationKey;
+    const akIndex = this.activationKeys.findIndex(ak => ak.key === key);
+    if (akIndex === -1) {
+      throw new Error('Activation key not found');
+    }
+    
+    this.activationKeys[akIndex] = {
+      ...this.activationKeys[akIndex],
+      isUsed: true,
+      usedBy: userId,
+      usedAt: new Date(),
+    };
+    return this.activationKeys[akIndex];
   }
 
   // Download operations
   async logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog> {
-    const [downloadLog] = await db
-      .insert(downloadLogs)
-      .values({
-        userId,
-        licenseId,
-        fileName,
-      })
-      .returning();
+    const downloadLog: DownloadLog = {
+      id: this.nextDownloadId++,
+      userId,
+      licenseId,
+      fileName,
+      downloadedAt: new Date(),
+    };
+    this.downloadLogs.push(downloadLog);
     return downloadLog;
   }
 
   async getUserDownloads(userId: number): Promise<DownloadLog[]> {
-    return await db.select().from(downloadLogs).where(eq(downloadLogs.userId, userId));
+    return this.downloadLogs.filter(log => log.userId === userId);
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
