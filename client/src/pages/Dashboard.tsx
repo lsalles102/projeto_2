@@ -25,7 +25,8 @@ import {
   Headphones,
   Archive,
   FileText,
-  Activity
+  Activity,
+  Eye
 } from "lucide-react";
 import type { z } from "zod";
 
@@ -40,10 +41,10 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard"],
   });
 
-  const user = data?.user;
-  const license = data?.license;
-  const downloads = data?.downloads || [];
-  const stats = data?.stats || {};
+  const user = (data as any)?.user;
+  const license = (data as any)?.license;
+  const downloads = (data as any)?.downloads || [];
+  const stats = (data as any)?.stats || {};
 
   // Activate key form
   const form = useForm<ActivateKeyFormData>({
@@ -78,10 +79,10 @@ export default function Dashboard() {
   // Download cheat mutation
   const downloadMutation = useMutation({
     mutationFn: () => apiRequest("GET", "/api/download/cheat"),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Download autorizado",
-        description: `${data.fileName} está pronto para download!`,
+        description: `${(data as any).fileName} está pronto para download!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       // In a real app, you would trigger the actual file download here
