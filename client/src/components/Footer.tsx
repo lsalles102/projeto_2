@@ -19,7 +19,6 @@ export default function Footer() {
           <div>
             <h4 className="font-bold mb-4">Produto</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/" className="hover:text-neon-green transition-colors duration-300">Recursos</Link></li>
               <li><Link href="/pricing" className="hover:text-neon-green transition-colors duration-300">Preços</Link></li>
               <li><Link href="/dashboard" className="hover:text-neon-green transition-colors duration-300">Download</Link></li>
               <li><a href="#" className="hover:text-neon-green transition-colors duration-300">Atualizações</a></li>
