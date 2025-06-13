@@ -14,6 +14,26 @@ import bcrypt from "bcrypt";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for monitoring
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Test database connection
+      await storage.getSystemStats();
+      res.status(200).json({ 
+        status: "ok", 
+        timestamp: new Date().toISOString(),
+        database: "connected"
+      });
+    } catch (error) {
+      res.status(503).json({ 
+        status: "error", 
+        timestamp: new Date().toISOString(),
+        database: "disconnected",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Setup authentication
   await setupAuth(app);
 

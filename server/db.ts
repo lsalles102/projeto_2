@@ -8,11 +8,15 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure postgres connection for Supabase
+// Configure postgres connection for production deployment
+const isProduction = process.env.NODE_ENV === 'production';
+
 const client = postgres(process.env.DATABASE_URL, {
-  max: 10,
-  idle_timeout: 20,
-  connect_timeout: 10,
+  max: isProduction ? 20 : 10,
+  idle_timeout: isProduction ? 30 : 20,
+  connect_timeout: isProduction ? 30 : 10,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  prepare: false, // Disable prepared statements for better compatibility
 });
 
 export const db = drizzle(client, { schema });
