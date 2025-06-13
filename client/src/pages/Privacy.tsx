@@ -8,14 +8,14 @@ export default function Privacy() {
       <div className="container mx-auto px-6 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-orbitron font-bold text-glow mb-4">POLÍTICA DE PRIVACIDADE</h1>
+          <h1 className="text-5xl font-orbitron font-bold  mb-4">POLÍTICA DE PRIVACIDADE</h1>
           <p className="text-xl text-gray-300">Última atualização: Janeiro de 2024</p>
         </div>
 
-        <Card className="glass-effect border-glass-border">
+        <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center text-2xl font-orbitron">
-              <Shield className="text-neon-green mr-3" />
+              <Shield className="text-primary mr-3" />
               Proteção de Dados e Privacidade
             </CardTitle>
           </CardHeader>
@@ -27,17 +27,17 @@ export default function Privacy() {
               </p>
             </div>
 
-            <Separator className="border-glass-border" />
+            <Separator className="border-primary/20" />
 
             {/* Section 1 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4 flex items-center">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4 flex items-center">
                 <Database className="mr-2" />
                 1. Informações que Coletamos
               </h2>
               <div className="space-y-4 text-gray-300">
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">1.1 Dados de Conta</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">1.1 Dados de Conta</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Nome completo e endereço de email</li>
                     <li>Senha criptografada (nunca armazenamos senhas em texto simples)</li>
@@ -47,7 +47,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">1.2 Dados de Licença</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">1.2 Dados de Licença</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>HWID (Hardware ID) do seu dispositivo</li>
                     <li>Chaves de ativação e status da licença</li>
@@ -57,7 +57,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">1.3 Dados Técnicos</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">1.3 Dados Técnicos</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Endereço IP e informações de localização</li>
                     <li>Tipo de navegador e sistema operacional</li>
@@ -70,13 +70,13 @@ export default function Privacy() {
 
             {/* Section 2 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4 flex items-center">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4 flex items-center">
                 <Eye className="mr-2" />
                 2. Como Usamos suas Informações
               </h2>
               <div className="space-y-4 text-gray-300">
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">2.1 Prestação de Serviços</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">2.1 Prestação de Serviços</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Autenticação e gerenciamento de contas</li>
                     <li>Validação e ativação de licenças</li>
@@ -86,7 +86,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">2.2 Segurança e Proteção</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">2.2 Segurança e Proteção</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Prevenção de uso não autorizado</li>
                     <li>Detecção de atividades fraudulentas</li>
@@ -96,7 +96,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">2.3 Melhorias e Comunicação</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">2.3 Melhorias e Comunicação</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Análise de uso para melhorar nossos serviços</li>
                     <li>Comunicação sobre atualizações importantes</li>
@@ -109,7 +109,7 @@ export default function Privacy() {
 
             {/* Section 3 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4 flex items-center">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4 flex items-center">
                 <Lock className="mr-2" />
                 3. Proteção e Armazenamento de Dados
               </h2>
@@ -125,7 +125,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">3.1 Medidas de Segurança</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">3.1 Medidas de Segurança</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Criptografia SSL/TLS para transmissão de dados</li>
                     <li>Hashing seguro de senhas com bcrypt</li>
@@ -136,7 +136,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">3.2 Armazenamento</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">3.2 Armazenamento</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Dados armazenados em servidores seguros e criptografados</li>
                     <li>Backups regulares com criptografia</li>
@@ -149,13 +149,13 @@ export default function Privacy() {
 
             {/* Section 4 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4 flex items-center">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4 flex items-center">
                 <Settings className="mr-2" />
                 4. Seus Direitos e Controles
               </h2>
               <div className="space-y-4 text-gray-300">
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">4.1 Direitos LGPD</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">4.1 Direitos LGPD</h3>
                   <p>De acordo com a Lei Geral de Proteção de Dados, você tem direito a:</p>
                   <ul className="list-disc list-inside ml-4 space-y-1 mt-2">
                     <li>Confirmar a existência de tratamento de dados</li>
@@ -169,7 +169,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">4.2 Como Exercer seus Direitos</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">4.2 Como Exercer seus Direitos</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Acesse configurações da conta no painel de usuário</li>
                     <li>Entre em contato com nosso DPO: privacy@fovdark.com</li>
@@ -182,13 +182,13 @@ export default function Privacy() {
 
             {/* Section 5 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4 flex items-center">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4 flex items-center">
                 <Cookie className="mr-2" />
                 5. Cookies e Tecnologias Similares
               </h2>
               <div className="space-y-4 text-gray-300">
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">5.1 Tipos de Cookies</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">5.1 Tipos de Cookies</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li><strong>Essenciais:</strong> Necessários para funcionamento básico</li>
                     <li><strong>Sessão:</strong> Mantém você logado durante a visita</li>
@@ -198,7 +198,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">5.2 Controle de Cookies</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">5.2 Controle de Cookies</h3>
                   <p>
                     Você pode gerenciar cookies através das configurações do seu navegador. 
                     Note que desabilitar cookies essenciais pode afetar a funcionalidade do site.
@@ -209,7 +209,7 @@ export default function Privacy() {
 
             {/* Section 6 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4">
                 6. Compartilhamento de Dados
               </h2>
               <div className="space-y-4 text-gray-300">
@@ -223,7 +223,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">6.1 Compartilhamento Limitado</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">6.1 Compartilhamento Limitado</h3>
                   <p>Compartilhamos dados apenas quando:</p>
                   <ul className="list-disc list-inside ml-4 space-y-1 mt-2">
                     <li>Necessário para prestação do serviço</li>
@@ -234,7 +234,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">6.2 Processadores de Dados</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">6.2 Processadores de Dados</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Provedores de hospedagem com certificação de segurança</li>
                     <li>Processadores de pagamento conformes com PCI DSS</li>
@@ -247,12 +247,12 @@ export default function Privacy() {
 
             {/* Section 7 */}
             <div>
-              <h2 className="text-2xl font-orbitron font-bold text-neon-green mb-4">
+              <h2 className="text-2xl font-orbitron font-bold text-primary mb-4">
                 7. Retenção e Exclusão de Dados
               </h2>
               <div className="space-y-4 text-gray-300">
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">7.1 Períodos de Retenção</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">7.1 Períodos de Retenção</h3>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li><strong>Dados de conta:</strong> Até exclusão solicitada pelo usuário</li>
                     <li><strong>Dados de licença:</strong> 2 anos após expiração</li>
@@ -262,7 +262,7 @@ export default function Privacy() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-neon-yellow mb-2">7.2 Exclusão Automática</h3>
+                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">7.2 Exclusão Automática</h3>
                   <p>
                     Dados são automaticamente excluídos após os períodos estabelecidos, 
                     exceto quando retenção é exigida por lei.
@@ -272,7 +272,7 @@ export default function Privacy() {
             </div>
 
             {/* Contact Information */}
-            <div className="bg-dark-surface rounded-lg p-6">
+            <div className="bg-muted rounded-lg p-6">
               <h3 className="text-xl font-orbitron font-bold mb-4">Contato para Questões de Privacidade</h3>
               <div className="space-y-3 text-gray-300">
                 <p><strong>Encarregado de Proteção de Dados (DPO):</strong></p>

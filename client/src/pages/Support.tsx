@@ -69,9 +69,9 @@ export default function Support() {
 
         {/* Success Message */}
         {isSuccess && (
-          <Alert className="mb-8 border-neon-green bg-neon-green/10">
-            <CheckCircle className="h-4 w-4 text-neon-green" />
-            <AlertDescription className="text-neon-green">
+          <Alert className="mb-8 border-primary bg-primary/10">
+            <CheckCircle className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-primary">
               Mensagem enviada com sucesso! Você receberá uma resposta em breve.
             </AlertDescription>
           </Alert>
@@ -79,7 +79,7 @@ export default function Support() {
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Contact Form */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="text-2xl font-bold neon-text">
                 Envie uma Mensagem
@@ -148,7 +148,7 @@ export default function Support() {
 
                 <Button
                   type="submit"
-                  className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
+                  className="w-full py-3 bg-primary text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
                   disabled={contactMutation.isPending}
                 >
                   {contactMutation.isPending ? (
@@ -169,7 +169,7 @@ export default function Support() {
 
           {/* Contact Options */}
           <div className="space-y-6">
-            <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
+            <Card className="bg-card/50 backdrop-blur-sm border-primary/20 text-center hover:scale-105 transition-all duration-300">
               <CardContent className="p-6">
                 <MessageCircle className="text-indigo-500 text-4xl mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Discord</h3>
@@ -183,14 +183,14 @@ export default function Support() {
               </CardContent>
             </Card>
 
-            <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
+            <Card className="bg-card/50 backdrop-blur-sm border-primary/20 text-center hover:scale-105 transition-all duration-300">
               <CardContent className="p-6">
-                <Mail className="text-neon-green text-4xl mx-auto mb-4" />
+                <Mail className="text-primary text-4xl mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Email</h3>
                 <p className="text-gray-400 mb-4">contato@suportefovdark.shop</p>
                 <Button 
                   onClick={() => window.open('mailto:contato@suportefovdark.shop', '_blank')}
-                  className="bg-neon-green text-black hover:scale-105 transition-all duration-300"
+                  className="bg-primary text-black hover:scale-105 transition-all duration-300"
                 >
                   Enviar Email
                 </Button>
@@ -198,7 +198,7 @@ export default function Support() {
             </Card>
 
             {/* FAQ Section */}
-            <Card className="glass-effect border-glass-border">
+            <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
               <CardHeader>
                 <CardTitle className="text-xl font-bold neon-text">
                   Perguntas Frequentes
@@ -206,19 +206,19 @@ export default function Support() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-bold text-neon-green mb-2">Como ativar minha licença?</h4>
+                  <h4 className="font-bold text-primary mb-2">Como ativar minha licença?</h4>
                   <p className="text-gray-400 text-sm">
                     Acesse seu dashboard e insira a chave de ativação que você recebeu.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-bold text-neon-green mb-2">Problemas de download?</h4>
+                  <h4 className="font-bold text-primary mb-2">Problemas de download?</h4>
                   <p className="text-gray-400 text-sm">
                     Verifique se sua licença está ativa e entre em contato se persistir.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-bold text-neon-green mb-2">Tempo de resposta</h4>
+                  <h4 className="font-bold text-primary mb-2">Tempo de resposta</h4>
                   <p className="text-gray-400 text-sm">
                     Respondemos em até 24-48 horas via email ou Discord.
                   </p>

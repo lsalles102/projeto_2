@@ -302,7 +302,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Features Status */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl font-orbitron">
                 <Settings className="text-neon-blue mr-3" />
@@ -311,15 +311,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass-effect p-4 rounded-lg border border-glass-border">
+                <div className="bg-card/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Shield className="text-neon-green text-xl" />
+                    <Shield className="text-primary text-xl" />
                     <span className="font-medium">Aimbot</span>
                   </div>
                   <Badge variant="secondary" className="bg-green-500/20 text-green-400">Ativo</Badge>
                 </div>
 
-                <div className="glass-effect p-4 rounded-lg border border-glass-border opacity-60">
+                <div className="bg-card/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20 opacity-60">
                   <div className="flex items-center gap-2 mb-2">
                     <Monitor className="text-gray-500 text-xl" />
                     <span className="font-medium text-gray-500">ESP</span>
@@ -327,7 +327,7 @@ export default function Dashboard() {
                   <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">Em Desenvolvimento</Badge>
                 </div>
 
-                <div className="glass-effect p-4 rounded-lg border border-glass-border opacity-60">
+                <div className="bg-card/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20 opacity-60">
                   <div className="flex items-center gap-2 mb-2">
                     <Eye className="text-gray-500 text-xl" />
                     <span className="font-medium text-gray-500">Wallhack</span>
@@ -335,7 +335,7 @@ export default function Dashboard() {
                   <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">Em Desenvolvimento</Badge>
                 </div>
 
-                <div className="glass-effect p-4 rounded-lg border border-glass-border">
+                <div className="bg-card/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20">
                   <div className="flex items-center gap-2 mb-2">
                     <RefreshCw className="text-neon-blue text-xl" />
                     <span className="font-medium">No Recoil</span>
@@ -349,18 +349,18 @@ export default function Dashboard() {
           </Card>
 
           {/* Download Section */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl font-orbitron">
-                <Download className="text-neon-purple mr-3" />
+                <Download className="text-accent mr-3" />
                 Downloads
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between bg-dark-surface rounded-lg p-4">
+                <div className="flex items-center justify-between bg-muted rounded-lg p-4">
                   <div className="flex items-center">
-                    <Archive className="text-neon-green text-xl mr-4" />
+                    <Archive className="text-primary text-xl mr-4" />
                     <div>
                       <div className="font-semibold">FovDark Cheat v2.4.1</div>
                       <div className="text-sm text-gray-400">Última atualização: há 2 horas</div>
@@ -369,16 +369,16 @@ export default function Dashboard() {
                   <Button
                     onClick={() => downloadMutation.mutate()}
                     disabled={!isLicenseActive || downloadMutation.isPending}
-                    className="bg-neon-green text-black hover:bg-neon-green/90 neon-glow"
+                    className="bg-primary text-black hover:bg-primary/90 neon-glow"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     {downloadMutation.isPending ? "Baixando..." : "Download"}
                   </Button>
                 </div>
                 
-                <div className="flex items-center justify-between bg-dark-surface rounded-lg p-4">
+                <div className="flex items-center justify-between bg-muted rounded-lg p-4">
                   <div className="flex items-center">
-                    <FileText className="text-neon-yellow text-xl mr-4" />
+                    <FileText className="text-yellow-400 text-xl mr-4" />
                     <div>
                       <div className="font-semibold">Manual de Configuração</div>
                       <div className="text-sm text-gray-400">Guia completo de instalação</div>
@@ -386,7 +386,7 @@ export default function Dashboard() {
                   </div>
                   <Button 
                     variant="ghost" 
-                    className="glass-effect"
+                    className="bg-card/50 backdrop-blur-sm"
                     onClick={handleViewManual}
                   >
                     <FileText className="w-4 h-4 mr-2" />
@@ -410,14 +410,14 @@ export default function Dashboard() {
         {/* Sidebar */}
         <div className="space-y-8">
           {/* Quick Actions */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl font-orbitron">Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button 
                 variant="ghost" 
-                className="w-full glass-effect hover:bg-glass-border"
+                className="w-full bg-card/50 backdrop-blur-sm hover:bg-glass-border"
                 onClick={handleRenewLicense}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -425,7 +425,7 @@ export default function Dashboard() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="w-full glass-effect hover:bg-glass-border"
+                className="w-full bg-card/50 backdrop-blur-sm hover:bg-glass-border"
                 onClick={handleSettings}
               >
                 <Settings className="w-4 h-4 mr-2" />
@@ -433,7 +433,7 @@ export default function Dashboard() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="w-full glass-effect hover:bg-glass-border"
+                className="w-full bg-card/50 backdrop-blur-sm hover:bg-glass-border"
                 onClick={handleSupport}
               >
                 <Headphones className="w-4 h-4 mr-2" />
@@ -443,14 +443,14 @@ export default function Dashboard() {
           </Card>
 
           {/* Stats */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl font-orbitron">Estatísticas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Total de Downloads</span>
-                <span className="font-bold text-neon-green">{stats.totalDownloads || 0}</span>
+                <span className="font-bold text-primary">{stats.totalDownloads || 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Último Download</span>
@@ -461,7 +461,7 @@ export default function Dashboard() {
                   }
                 </span>
               </div>
-              <Separator className="border-glass-border" />
+              <Separator className="border-primary/20" />
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Conta criada em</span>
                 <span className="text-sm">
@@ -475,14 +475,14 @@ export default function Dashboard() {
           </Card>
 
           {/* Recent Activity */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl font-orbitron">Atividade Recente</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {downloads.slice(0, 3).map((download: any, index: number) => (
                 <div key={index} className="flex items-center text-sm">
-                  <span className="w-2 h-2 bg-neon-green rounded-full mr-3"></span>
+                  <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
                   <span>Download: {download.fileName}</span>
                 </div>
               ))}
