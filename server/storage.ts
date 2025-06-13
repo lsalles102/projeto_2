@@ -14,12 +14,8 @@ import {
   downloadLogs,
   passwordResetTokens
 } from "@shared/schema";
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { Pool } from '@neondatabase/serverless';
 import { eq, and, gt, lt, sql } from 'drizzle-orm';
-import * as schema from "@shared/schema";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { db } from './db';
 
 export interface IStorage {
   // User operations
@@ -432,10 +428,9 @@ export class MemStorage implements IStorage {
 
 // PostgreSQL storage implementation using Drizzle ORM
 export class PostgresStorage implements IStorage {
-  private db = drizzle({ client: pool, schema });
 
   async getUser(id: number): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.id, id));
+    const result = await db.select().from(users).where(eq(users.id, id));
     return result[0];
   }
 
