@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Check, Star, Crown, ExternalLink, Copy, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const plans = [
   {
@@ -15,7 +17,7 @@ const plans = [
     duration: "7 dias",
     durationDays: 7,
     icon: <Star className="text-orange-500 text-4xl" />,
-    paymentLink: "https://infinitpay.io/checkout/seu-link-7-dias", // Substitua pelo link real
+    // Payment will be handled by MercadoPago integration
     features: [
       "Aimbot Color para BloodStrike",
       "Smooth aim configurável",
@@ -34,7 +36,7 @@ const plans = [
     durationDays: 15,
     icon: <Crown className="text-yellow-400 text-4xl" />,
     popular: true,
-    paymentLink: "https://infinitpay.io/checkout/seu-link-15-dias", // Substitua pelo link real
+    // Payment will be handled by MercadoPago integration
     features: [
       "Aimbot Color para BloodStrike",
       "Smooth aim configurável", 
@@ -52,23 +54,68 @@ export default function Checkout() {
   const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
   const [step, setStep] = useState<'select' | 'payment' | 'activation'>('select');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSelectPlan = (plan: typeof plans[0]) => {
     setSelectedPlan(plan);
     setStep('payment');
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copiado!",
-      description: "Link copiado para a área de transferência",
-    });
+  const handlePixPayment = async (plan: typeof plans[0]) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para fazer uma compra",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Integrate with MercadoPago PIX payment
+      const response = await fetch('/api/payments/create-pix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          plan: plan.id,
+          durationDays: plan.durationDays,
+          payerEmail: user.email,
+          payerFirstName: user.firstName,
+          payerLastName: user.lastName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao processar pagamento');
+      }
+
+      const paymentData = await response.json();
+      
+      // Show PIX QR code or redirect to payment
+      toast({
+        title: "Pagamento PIX criado",
+        description: "Redirecionando para o pagamento...",
+      });
+      
+      // Handle PIX payment flow (this would show QR code, etc.)
+      console.log('Payment data:', paymentData);
+      
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao processar pagamento PIX",
+        variant: "destructive",
+      });
+    }
   };
 
   if (step === 'payment' && selectedPlan) {
     return (
-      <div className="py-20 min-h-screen">
+      <ProtectedRoute>
+        <div className="py-20 min-h-screen">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-orbitron font-bold mb-4">
@@ -125,7 +172,7 @@ export default function Checkout() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ExternalLink className="w-5 h-5 text-primary" />
-                  PAGAMENTO INFINIT PAY
+                  PAGAMENTO PIX
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -135,8 +182,9 @@ export default function Checkout() {
                     Como funciona:
                   </h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-gray-300">
-                    <li>Clique no botão "Pagar com Infinit Pay"</li>
-                    <li>Complete o pagamento na página do Infinit Pay</li>
+                    <li>Clique no botão "Processar Pagamento PIX"</li>
+                    <li>Escaneie o QR Code ou copie o código PIX</li>
+                    <li>Complete o pagamento no seu app bancário</li>
                     <li>Você receberá sua chave de ativação por email</li>
                     <li>Ative a chave no seu painel de usuário</li>
                   </ol>
@@ -145,19 +193,10 @@ export default function Checkout() {
                 <div className="space-y-3">
                   <Button
                     className="w-full bg-primary text-black hover:bg-primary/90 font-bold text-lg py-3"
-                    onClick={() => window.open(selectedPlan.paymentLink, '_blank')}
+                    onClick={() => handlePixPayment(selectedPlan)}
                   >
                     <ExternalLink className="w-5 h-5 mr-2" />
-                    PAGAR COM INFINIT PAY
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => copyToClipboard(selectedPlan.paymentLink)}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar Link de Pagamento
+                    PROCESSAR PAGAMENTO PIX
                   </Button>
                 </div>
 
@@ -281,6 +320,74 @@ export default function Checkout() {
           </div>
         </div>
       </div>
-    </div>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <div className="py-20 min-h-screen">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-orbitron font-bold mb-4">
+            ESCOLHA SEU PLANO
+          </h1>
+          <p className="text-xl text-gray-300">
+            Domine o BloodStrike com nossos cheats premium
+          </p>
+        </div>
+
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-8 justify-center max-w-4xl mx-auto">
+            {plans.map((plan) => (
+              <Card
+                key={plan.id}
+                className={`bg-card/50 backdrop-blur-sm border-primary/20 hover:scale-105 transition-all duration-300 relative ${
+                  plan.popular ? "border-2 border-primary" : ""
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-primary text-black px-6 py-2 font-bold">
+                      MAIS POPULAR
+                    </Badge>
+                  </div>
+                )}
+
+                <CardHeader className="text-center pb-8 pt-8">
+                  <div className="mx-auto mb-4">{plan.icon}</div>
+                  <h3 className="text-2xl font-orbitron font-bold mb-2">
+                    {plan.name}
+                  </h3>
+                  <div className="text-4xl font-bold text-primary mb-1">
+                    {plan.price}
+                  </div>
+                  <p className="text-gray-400">por {plan.duration}</p>
+                </CardHeader>
+
+                <CardContent className="px-8 pb-8">
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center">
+                        <Check className="text-primary mr-3 w-5 h-5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full py-3 font-bold bg-primary text-black hover:bg-primary/90 neon-glow"
+                    onClick={() => handleSelectPlan(plan)}
+                  >
+                    {plan.name === "7 DIAS" && <Star className="w-4 h-4 mr-2" />}
+                    {plan.name === "15 DIAS" && <Crown className="w-4 h-4 mr-2" />}
+                    Escolher {plan.name}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ProtectedRoute>
   );
 }
