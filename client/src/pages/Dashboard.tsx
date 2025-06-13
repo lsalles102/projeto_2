@@ -215,9 +215,12 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="bg-dark-surface rounded-lg p-4">
-                    <div className="text-sm text-gray-400 mb-1">Válida até</div>
-                    <div className="text-lg">
-                      {new Date(license.expiresAt).toLocaleDateString("pt-BR")}
+                    <div className="text-sm text-gray-400 mb-1">Tempo Restante</div>
+                    <div className="text-lg font-mono">
+                      {license.daysRemaining || 0}d {license.hoursRemaining || 0}h {license.minutesRemaining || 0}m
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Expires: {new Date(license.expiresAt).toLocaleDateString("pt-BR")}
                     </div>
                   </div>
                   
@@ -226,6 +229,9 @@ export default function Dashboard() {
                     <Badge variant="secondary" className="text-neon-yellow bg-yellow-500/20">
                       {license.plan.toUpperCase()}
                     </Badge>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Status: {license.status?.toUpperCase()}
+                    </div>
                   </div>
                 </div>
               ) : (
