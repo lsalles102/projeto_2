@@ -41,8 +41,8 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   const externalReference = `payment_${nanoid()}`;
   const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais
   
-  // URL base da aplicação
-  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.REPLIT_URL || 'http://localhost:5000';
+  // URL base da aplicação - usar URL pública válida para webhook
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.REPLIT_URL || 'https://webhook.site/b5811f56-ae85-4342-9a1f-c1df4876e770';
   
   const paymentData = {
     transaction_amount: transactionAmount,
@@ -54,9 +54,13 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
       last_name: data.payerLastName,
     },
     external_reference: externalReference,
-    notification_url: `${baseUrl}/api/payments/webhook`,
     date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
   };
+
+  // Adicionar notification_url apenas se tivermos uma URL válida do Render
+  if (process.env.RENDER_EXTERNAL_URL) {
+    paymentData.notification_url = `${process.env.RENDER_EXTERNAL_URL}/api/payments/webhook`;
+  }
 
   try {
     // Criar pagamento PIX diretamente
@@ -102,7 +106,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
           ],
         },
         external_reference: externalReference,
-        notification_url: `${baseUrl}/api/payments/webhook`,
+        notification_url: baseUrl.includes('webhook.site') ? baseUrl : `${baseUrl}/api/payments/webhook`,
         expires: true,
         expiration_date_from: new Date().toISOString(),
         expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
