@@ -40,7 +40,6 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link href="/terms" className="hover:text-neon-green transition-colors duration-300">Termos de Uso</Link></li>
               <li><Link href="/privacy" className="hover:text-neon-green transition-colors duration-300">Política de Privacidade</Link></li>
-              <li><a href="#" className="hover:text-neon-green transition-colors duration-300">Reembolsos</a></li>
               <li><a href="#" className="hover:text-neon-green transition-colors duration-300">DMCA</a></li>
             </ul>
           </div>

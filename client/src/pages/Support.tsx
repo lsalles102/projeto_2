@@ -68,9 +68,9 @@ export default function Support() {
         "Cada licença é vinculada a um HWID específico por questões de segurança. Para usar em outro PC, você pode resetar seu HWID através do painel de usuário uma vez por mês.",
     },
     {
-      question: "Como funciona o sistema de reembolso?",
+      question: "Posso trocar meu HWID?",
       answer:
-        "Não existe politica de reembolso, todos os produtos são testados periodicamente, tenha ciêcia disto ao finalizar a compra.",
+        "Sim, você pode trocar seu HWID uma vez por mês através do painel de usuário. Esta funcionalidade permite usar sua licença em um computador diferente quando necessário.",
     },
     {
       question: "Que configurações são recomendadas?",
@@ -155,9 +155,7 @@ export default function Support() {
                       <SelectItem value="license">
                         Dúvida sobre licença
                       </SelectItem>
-                      <SelectItem value="refund">
-                        Solicitação de reembolso
-                      </SelectItem>
+
                       <SelectItem value="suggestion">Sugestão</SelectItem>
                       <SelectItem value="other">Outro</SelectItem>
                     </SelectContent>
