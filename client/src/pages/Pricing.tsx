@@ -102,7 +102,7 @@ export default function Pricing() {
                 </ul>
 
                 {isAuthenticated ? (
-                  <Link href="/checkout">
+                  <Link href="/payment">
                     <Button
                       className={`w-full py-3 font-bold transition-all duration-300 ${
                         plan.buttonVariant === "default"
@@ -111,10 +111,9 @@ export default function Pricing() {
                       }`}
                       variant={plan.buttonVariant}
                     >
-                      {plan.name === "PREMIUM" && (
+                      {plan.name === "15 DIAS" && (
                         <Crown className="w-4 h-4 mr-2" />
                       )}
-                      {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
                       {plan.buttonText}
                     </Button>
                   </Link>

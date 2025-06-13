@@ -71,12 +71,6 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
     },
     external_reference: externalReference,
     notification_url: `${baseUrl}/api/payments/webhook`,
-    back_urls: {
-      success: `${baseUrl}/payment/success`,
-      failure: `${baseUrl}/payment/failure`,
-      pending: `${baseUrl}/payment/pending`,
-    },
-    auto_return: 'approved',
     binary_mode: true,
     expires: true,
     expiration_date_from: new Date().toISOString(),

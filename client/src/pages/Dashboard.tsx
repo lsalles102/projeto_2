@@ -250,13 +250,22 @@ export default function Dashboard() {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-400 mb-4">Você ainda não possui uma licença ativa.</p>
-                  <Button
-                    onClick={() => setShowActivateForm(!showActivateForm)}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Key className="w-4 h-4 mr-2" />
-                    Ativar Licença
-                  </Button>
+                  <div className="flex gap-4 justify-center">
+                    <Link href="/payment">
+                      <Button className="bg-green-600 hover:bg-green-700">
+                        <Download className="w-4 h-4 mr-2" />
+                        Comprar Licença PIX
+                      </Button>
+                    </Link>
+                    <Button
+                      onClick={() => setShowActivateForm(!showActivateForm)}
+                      variant="outline"
+                      className="border-primary/20 hover:bg-primary/10"
+                    >
+                      <Key className="w-4 h-4 mr-2" />
+                      Ativar Chave
+                    </Button>
+                  </div>
                 </div>
               )}
 
