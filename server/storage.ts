@@ -16,7 +16,7 @@ import {
 } from "@shared/schema";
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
-import { eq, and, gt, lt } from 'drizzle-orm';
+import { eq, and, gt, lt, sql } from 'drizzle-orm';
 import * as schema from "@shared/schema";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -104,6 +104,7 @@ export class MemStorage implements IStorage {
       profileImageUrl: null,
       googleId: null,
       hwid: null,
+      isAdmin: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -156,6 +157,7 @@ export class MemStorage implements IStorage {
       profileImageUrl: userData.profileImageUrl || null,
       googleId: userData.googleId || null,
       hwid: userData.hwid || null,
+      isAdmin: userData.isAdmin || false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -368,6 +370,64 @@ export class MemStorage implements IStorage {
 
     return license;
   }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    return this.users;
+  }
+
+  async getAllLicenses(): Promise<License[]> {
+    return this.licenses;
+  }
+
+  async getAllActivationKeys(): Promise<ActivationKey[]> {
+    return this.activationKeys;
+  }
+
+  async getSystemStats(): Promise<{
+    totalUsers: number;
+    totalLicenses: number;
+    activeLicenses: number;
+    totalActivationKeys: number;
+    unusedActivationKeys: number;
+    totalDownloads: number;
+  }> {
+    return {
+      totalUsers: this.users.length,
+      totalLicenses: this.licenses.length,
+      activeLicenses: this.licenses.filter(l => l.status === 'active').length,
+      totalActivationKeys: this.activationKeys.length,
+      unusedActivationKeys: this.activationKeys.filter(ak => !ak.isUsed).length,
+      totalDownloads: this.downloadLogs.length,
+    };
+  }
+
+  async deleteActivationKey(id: number): Promise<void> {
+    const index = this.activationKeys.findIndex(ak => ak.id === id);
+    if (index !== -1) {
+      this.activationKeys.splice(index, 1);
+    }
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    const userIndex = this.users.findIndex(u => u.id === id);
+    if (userIndex !== -1) {
+      this.users.splice(userIndex, 1);
+      // Also delete related data
+      this.licenses = this.licenses.filter(l => l.userId !== id);
+      this.downloadLogs = this.downloadLogs.filter(dl => dl.userId !== id);
+      this.passwordResetTokens = this.passwordResetTokens.filter(prt => prt.userId !== id);
+    }
+  }
+
+  async deleteLicense(id: number): Promise<void> {
+    const index = this.licenses.findIndex(l => l.id === id);
+    if (index !== -1) {
+      this.licenses.splice(index, 1);
+      // Also delete related download logs
+      this.downloadLogs = this.downloadLogs.filter(dl => dl.licenseId !== id);
+    }
+  }
 }
 
 // PostgreSQL storage implementation using Drizzle ORM
@@ -568,6 +628,64 @@ export class PostgresStorage implements IStorage {
       .returning();
 
     return result[0];
+  }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    return await this.db.select().from(users);
+  }
+
+  async getAllLicenses(): Promise<License[]> {
+    return await this.db.select().from(licenses);
+  }
+
+  async getAllActivationKeys(): Promise<ActivationKey[]> {
+    return await this.db.select().from(activationKeys);
+  }
+
+  async getSystemStats(): Promise<{
+    totalUsers: number;
+    totalLicenses: number;
+    activeLicenses: number;
+    totalActivationKeys: number;
+    unusedActivationKeys: number;
+    totalDownloads: number;
+  }> {
+    const allUsers = await this.db.select().from(users);
+    const allLicenses = await this.db.select().from(licenses);
+    const activeLicenses = await this.db.select().from(licenses).where(eq(licenses.status, 'active'));
+    const allKeys = await this.db.select().from(activationKeys);
+    const unusedKeys = await this.db.select().from(activationKeys).where(eq(activationKeys.isUsed, false));
+    const allDownloads = await this.db.select().from(downloadLogs);
+
+    return {
+      totalUsers: allUsers.length,
+      totalLicenses: allLicenses.length,
+      activeLicenses: activeLicenses.length,
+      totalActivationKeys: allKeys.length,
+      unusedActivationKeys: unusedKeys.length,
+      totalDownloads: allDownloads.length,
+    };
+  }
+
+  async deleteActivationKey(id: number): Promise<void> {
+    await this.db.delete(activationKeys).where(eq(activationKeys.id, id));
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    // Delete related data first
+    await this.db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
+    await this.db.delete(licenses).where(eq(licenses.userId, id));
+    await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+    // Delete user
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+
+  async deleteLicense(id: number): Promise<void> {
+    // Delete related download logs first
+    await this.db.delete(downloadLogs).where(eq(downloadLogs.licenseId, id));
+    // Delete license
+    await this.db.delete(licenses).where(eq(licenses.id, id));
   }
 }
 
