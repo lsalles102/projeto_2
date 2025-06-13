@@ -339,4 +339,285 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class PostgresStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, id),
+    });
+    return result;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.email, email),
+    });
+    return result;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.googleId, googleId),
+    });
+    return result;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const { db } = await import("./db");
+    const { users } = await import("@shared/schema");
+    
+    const result = await db.insert(users).values({
+      ...userData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const { db } = await import("./db");
+    const { users } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("User not found");
+    }
+    
+    return result[0];
+  }
+
+  async getLicense(id: number): Promise<License | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.licenses.findFirst({
+      where: (licenses, { eq }) => eq(licenses.id, id),
+    });
+    return result;
+  }
+
+  async getLicenseByUserId(userId: number): Promise<License | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.licenses.findFirst({
+      where: (licenses, { eq }) => eq(licenses.userId, userId),
+    });
+    return result;
+  }
+
+  async getLicenseByKey(key: string): Promise<License | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.licenses.findFirst({
+      where: (licenses, { eq }) => eq(licenses.key, key),
+    });
+    return result;
+  }
+
+  async createLicense(licenseData: InsertLicense): Promise<License> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    
+    const result = await db.insert(licenses).values({
+      ...licenseData,
+      createdAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async updateLicense(id: number, updates: Partial<License>): Promise<License> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(licenses)
+      .set(updates)
+      .where(eq(licenses.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("License not found");
+    }
+    
+    return result[0];
+  }
+
+  async getActivationKey(key: string): Promise<ActivationKey | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.activationKeys.findFirst({
+      where: (activationKeys, { eq }) => eq(activationKeys.key, key),
+    });
+    return result;
+  }
+
+  async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
+    const { db } = await import("./db");
+    const { activationKeys } = await import("@shared/schema");
+    
+    const result = await db.insert(activationKeys).values({
+      ...activationKeyData,
+      createdAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async markActivationKeyAsUsed(key: string, userId: number): Promise<ActivationKey> {
+    const { db } = await import("./db");
+    const { activationKeys } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(activationKeys)
+      .set({
+        isUsed: true,
+        usedBy: userId,
+        usedAt: new Date(),
+      })
+      .where(eq(activationKeys.key, key))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Activation key not found");
+    }
+    
+    return result[0];
+  }
+
+  async logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog> {
+    const { db } = await import("./db");
+    const { downloadLogs } = await import("@shared/schema");
+    
+    const result = await db.insert(downloadLogs).values({
+      userId,
+      licenseId,
+      fileName,
+      downloadedAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getUserDownloads(userId: number): Promise<DownloadLog[]> {
+    const { db } = await import("./db");
+    const result = await db.query.downloadLogs.findMany({
+      where: (downloadLogs, { eq }) => eq(downloadLogs.userId, userId),
+      orderBy: (downloadLogs, { desc }) => desc(downloadLogs.downloadedAt),
+    });
+    return result;
+  }
+
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const { db } = await import("./db");
+    const { passwordResetTokens } = await import("@shared/schema");
+    
+    const result = await db.insert(passwordResetTokens).values({
+      ...tokenData,
+      createdAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.passwordResetTokens.findFirst({
+      where: (passwordResetTokens, { eq }) => eq(passwordResetTokens.token, token),
+    });
+    return result;
+  }
+
+  async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
+    const { db } = await import("./db");
+    const { passwordResetTokens } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Password reset token not found");
+    }
+    
+    return result[0];
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    const { db } = await import("./db");
+    const { passwordResetTokens } = await import("@shared/schema");
+    const { lt } = await import("drizzle-orm");
+    
+    await db.delete(passwordResetTokens)
+      .where(lt(passwordResetTokens.expiresAt, new Date()));
+  }
+
+  async createPayment(paymentData: InsertPayment): Promise<Payment> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    
+    const result = await db.insert(payments).values({
+      ...paymentData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.payments.findFirst({
+      where: (payments, { eq }) => eq(payments.externalReference, externalReference),
+    });
+    return result;
+  }
+
+  async updatePayment(id: number, updates: Partial<Payment>): Promise<Payment> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(payments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Payment not found");
+    }
+    
+    return result[0];
+  }
+
+  async getSystemStats(): Promise<any> {
+    const { db } = await import("./db");
+    const { count } = await import("drizzle-orm");
+    const { users, licenses, activationKeys, payments, downloadLogs, passwordResetTokens } = await import("@shared/schema");
+    
+    const [usersCount, licensesCount, activationKeysCount, paymentsCount, downloadLogsCount, passwordResetTokensCount] = await Promise.all([
+      db.select({ count: count() }).from(users),
+      db.select({ count: count() }).from(licenses),
+      db.select({ count: count() }).from(activationKeys),
+      db.select({ count: count() }).from(payments),
+      db.select({ count: count() }).from(downloadLogs),
+      db.select({ count: count() }).from(passwordResetTokens),
+    ]);
+    
+    return {
+      users: usersCount[0].count,
+      licenses: licensesCount[0].count,
+      activationKeys: activationKeysCount[0].count,
+      payments: paymentsCount[0].count,
+      downloadLogs: downloadLogsCount[0].count,
+      passwordResetTokens: passwordResetTokensCount[0].count,
+    };
+  }
+}
+
+export const storage = new PostgresStorage();
