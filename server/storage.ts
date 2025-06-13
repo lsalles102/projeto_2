@@ -55,10 +55,19 @@ export interface IStorage {
   updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined>;
   decrementLicenseTime(licenseId: number, minutes: number): Promise<License>;
   
+  // Payment operations
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPayment(id: number): Promise<Payment | undefined>;
+  getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined>;
+  getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined>;
+  updatePayment(id: number, updates: Partial<Payment>): Promise<Payment>;
+  getUserPayments(userId: number): Promise<Payment[]>;
+  
   // Admin operations
   getAllUsers(): Promise<User[]>;
   getAllLicenses(): Promise<License[]>;
   getAllActivationKeys(): Promise<ActivationKey[]>;
+  getAllPayments(): Promise<Payment[]>;
   getSystemStats(): Promise<{
     totalUsers: number;
     totalLicenses: number;
@@ -66,10 +75,13 @@ export interface IStorage {
     totalActivationKeys: number;
     unusedActivationKeys: number;
     totalDownloads: number;
+    totalPayments: number;
+    approvedPayments: number;
   }>;
   deleteActivationKey(id: number): Promise<void>;
   deleteUser(id: number): Promise<void>;
   deleteLicense(id: number): Promise<void>;
+  deletePayment(id: number): Promise<void>;
 }
 
 // In-memory storage implementation
@@ -79,11 +91,13 @@ export class MemStorage implements IStorage {
   private activationKeys: ActivationKey[] = [];
   private downloadLogs: DownloadLog[] = [];
   private passwordResetTokens: PasswordResetToken[] = [];
+  private payments: Payment[] = [];
   private nextUserId = 1;
   private nextLicenseId = 1;
   private nextDownloadId = 1;
   private nextActivationKeyId = 1;
   private nextPasswordResetTokenId = 1;
+  private nextPaymentId = 1;
 
   constructor() {
     // Initialize test data synchronously with pre-hashed password
@@ -314,6 +328,63 @@ export class MemStorage implements IStorage {
     this.passwordResetTokens = this.passwordResetTokens.filter(t => t.expiresAt > now);
   }
 
+  // Payment operations
+  async createPayment(paymentData: InsertPayment): Promise<Payment> {
+    const payment: Payment = {
+      id: this.nextPaymentId++,
+      userId: paymentData.userId,
+      mercadoPagoId: paymentData.mercadoPagoId || null,
+      preferenceId: paymentData.preferenceId || null,
+      externalReference: paymentData.externalReference,
+      status: paymentData.status || 'pending',
+      statusDetail: paymentData.statusDetail || null,
+      transactionAmount: paymentData.transactionAmount,
+      currency: paymentData.currency || 'BRL',
+      plan: paymentData.plan,
+      durationDays: paymentData.durationDays,
+      payerEmail: paymentData.payerEmail || null,
+      payerFirstName: paymentData.payerFirstName || null,
+      payerLastName: paymentData.payerLastName || null,
+      paymentMethodId: paymentData.paymentMethodId || null,
+      notificationUrl: paymentData.notificationUrl || null,
+      pixQrCode: paymentData.pixQrCode || null,
+      pixQrCodeBase64: paymentData.pixQrCodeBase64 || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.payments.push(payment);
+    return payment;
+  }
+
+  async getPayment(id: number): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.id === id);
+  }
+
+  async getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.externalReference === externalReference);
+  }
+
+  async getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.preferenceId === preferenceId);
+  }
+
+  async updatePayment(id: number, updates: Partial<Payment>): Promise<Payment> {
+    const paymentIndex = this.payments.findIndex(payment => payment.id === id);
+    if (paymentIndex === -1) {
+      throw new Error("Payment não encontrado");
+    }
+    this.payments[paymentIndex] = {
+      ...this.payments[paymentIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    return this.payments[paymentIndex];
+  }
+
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    return this.payments.filter(payment => payment.userId === userId);
+  }
+
   // HWID-based license operations
   async getLicenseByHwid(hwid: string): Promise<License | undefined> {
     return this.licenses.find(license => license.hwid === hwid && license.status === 'active');
@@ -385,6 +456,10 @@ export class MemStorage implements IStorage {
     return this.activationKeys;
   }
 
+  async getAllPayments(): Promise<Payment[]> {
+    return this.payments;
+  }
+
   async getSystemStats(): Promise<{
     totalUsers: number;
     totalLicenses: number;
@@ -392,6 +467,8 @@ export class MemStorage implements IStorage {
     totalActivationKeys: number;
     unusedActivationKeys: number;
     totalDownloads: number;
+    totalPayments: number;
+    approvedPayments: number;
   }> {
     return {
       totalUsers: this.users.length,
@@ -400,6 +477,8 @@ export class MemStorage implements IStorage {
       totalActivationKeys: this.activationKeys.length,
       unusedActivationKeys: this.activationKeys.filter(ak => !ak.isUsed).length,
       totalDownloads: this.downloadLogs.length,
+      totalPayments: this.payments.length,
+      approvedPayments: this.payments.filter(p => p.status === 'approved').length,
     };
   }
 
@@ -427,6 +506,13 @@ export class MemStorage implements IStorage {
       this.licenses.splice(index, 1);
       // Also delete related download logs
       this.downloadLogs = this.downloadLogs.filter(dl => dl.licenseId !== id);
+    }
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    const index = this.payments.findIndex(p => p.id === id);
+    if (index !== -1) {
+      this.payments.splice(index, 1);
     }
   }
 }
@@ -541,6 +627,39 @@ export class PostgresStorage implements IStorage {
       .where(lt(passwordResetTokens.expiresAt, new Date()));
   }
 
+  // Payment operations
+  async createPayment(paymentData: InsertPayment): Promise<Payment> {
+    const result = await db.insert(payments).values(paymentData).returning();
+    return result[0];
+  }
+
+  async getPayment(id: number): Promise<Payment | undefined> {
+    const result = await db.select().from(payments).where(eq(payments.id, id));
+    return result[0];
+  }
+
+  async getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined> {
+    const result = await db.select().from(payments).where(eq(payments.externalReference, externalReference));
+    return result[0];
+  }
+
+  async getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined> {
+    const result = await db.select().from(payments).where(eq(payments.preferenceId, preferenceId));
+    return result[0];
+  }
+
+  async updatePayment(id: number, updates: Partial<Payment>): Promise<Payment> {
+    const result = await db.update(payments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    return await db.select().from(payments).where(eq(payments.userId, userId));
+  }
+
   // HWID-based license operations
   async getLicenseByHwid(hwid: string): Promise<License | undefined> {
     const result = await db.select()
@@ -643,6 +762,10 @@ export class PostgresStorage implements IStorage {
     return await db.select().from(activationKeys);
   }
 
+  async getAllPayments(): Promise<Payment[]> {
+    return await db.select().from(payments);
+  }
+
   async getSystemStats(): Promise<{
     totalUsers: number;
     totalLicenses: number;
@@ -650,6 +773,8 @@ export class PostgresStorage implements IStorage {
     totalActivationKeys: number;
     unusedActivationKeys: number;
     totalDownloads: number;
+    totalPayments: number;
+    approvedPayments: number;
   }> {
     const allUsers = await db.select().from(users);
     const allLicenses = await db.select().from(licenses);
@@ -657,6 +782,8 @@ export class PostgresStorage implements IStorage {
     const allKeys = await db.select().from(activationKeys);
     const unusedKeys = await db.select().from(activationKeys).where(eq(activationKeys.isUsed, false));
     const allDownloads = await db.select().from(downloadLogs);
+    const allPayments = await db.select().from(payments);
+    const approvedPayments = await db.select().from(payments).where(eq(payments.status, 'approved'));
 
     return {
       totalUsers: allUsers.length,
