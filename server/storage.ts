@@ -7,8 +7,19 @@ import {
   type InsertActivationKey,
   type DownloadLog,
   type PasswordResetToken,
-  type InsertPasswordResetToken
+  type InsertPasswordResetToken,
+  users,
+  licenses,
+  activationKeys,
+  downloadLogs,
+  passwordResetTokens
 } from "@shared/schema";
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
+import { eq, and, gt, lt } from 'drizzle-orm';
+import * as schema from "@shared/schema";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export interface IStorage {
   // User operations
@@ -273,4 +284,116 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// PostgreSQL storage implementation using Drizzle ORM
+export class PostgresStorage implements IStorage {
+  private db = drizzle({ client: pool, schema });
+
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email));
+    return result[0];
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.googleId, googleId));
+    return result[0];
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(userData).returning();
+    return result[0];
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  async getLicense(id: number): Promise<License | undefined> {
+    const result = await this.db.select().from(licenses).where(eq(licenses.id, id));
+    return result[0];
+  }
+
+  async getLicenseByUserId(userId: number): Promise<License | undefined> {
+    const result = await this.db.select().from(licenses).where(eq(licenses.userId, userId));
+    return result[0];
+  }
+
+  async getLicenseByKey(key: string): Promise<License | undefined> {
+    const result = await this.db.select().from(licenses).where(eq(licenses.key, key));
+    return result[0];
+  }
+
+  async createLicense(licenseData: InsertLicense): Promise<License> {
+    const result = await this.db.insert(licenses).values(licenseData).returning();
+    return result[0];
+  }
+
+  async updateLicense(id: number, updates: Partial<License>): Promise<License> {
+    const result = await this.db.update(licenses).set(updates).where(eq(licenses.id, id)).returning();
+    return result[0];
+  }
+
+  async getActivationKey(key: string): Promise<ActivationKey | undefined> {
+    const result = await this.db.select().from(activationKeys).where(eq(activationKeys.key, key));
+    return result[0];
+  }
+
+  async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
+    const result = await this.db.insert(activationKeys).values(activationKeyData).returning();
+    return result[0];
+  }
+
+  async markActivationKeyAsUsed(key: string, userId: number): Promise<ActivationKey> {
+    const result = await this.db.update(activationKeys)
+      .set({ isUsed: true, usedBy: userId, usedAt: new Date() })
+      .where(eq(activationKeys.key, key))
+      .returning();
+    return result[0];
+  }
+
+  async logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog> {
+    const result = await this.db.insert(downloadLogs)
+      .values({ userId, licenseId, fileName, downloadedAt: new Date() })
+      .returning();
+    return result[0];
+  }
+
+  async getUserDownloads(userId: number): Promise<DownloadLog[]> {
+    return await this.db.select().from(downloadLogs).where(eq(downloadLogs.userId, userId));
+  }
+
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const result = await this.db.insert(passwordResetTokens).values(tokenData).returning();
+    return result[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const result = await this.db.select().from(passwordResetTokens)
+      .where(and(
+        eq(passwordResetTokens.token, token),
+        eq(passwordResetTokens.used, false),
+        gt(passwordResetTokens.expiresAt, new Date())
+      ));
+    return result[0];
+  }
+
+  async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
+    const result = await this.db.update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token))
+      .returning();
+    return result[0];
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    await this.db.delete(passwordResetTokens)
+      .where(lt(passwordResetTokens.expiresAt, new Date()));
+  }
+}
+
+export const storage = new PostgresStorage();
