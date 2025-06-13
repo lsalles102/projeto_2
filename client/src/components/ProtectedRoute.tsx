@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,9 +9,12 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  
+  const isAuthenticated = !!user;
+  const isLoading = loading;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

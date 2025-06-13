@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Crosshair, LogOut, User } from "lucide-react";
@@ -10,19 +10,19 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
   const [location, navigate] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, signOut } = useAuth();
+  const isAuthenticated = !!user;
   const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("/api/auth/logout", { method: "POST", body: {} }),
+    mutationFn: () => signOut(),
     onSuccess: () => {
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
       });
       navigate("/");
-      window.location.reload(); // Refresh to clear auth state
     },
     onError: () => {
       toast({
