@@ -50,6 +50,11 @@ export interface IStorage {
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken>;
   deleteExpiredPasswordResetTokens(): Promise<void>;
+  
+  // HWID-based license operations
+  getLicenseByHwid(hwid: string): Promise<License | undefined>;
+  updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined>;
+  decrementLicenseTime(licenseId: number, minutes: number): Promise<License>;
 }
 
 // In-memory storage implementation
@@ -213,7 +218,7 @@ export class MemStorage implements IStorage {
       id: this.nextActivationKeyId++,
       key: activationKeyData.key,
       plan: activationKeyData.plan,
-      durationDays: activationKeyData.durationDays || 30,
+      durationDays: activationKeyData.durationDays,
       createdAt: new Date(),
       isUsed: false,
       usedBy: null,
@@ -288,6 +293,64 @@ export class MemStorage implements IStorage {
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     const now = new Date();
     this.passwordResetTokens = this.passwordResetTokens.filter(t => t.expiresAt > now);
+  }
+
+  // HWID-based license operations
+  async getLicenseByHwid(hwid: string): Promise<License | undefined> {
+    return this.licenses.find(license => license.hwid === hwid && license.status === 'active');
+  }
+
+  async updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined> {
+    const licenseIndex = this.licenses.findIndex(license => 
+      license.key === licenseKey && license.hwid === hwid && license.status === 'active'
+    );
+    
+    if (licenseIndex === -1) {
+      return undefined;
+    }
+
+    // Update heartbeat and decrement 1 minute
+    this.licenses[licenseIndex].lastHeartbeat = new Date();
+    
+    if ((this.licenses[licenseIndex].totalMinutesRemaining || 0) > 0) {
+      this.licenses[licenseIndex].totalMinutesRemaining = (this.licenses[licenseIndex].totalMinutesRemaining || 0) - 1;
+      
+      // Recalculate days, hours, minutes
+      const totalMinutes = this.licenses[licenseIndex].totalMinutesRemaining || 0;
+      this.licenses[licenseIndex].daysRemaining = Math.floor(totalMinutes / (24 * 60));
+      this.licenses[licenseIndex].hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+      this.licenses[licenseIndex].minutesRemaining = totalMinutes % 60;
+      
+      // Check if license expired
+      if (totalMinutes <= 0) {
+        this.licenses[licenseIndex].status = 'expired';
+      }
+    }
+
+    return this.licenses[licenseIndex];
+  }
+
+  async decrementLicenseTime(licenseId: number, minutes: number): Promise<License> {
+    const licenseIndex = this.licenses.findIndex(license => license.id === licenseId);
+    if (licenseIndex === -1) {
+      throw new Error('License not found');
+    }
+
+    const license = this.licenses[licenseIndex];
+    license.totalMinutesRemaining = Math.max(0, (license.totalMinutesRemaining || 0) - minutes);
+    
+    // Recalculate days, hours, minutes
+    const totalMinutes = license.totalMinutesRemaining || 0;
+    license.daysRemaining = Math.floor(totalMinutes / (24 * 60));
+    license.hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+    license.minutesRemaining = totalMinutes % 60;
+    
+    // Check if license expired
+    if (totalMinutes <= 0) {
+      license.status = 'expired';
+    }
+
+    return license;
   }
 }
 
@@ -400,6 +463,95 @@ export class PostgresStorage implements IStorage {
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     await this.db.delete(passwordResetTokens)
       .where(lt(passwordResetTokens.expiresAt, new Date()));
+  }
+
+  // HWID-based license operations
+  async getLicenseByHwid(hwid: string): Promise<License | undefined> {
+    const result = await this.db.select()
+      .from(licenses)
+      .where(and(
+        eq(licenses.hwid, hwid),
+        eq(licenses.status, 'active')
+      ));
+    return result[0];
+  }
+
+  async updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined> {
+    // First get the current license
+    const currentLicense = await this.db.select()
+      .from(licenses)
+      .where(and(
+        eq(licenses.key, licenseKey),
+        eq(licenses.hwid, hwid),
+        eq(licenses.status, 'active')
+      ));
+
+    if (currentLicense.length === 0) {
+      return undefined;
+    }
+
+    const license = currentLicense[0];
+    let newTotalMinutes = Math.max(0, license.totalMinutesRemaining - 1);
+    let newStatus = license.status;
+
+    // Calculate new time breakdown
+    const days = Math.floor(newTotalMinutes / (24 * 60));
+    const hours = Math.floor((newTotalMinutes % (24 * 60)) / 60);
+    const minutes = newTotalMinutes % 60;
+
+    // Check if license expired
+    if (newTotalMinutes <= 0) {
+      newStatus = 'expired';
+    }
+
+    // Update the license
+    const result = await this.db.update(licenses)
+      .set({
+        lastHeartbeat: new Date(),
+        totalMinutesRemaining: newTotalMinutes,
+        daysRemaining: days,
+        hoursRemaining: hours,
+        minutesRemaining: minutes,
+        status: newStatus
+      })
+      .where(eq(licenses.id, license.id))
+      .returning();
+
+    return result[0];
+  }
+
+  async decrementLicenseTime(licenseId: number, minutes: number): Promise<License> {
+    const currentLicense = await this.db.select()
+      .from(licenses)
+      .where(eq(licenses.id, licenseId));
+
+    if (currentLicense.length === 0) {
+      throw new Error('License not found');
+    }
+
+    const license = currentLicense[0];
+    const newTotalMinutes = Math.max(0, license.totalMinutesRemaining - minutes);
+    
+    // Calculate new time breakdown
+    const days = Math.floor(newTotalMinutes / (24 * 60));
+    const hours = Math.floor((newTotalMinutes % (24 * 60)) / 60);
+    const mins = newTotalMinutes % 60;
+
+    // Check if license expired
+    const newStatus = newTotalMinutes <= 0 ? 'expired' : license.status;
+
+    const result = await this.db.update(licenses)
+      .set({
+        totalMinutesRemaining: newTotalMinutes,
+        daysRemaining: days,
+        hoursRemaining: hours,
+        minutesRemaining: mins,
+        status: newStatus
+      })
+      .where(eq(licenses.id, licenseId))
+      .returning();
+
+    return result[0];
   }
 }
 
