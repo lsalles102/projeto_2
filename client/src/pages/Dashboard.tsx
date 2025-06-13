@@ -124,10 +124,7 @@ export default function Dashboard() {
   };
 
   const handleSettings = () => {
-    toast({
-      title: "Configurações",
-      description: "Funcionalidade em desenvolvimento",
-    });
+    window.location.href = "/settings";
   };
 
   const handleSupport = () => {
