@@ -120,8 +120,7 @@ export default function Pricing() {
                   </Link>
                 ) : (
                   <Button
-                    className="w-full py-3 font-bold bg-gray-600 text-gray-300 cursor-not-allowed"
-                    disabled
+                    className="w-full py-3 font-bold bg-gray-600 text-gray-300 hover:bg-gray-500 transition-colors"
                     onClick={() => navigate("/login")}
                   >
                     Faça login para comprar
