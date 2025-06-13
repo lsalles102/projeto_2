@@ -491,7 +491,7 @@ export class PostgresStorage implements IStorage {
     }
 
     const license = currentLicense[0];
-    let newTotalMinutes = Math.max(0, license.totalMinutesRemaining - 1);
+    let newTotalMinutes = Math.max(0, (license.totalMinutesRemaining || 0) - 1);
     let newStatus = license.status;
 
     // Calculate new time breakdown
@@ -530,7 +530,7 @@ export class PostgresStorage implements IStorage {
     }
 
     const license = currentLicense[0];
-    const newTotalMinutes = Math.max(0, license.totalMinutesRemaining - minutes);
+    const newTotalMinutes = Math.max(0, (license.totalMinutesRemaining || 0) - minutes);
     
     // Calculate new time breakdown
     const days = Math.floor(newTotalMinutes / (24 * 60));

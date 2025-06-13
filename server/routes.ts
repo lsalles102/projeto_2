@@ -4,7 +4,7 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
-import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema } from "@shared/schema";
+import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
@@ -130,15 +130,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid or already used activation key" });
       }
 
-      // Create license with correct duration
+      // Create license with correct duration and time tracking
+      const totalMinutes = activationKey.durationDays * 24 * 60;
+      const daysRemaining = Math.floor(totalMinutes / (24 * 60));
+      const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+      const minutesRemaining = totalMinutes % 60;
+      
       const expiresAt = new Date();
-      if (activationKey.plan === "7days") {
-        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
-      } else if (activationKey.plan === "15days") {
-        expiresAt.setDate(expiresAt.getDate() + 15); // 15 days from now
-      } else {
-        expiresAt.setDate(expiresAt.getDate() + 7); // default to 7 days
-      }
+      expiresAt.setDate(expiresAt.getDate() + activationKey.durationDays);
 
       const license = await storage.createLicense({
         userId: user.id,
@@ -146,6 +145,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         plan: activationKey.plan,
         status: "active",
         hwid,
+        daysRemaining,
+        hoursRemaining,
+        minutesRemaining,
+        totalMinutesRemaining: totalMinutes,
         expiresAt,
         activatedAt: new Date(),
       });
@@ -239,6 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activationKey = await storage.createActivationKey({
           key,
           plan,
+          durationDays: plan === "7days" ? 7 : 15,
           isUsed: false,
         });
         keys.push(activationKey);
@@ -512,6 +516,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Contact form error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // HWID-based license system routes
+  
+  // Check license status by HWID (for loader)
+  app.post("/api/licenses/status", async (req, res) => {
+    try {
+      const { hwid } = licenseStatusSchema.parse(req.body);
+      
+      const license = await storage.getLicenseByHwid(hwid);
+      
+      if (!license) {
+        return res.status(404).json({ 
+          message: "No active license found for this hardware", 
+          valid: false 
+        });
+      }
+
+      // Check if license has expired
+      const now = new Date();
+      if (license.status === 'expired' || license.expiresAt < now || (license.totalMinutesRemaining || 0) <= 0) {
+        return res.json({
+          message: "License expired",
+          valid: false,
+          timeRemaining: {
+            days: 0,
+            hours: 0,
+            minutes: 0
+          }
+        });
+      }
+
+      res.json({
+        valid: true,
+        plan: license.plan,
+        timeRemaining: {
+          days: license.daysRemaining || 0,
+          hours: license.hoursRemaining || 0,
+          minutes: license.minutesRemaining || 0
+        },
+        expiresAt: license.expiresAt
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("License status check error:", error);
+      res.status(500).json({ message: "License status check failed" });
+    }
+  });
+
+  // Heartbeat endpoint (decrements time and updates last activity)
+  app.post("/api/licenses/heartbeat", async (req, res) => {
+    try {
+      const { licenseKey, hwid } = heartbeatSchema.parse(req.body);
+      
+      const updatedLicense = await storage.updateLicenseHeartbeat(licenseKey, hwid);
+      
+      if (!updatedLicense) {
+        return res.status(404).json({ 
+          message: "License not found or invalid", 
+          valid: false 
+        });
+      }
+
+      // Return current status
+      const valid = updatedLicense.status === 'active' && (updatedLicense.totalMinutesRemaining || 0) > 0;
+      
+      res.json({
+        valid,
+        timeRemaining: {
+          days: updatedLicense.daysRemaining || 0,
+          hours: updatedLicense.hoursRemaining || 0,
+          minutes: updatedLicense.minutesRemaining || 0
+        },
+        status: updatedLicense.status
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("License heartbeat error:", error);
+      res.status(500).json({ message: "License heartbeat failed" });
+    }
+  });
+
+  // Admin endpoint to manually decrement time
+  app.post("/api/admin/licenses/:id/decrement", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { minutes } = req.body;
+      
+      if (!minutes || minutes < 1) {
+        return res.status(400).json({ message: "Invalid minutes value" });
+      }
+
+      const updatedLicense = await storage.decrementLicenseTime(parseInt(id), minutes);
+      
+      res.json({
+        license: updatedLicense,
+        message: `Decremented ${minutes} minutes from license`
+      });
+    } catch (error) {
+      console.error("License time decrement error:", error);
+      res.status(500).json({ message: "Time decrement failed" });
     }
   });
 
