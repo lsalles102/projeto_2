@@ -4,7 +4,7 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
-import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
+import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
@@ -859,10 +859,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/user/password", isAuthenticated, async (req, res) => {
+  app.patch("/api/auth/password", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const { currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword, confirmPassword } = changePasswordSchema.parse(req.body);
 
       // Verify current password
       const isValidPassword = await bcrypt.compare(currentPassword, user.password);
@@ -876,6 +876,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
       console.error("Password change error:", error);
       res.status(500).json({ message: "Erro ao alterar senha" });
     }
