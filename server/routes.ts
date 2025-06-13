@@ -141,6 +141,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update profile route
+  app.patch("/api/auth/profile", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const updateData = z.object({
+        firstName: z.string().min(1, "Nome é obrigatório"),
+        lastName: z.string().min(1, "Sobrenome é obrigatório"),
+        email: z.string().email("Email inválido"),
+      }).parse(req.body);
+
+      // Check if email is already in use by another user
+      if (updateData.email !== user.email) {
+        const existingUser = await storage.getUserByEmail(updateData.email);
+        if (existingUser && existingUser.id !== user.id) {
+          return res.status(400).json({ message: "Este email já está em uso" });
+        }
+      }
+
+      const updatedUser = await storage.updateUser(user.id, updateData);
+      res.json({ 
+        user: { ...updatedUser, password: undefined },
+        message: "Perfil atualizado com sucesso" 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+  });
+
+  // Change password route
+  app.patch("/api/auth/password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const passwordData = z.object({
+        currentPassword: z.string().min(1, "Senha atual é obrigatória"),
+        newPassword: z.string().min(6, "Nova senha deve ter pelo menos 6 caracteres"),
+        confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
+      }).refine(data => data.newPassword === data.confirmPassword, {
+        message: "As senhas não coincidem",
+        path: ["confirmPassword"],
+      }).parse(req.body);
+
+      // Get current user with password
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(passwordData.currentPassword, currentUser.password || "");
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(passwordData.newPassword, 12);
+
+      // Update password
+      await storage.updateUser(user.id, { password: hashedNewPassword });
+
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
   // Dashboard route
   app.get("/api/dashboard", isAuthenticated, async (req, res) => {
     try {
