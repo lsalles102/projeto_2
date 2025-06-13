@@ -83,19 +83,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    const data = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: {
-        email,
-        password,
+    try {
+      const data = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: {
+          email,
+          password,
+        }
+      });
+      
+      if (data.user) {
+        setUser(data.user);
+        // Force a state update to trigger re-renders
+        setLoading(false);
       }
-    });
-    
-    if (data.user) {
-      setUser(data.user);
+      
+      return data;
+    } catch (error) {
+      setUser(null);
+      setLoading(false);
+      throw error;
     }
-    
-    return data;
   };
 
   const signOut = async () => {

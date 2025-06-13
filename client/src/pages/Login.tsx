@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation } from "wouter";
@@ -19,8 +19,15 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { user, signIn, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -35,12 +42,17 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await signIn(data.email, data.password);
-      toast({
-        title: "Login realizado",
-        description: "Bem-vindo de volta ao FovDark!",
-      });
-      navigate("/dashboard");
+      const result = await signIn(data.email, data.password);
+      if (result.user) {
+        toast({
+          title: "Login realizado",
+          description: "Bem-vindo de volta ao FovDark!",
+        });
+        // Use setTimeout to ensure state updates have propagated
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 100);
+      }
     } catch (error: any) {
       toast({
         title: "Erro no login",
