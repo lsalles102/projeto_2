@@ -45,8 +45,12 @@ export default function Pricing() {
     <div className="py-20">
       {/* Hero Section */}
       <div className="text-center mb-16 pricing-bg py-16 mx-6 rounded-xl">
-        <h1 className="text-5xl font-orbitron font-bold  mb-4">PLANOS PREMIUM</h1>
-        <p className="text-xl text-gray-300">Escolha o melhor plano para dominar o BloodStrike</p>
+        <h1 className="text-5xl font-orbitron font-bold  mb-4">
+          PLANOS PREMIUM
+        </h1>
+        <p className="text-xl text-gray-300">
+          Escolha o melhor plano para dominar o BloodStrike
+        </p>
       </div>
 
       <div className="container mx-auto px-6 max-w-6xl">
@@ -69,8 +73,12 @@ export default function Pricing() {
 
               <CardHeader className="text-center pb-8 pt-8">
                 <div className="mx-auto mb-4">{plan.icon}</div>
-                <h3 className="text-2xl font-orbitron font-bold mb-2">{plan.name}</h3>
-                <div className="text-4xl font-bold text-primary mb-1">{plan.price}</div>
+                <h3 className="text-2xl font-orbitron font-bold mb-2">
+                  {plan.name}
+                </h3>
+                <div className="text-4xl font-bold text-primary mb-1">
+                  {plan.price}
+                </div>
                 <p className="text-gray-400">por {plan.duration}</p>
               </CardHeader>
 
@@ -98,7 +106,9 @@ export default function Pricing() {
                   }`}
                   variant={plan.buttonVariant}
                 >
-                  {plan.name === "PREMIUM" && <Crown className="w-4 h-4 mr-2" />}
+                  {plan.name === "PREMIUM" && (
+                    <Crown className="w-4 h-4 mr-2" />
+                  )}
                   {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
                   {plan.buttonText}
                 </Button>
@@ -107,16 +117,14 @@ export default function Pricing() {
           ))}
         </div>
 
-
-
         {/* Payment Methods */}
         <div className="text-center mb-16">
-          <h3 className="text-2xl font-orbitron font-bold mb-8">Método de Pagamento</h3>
+          <h3 className="text-2xl font-orbitron font-bold mb-8">
+            Método de Pagamento
+          </h3>
           <div className="flex justify-center items-center">
             <div className="bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg p-6 border border-primary/30">
-              <div className="text-6xl text-primary mb-4">
-                💳
-              </div>
+              <div className="text-6xl text-primary mb-4">💳</div>
               <h4 className="text-2xl font-bold text-primary mb-2">PIX</h4>
               <p className="text-gray-300">Pagamento instantâneo e seguro</p>
             </div>
@@ -133,40 +141,47 @@ export default function Pricing() {
           <CardContent>
             <div className="space-y-6">
               <div>
-                <h4 className="font-semibold mb-2">Posso trocar de plano depois?</h4>
+                <h4 className="font-semibold mb-2">
+                  Posso usar em mais de um dispositivo?
+                </h4>
                 <p className="text-gray-400 text-sm">
-                  Sim, você pode fazer upgrade ou downgrade do seu plano a qualquer momento. 
-                  As diferenças serão calculadas proporcionalmente.
+                  Não, licença unica serve apenas para um dispositivo.
                 </p>
               </div>
-              
+
               <div>
-                <h4 className="font-semibold mb-2">Como funcionam os planos de dias?</h4>
+                <h4 className="font-semibold mb-2">
+                  Como funcionam os planos de dias?
+                </h4>
                 <p className="text-gray-400 text-sm">
-                  Oferecemos planos de 7 e 15 dias. Após o período, você pode renovar ou escolher outro plano.
+                  Oferecemos planos de 7 e 15 dias. Após o período, você pode
+                  renovar ou escolher outro plano.
                 </p>
               </div>
-              
+
               <div>
-                <h4 className="font-semibold mb-2">Como funciona o pagamento?</h4>
+                <h4 className="font-semibold mb-2">
+                  Como funciona o pagamento?
+                </h4>
                 <p className="text-gray-400 text-sm">
-                  Pagamento único por período selecionado. Todas as vendas são finais - não há reembolsos.
+                  Pagamento único por período selecionado. Todas as vendas são
+                  finais - não há reembolsos.
                 </p>
               </div>
-              
+
               <div>
-                <h4 className="font-semibold mb-2">Qual a diferença entre os planos?</h4>
-                <p className="text-gray-400 text-sm">
-                  O plano de 7 dias inclui aimbot avançado com configurações básicas. 
-                  O plano de 15 dias adiciona recursos como trigger bot, no recoil e suporte 24/7.
-                </p>
+                <h4 className="font-semibold mb-2"></h4>
+                <p className="text-gray-400 text-sm"></p>
               </div>
-              
+
               <div>
-                <h4 className="font-semibold mb-2">ESP e Wallhack estão disponíveis?</h4>
+                <h4 className="font-semibold mb-2">
+                  ESP e Wallhack estão disponíveis?
+                </h4>
                 <p className="text-gray-400 text-sm">
-                  ESP e Wallhack estão atualmente em desenvolvimento e manutenção. 
-                  Serão lançados em breve com sistema anti-detecção aprimorado.
+                  ESP e Wallhack estão atualmente em desenvolvimento e
+                  manutenção. Serão lançados em breve com sistema anti-detecção
+                  aprimorado.
                 </p>
               </div>
             </div>
@@ -179,7 +194,8 @@ export default function Pricing() {
             Pronto para começar?
           </h2>
           <p className="text-gray-400 mb-8">
-            Junte-se a milhares de jogadores que já dominam o BloodStrike com FovDark
+            Junte-se a milhares de jogadores que já dominam o BloodStrike com
+            FovDark
           </p>
           <Link href="/register">
             <Button className="px-8 py-4 bg-primary text-black rounded-lg neon-glow font-bold text-lg hover:scale-105 transition-all duration-300">

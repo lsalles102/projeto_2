@@ -55,6 +55,22 @@ export interface IStorage {
   getLicenseByHwid(hwid: string): Promise<License | undefined>;
   updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined>;
   decrementLicenseTime(licenseId: number, minutes: number): Promise<License>;
+  
+  // Admin operations
+  getAllUsers(): Promise<User[]>;
+  getAllLicenses(): Promise<License[]>;
+  getAllActivationKeys(): Promise<ActivationKey[]>;
+  getSystemStats(): Promise<{
+    totalUsers: number;
+    totalLicenses: number;
+    activeLicenses: number;
+    totalActivationKeys: number;
+    unusedActivationKeys: number;
+    totalDownloads: number;
+  }>;
+  deleteActivationKey(id: number): Promise<void>;
+  deleteUser(id: number): Promise<void>;
+  deleteLicense(id: number): Promise<void>;
 }
 
 // In-memory storage implementation

@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
   hwid: varchar("hwid"),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -145,6 +146,27 @@ export const contactSchema = z.object({
   email: z.string().email("Email inválido"),
   subject: z.string().min(1, "Assunto é obrigatório"),
   message: z.string().min(10, "Mensagem deve ter pelo menos 10 caracteres"),
+});
+
+// Admin schemas
+export const createActivationKeySchema = z.object({
+  plan: z.enum(["basic", "premium", "vip"]),
+  durationDays: z.number().min(1).max(365),
+  quantity: z.number().min(1).max(100).default(1),
+});
+
+export const updateUserSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  isAdmin: z.boolean().optional(),
+});
+
+export const updateLicenseSchema = z.object({
+  status: z.enum(["inactive", "active", "expired", "revoked"]).optional(),
+  daysRemaining: z.number().min(0).optional(),
+  hoursRemaining: z.number().min(0).max(23).optional(),
+  minutesRemaining: z.number().min(0).max(59).optional(),
 });
 
 // Types
