@@ -129,6 +129,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 13, 2025. Comprehensive code review and bug fixes completed
 - June 13, 2025. Updated database connection to use postgres-js driver
 - June 13, 2025. Fixed username field requirements in user schema
+- June 13, 2025. Completed migration to Replit environment
+- June 13, 2025. Fixed admin authentication system and session management
+- June 13, 2025. Translated all error messages to Portuguese
+- June 13, 2025. Admin login credentials: lsalles102@gmail.com / admin123
 
 ## User Preferences
 
