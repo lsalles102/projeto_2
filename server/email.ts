@@ -45,6 +45,70 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
   }
 }
 
+export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
+  const transporter = createTransporter();
+  
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: email,
+    subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #00ff88; margin: 0;">FovDark</h1>
+          <p style="color: #888; margin: 5px 0;">Software Licensing Platform</p>
+        </div>
+        
+        <h2 style="color: #00ff88;">Pagamento Confirmado!</h2>
+        <p>Parabéns! Seu pagamento foi processado com sucesso.</p>
+        
+        <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #00ff88; margin-top: 0;">Detalhes da Compra:</h3>
+          <p><strong>Plano:</strong> ${planName}</p>
+          <p><strong>Sua Chave de Licença:</strong></p>
+          <div style="background-color: #000; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 18px; letter-spacing: 2px; text-align: center; color: #00ff88; border: 2px solid #00ff88;">
+            <strong>${licenseKey}</strong>
+          </div>
+        </div>
+        
+        <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #00ff88; margin-top: 0;">Como Ativar:</h3>
+          <ol style="color: #cccccc;">
+            <li>Faça login em sua conta no FovDark</li>
+            <li>Vá para o Dashboard</li>
+            <li>Insira sua chave de licença no campo "Ativar Licença"</li>
+            <li>Clique em "Ativar" para começar a usar</li>
+          </ol>
+        </div>
+        
+        <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #ff6b6b; margin-top: 0;">⚠️ Importante:</h3>
+          <ul style="color: #cccccc;">
+            <li>Guarde esta chave em local seguro</li>
+            <li>Não compartilhe sua chave com terceiros</li>
+            <li>A chave será vinculada ao seu hardware após ativação</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
+          <p style="color: #888; font-size: 14px;">
+            Se você tiver dúvidas, entre em contato conosco.<br>
+            Obrigado por escolher FovDark!
+          </p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Email com chave de licença enviado para:', email);
+  } catch (error) {
+    console.error('Erro ao enviar email com chave de licença:', error);
+    throw new Error('Falha ao enviar email com chave de licença');
+  }
+}
+
 export async function testEmailConnection() {
   try {
     const transporter = createTransporter();

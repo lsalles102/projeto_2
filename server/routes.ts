@@ -10,6 +10,7 @@ import nodemailer from "nodemailer";
 import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
+import { sendLicenseKeyEmail } from "./email";
 
 
 
@@ -1122,6 +1123,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             console.log(`Licença criada para usuário ${payment.userId}: ${licenseKey}`);
+
+            // Enviar email automático com chave de licença
+            try {
+              const user = await storage.getUser(payment.userId);
+              if (user) {
+                const planName = payment.plan === '7days' ? '7 DIAS' : '15 DIAS';
+                await sendLicenseKeyEmail(user.email, licenseKey, planName);
+                console.log(`Email com chave de licença enviado para: ${user.email}`);
+              }
+            } catch (emailError) {
+              console.error('Erro ao enviar email com chave de licença:', emailError);
+              // Não falhar o webhook por erro de email
+            }
           }
         }
       }
