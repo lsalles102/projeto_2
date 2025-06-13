@@ -1,10 +1,10 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
-import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema } from "@shared/schema";
+import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
@@ -261,31 +261,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes (for creating activation keys)
-  app.post("/api/admin/keys", async (req, res) => {
-    try {
-      const { plan, count = 1 } = req.body;
-      
-      if (!["7days", "15days"].includes(plan)) {
-        return res.status(400).json({ message: "Invalid plan type" });
-      }
+  // Admin middleware
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
+    }
+    next();
+  };
 
+  // Admin dashboard data
+  app.get("/api/admin/dashboard", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      const users = await storage.getAllUsers();
+      const licenses = await storage.getAllLicenses();
+      const activationKeys = await storage.getAllActivationKeys();
+
+      res.json({
+        stats,
+        users: users.map(u => ({ ...u, password: undefined })),
+        licenses,
+        activationKeys,
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ message: "Erro ao carregar dashboard administrativo" });
+    }
+  });
+
+  // Admin - Create activation keys
+  app.post("/api/admin/keys", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { plan, durationDays, quantity } = createActivationKeySchema.parse(req.body);
+      
       const keys = [];
-      for (let i = 0; i < count; i++) {
-        const key = `FOVD-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      for (let i = 0; i < quantity; i++) {
+        const key = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
         const activationKey = await storage.createActivationKey({
           key,
           plan,
-          durationDays: plan === "7days" ? 7 : 15,
+          durationDays,
           isUsed: false,
         });
         keys.push(activationKey);
       }
 
-      res.json({ keys });
+      res.json({ keys, message: `${quantity} chaves criadas com sucesso` });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
       console.error("Key generation error:", error);
-      res.status(500).json({ message: "Key generation failed" });
+      res.status(500).json({ message: "Erro ao gerar chaves" });
+    }
+  });
+
+  // Admin - Update user
+  app.patch("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const updates = updateUserSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUser(userId, updates);
+      res.json({ user: { ...updatedUser, password: undefined }, message: "Usuário atualizado" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Erro ao atualizar usuário" });
+    }
+  });
+
+  // Admin - Update license
+  app.patch("/api/admin/licenses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const licenseId = parseInt(req.params.id);
+      const updates = updateLicenseSchema.parse(req.body);
+      
+      // Calculate total minutes if time components are updated
+      if (updates.daysRemaining !== undefined || updates.hoursRemaining !== undefined || updates.minutesRemaining !== undefined) {
+        const days = updates.daysRemaining || 0;
+        const hours = updates.hoursRemaining || 0;
+        const minutes = updates.minutesRemaining || 0;
+        (updates as any).totalMinutesRemaining = (days * 24 * 60) + (hours * 60) + minutes;
+      }
+      
+      const updatedLicense = await storage.updateLicense(licenseId, updates);
+      res.json({ license: updatedLicense, message: "Licença atualizada" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update license error:", error);
+      res.status(500).json({ message: "Erro ao atualizar licença" });
+    }
+  });
+
+  // Admin - Delete user
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const currentUser = req.user as any;
+      
+      if (userId === currentUser.id) {
+        return res.status(400).json({ message: "Não é possível deletar sua própria conta" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.json({ message: "Usuário deletado com sucesso" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Erro ao deletar usuário" });
+    }
+  });
+
+  // Admin - Delete license
+  app.delete("/api/admin/licenses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const licenseId = parseInt(req.params.id);
+      await storage.deleteLicense(licenseId);
+      res.json({ message: "Licença deletada com sucesso" });
+    } catch (error) {
+      console.error("Delete license error:", error);
+      res.status(500).json({ message: "Erro ao deletar licença" });
+    }
+  });
+
+  // Admin - Delete activation key
+  app.delete("/api/admin/keys/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const keyId = parseInt(req.params.id);
+      await storage.deleteActivationKey(keyId);
+      res.json({ message: "Chave de ativação deletada com sucesso" });
+    } catch (error) {
+      console.error("Delete activation key error:", error);
+      res.status(500).json({ message: "Erro ao deletar chave de ativação" });
     }
   });
 

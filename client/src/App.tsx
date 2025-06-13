@@ -12,6 +12,7 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
 import Pricing from "@/pages/Pricing";
 import Support from "@/pages/Support";
 import Terms from "@/pages/Terms";
@@ -39,6 +40,11 @@ function Router() {
           <Route path="/dashboard">
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin">
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           </Route>
           <Route component={NotFound} />
