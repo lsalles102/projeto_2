@@ -159,7 +159,7 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto px-6 py-20 max-w-6xl">
       {/* Welcome Header */}
-      <Card className="glass-effect border-glass-border mb-8">
+      <Card className="bg-card/50 backdrop-blur-sm border-primary/20 mb-8">
         <CardContent className="p-8">
           <div className="flex items-center justify-between">
             <div>
@@ -194,7 +194,7 @@ export default function Dashboard() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
           {/* License Info */}
-          <Card className="glass-effect border-glass-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl font-orbitron">
                 <Key className="text-primary mr-3" />
@@ -204,17 +204,17 @@ export default function Dashboard() {
             <CardContent>
               {license ? (
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-dark-surface rounded-lg p-4">
+                  <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">Chave de Ativação</div>
                     <div className="font-mono text-lg break-all">{license.key}</div>
                   </div>
                   
-                  <div className="bg-dark-surface rounded-lg p-4">
+                  <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">HWID Registrado</div>
                     <div className="font-mono text-sm break-all">{license.hwid || "Não definido"}</div>
                   </div>
                   
-                  <div className="bg-dark-surface rounded-lg p-4">
+                  <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">Tempo Restante</div>
                     <div className="text-lg font-mono">
                       {license.daysRemaining || 0}d {license.hoursRemaining || 0}h {license.minutesRemaining || 0}m
@@ -224,9 +224,9 @@ export default function Dashboard() {
                     </div>
                   </div>
                   
-                  <div className="bg-dark-surface rounded-lg p-4">
+                  <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">Tipo de Plano</div>
-                    <Badge variant="secondary" className="text-neon-yellow bg-yellow-500/20">
+                    <Badge variant="secondary" className="text-yellow-400">
                       {license.plan.toUpperCase()}
                     </Badge>
                     <div className="text-xs text-gray-500 mt-1">
@@ -239,7 +239,7 @@ export default function Dashboard() {
                   <p className="text-gray-400 mb-4">Você ainda não possui uma licença ativa.</p>
                   <Button
                     onClick={() => setShowActivateForm(!showActivateForm)}
-                    className="bg-neon-green text-black hover:bg-neon-green/90"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <Key className="w-4 h-4 mr-2" />
                     Ativar Licença
@@ -249,7 +249,7 @@ export default function Dashboard() {
 
               {/* Activate Key Form */}
               {showActivateForm && (
-                <div className="mt-6 border-t border-glass-border pt-6">
+                <div className="mt-6 border-t border-primary/20 pt-6">
                   <h3 className="text-lg font-semibold mb-4">Ativar Chave de Licença</h3>
                   <form onSubmit={form.handleSubmit(onActivateSubmit)} className="space-y-4">
                     <div>
@@ -257,7 +257,7 @@ export default function Dashboard() {
                       <Input
                         id="key"
                         placeholder="FOVD-XXXX-XXXX-XXXX"
-                        className="bg-dark-surface border-glass-border focus:border-neon-green"
+                        className="bg-background/50 border-primary/20 focus:border-primary"
                         {...form.register("key")}
                       />
                       {form.formState.errors.key && (
@@ -271,7 +271,7 @@ export default function Dashboard() {
                         id="hwid"
                         value={form.watch("hwid")}
                         readOnly
-                        className="bg-dark-surface border-glass-border font-mono text-sm"
+                        className="bg-background/50 border-primary/20 font-mono text-sm"
                       />
                       <p className="text-xs text-gray-400 mt-1">
                         Este ID será vinculado à sua licença automaticamente.
@@ -282,7 +282,7 @@ export default function Dashboard() {
                       <Button
                         type="submit"
                         disabled={activateMutation.isPending}
-                        className="bg-neon-green text-black hover:bg-neon-green/90"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         {activateMutation.isPending ? "Ativando..." : "Ativar Licença"}
                       </Button>
@@ -290,7 +290,7 @@ export default function Dashboard() {
                         type="button"
                         variant="ghost"
                         onClick={() => setShowActivateForm(false)}
-                        className="glass-effect"
+                        className="bg-card/50 backdrop-blur-sm"
                       >
                         Cancelar
                       </Button>
