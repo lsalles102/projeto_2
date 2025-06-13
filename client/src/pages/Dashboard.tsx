@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getHWID } from "@/lib/authUtils";
 import { activateKeySchema } from "@shared/schema";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
+import { Link } from "wouter";
 import { 
   Key, 
   Download, 
