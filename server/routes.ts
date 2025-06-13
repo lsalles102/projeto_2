@@ -115,6 +115,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard route
+  app.get("/api/dashboard", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userWithLicense = await storage.getUser(user.id);
+      const license = await storage.getLicenseByUserId(user.id);
+      const downloads = await storage.getUserDownloads(user.id);
+      
+      // Calculate stats
+      const stats = {
+        totalDownloads: downloads.length,
+        licenseStatus: license ? license.status : "inactive",
+        remainingTime: license ? {
+          days: license.daysRemaining || 0,
+          hours: license.hoursRemaining || 0,
+          minutes: license.minutesRemaining || 0,
+        } : null,
+      };
+      
+      res.json({
+        user: { ...userWithLicense, password: undefined },
+        license,
+        downloads,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
   // License routes
   app.post("/api/licenses/activate", isAuthenticated, async (req, res) => {
     try {

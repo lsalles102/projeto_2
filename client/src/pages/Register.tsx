@@ -86,7 +86,7 @@ export default function Register() {
                   <Input
                     id="firstName"
                     placeholder="João"
-                    className="bg-dark-surface border-glass-border focus:border-neon-green"
+                    className="bg-background/50 border-primary/20 focus:border-primary"
                     {...form.register("firstName")}
                   />
                   {form.formState.errors.firstName && (
@@ -101,7 +101,7 @@ export default function Register() {
                   <Input
                     id="lastName"
                     placeholder="Silva"
-                    className="bg-dark-surface border-glass-border focus:border-neon-green"
+                    className="bg-background/50 border-primary/20 focus:border-primary"
                     {...form.register("lastName")}
                   />
                   {form.formState.errors.lastName && (
@@ -118,7 +118,7 @@ export default function Register() {
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
-                  className="bg-dark-surface border-glass-border focus:border-neon-green"
+                  className="bg-background/50 border-primary/20 focus:border-primary"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email && (
@@ -135,7 +135,7 @@ export default function Register() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="bg-dark-surface border-glass-border focus:border-neon-green pr-10"
+                    className="bg-background/50 border-primary/20 focus:border-primary pr-10"
                     {...form.register("password")}
                   />
                   <button
@@ -159,11 +159,11 @@ export default function Register() {
                 />
                 <Label htmlFor="terms" className="text-sm">
                   Concordo com os{" "}
-                  <Link href="/terms" className="text-neon-green hover:underline">
+                  <Link href="/terms" className="text-primary hover:underline">
                     Termos de Uso
                   </Link>{" "}
                   e{" "}
-                  <Link href="/privacy" className="text-neon-green hover:underline">
+                  <Link href="/privacy" className="text-primary hover:underline">
                     Política de Privacidade
                   </Link>
                 </Label>
@@ -171,7 +171,7 @@ export default function Register() {
 
               <Button
                 type="submit"
-                className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:scale-105 transition-all duration-300"
                 disabled={registerMutation.isPending}
               >
                 {registerMutation.isPending ? (
@@ -189,7 +189,7 @@ export default function Register() {
 
             <p className="text-center text-sm text-gray-400 mt-6">
               Já tem uma conta?{" "}
-              <Link href="/login" className="text-neon-green hover:underline">
+              <Link href="/login" className="text-primary hover:underline">
                 Fazer login
               </Link>
             </p>
