@@ -34,9 +34,14 @@ export const licenses = pgTable("licenses", {
   key: varchar("key").unique().notNull(),
   plan: varchar("plan").notNull(), // basic, premium, vip
   status: varchar("status").notNull().default("inactive"), // inactive, active, expired, revoked
-  hwid: varchar("hwid"),
+  hwid: varchar("hwid"), // Hardware ID vinculado à licença
+  daysRemaining: integer("days_remaining").default(0),
+  hoursRemaining: integer("hours_remaining").default(0),
+  minutesRemaining: integer("minutes_remaining").default(0),
+  totalMinutesRemaining: integer("total_minutes_remaining").default(0), // Para facilitar cálculos
   expiresAt: timestamp("expires_at").notNull(),
   activatedAt: timestamp("activated_at"),
+  lastHeartbeat: timestamp("last_heartbeat"), // Última vez que o loader verificou a licença
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -45,6 +50,7 @@ export const activationKeys = pgTable("activation_keys", {
   id: serial("id").primaryKey(),
   key: varchar("key").unique().notNull(),
   plan: varchar("plan").notNull(),
+  durationDays: integer("duration_days").notNull().default(30), // Duração em dias da licença
   isUsed: boolean("is_used").default(false),
   usedBy: integer("used_by").references(() => users.id),
   usedAt: timestamp("used_at"),
@@ -102,6 +108,15 @@ export const registerSchema = z.object({
 
 export const activateKeySchema = z.object({
   key: z.string().min(1),
+  hwid: z.string().min(1),
+});
+
+export const licenseStatusSchema = z.object({
+  hwid: z.string().min(1),
+});
+
+export const heartbeatSchema = z.object({
+  licenseKey: z.string().min(1),
   hwid: z.string().min(1),
 });
 
