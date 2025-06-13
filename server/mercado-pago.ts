@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { nanoid } from 'nanoid';
 
 // Configuração do Mercado Pago
@@ -6,11 +6,11 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
   options: {
     timeout: 5000,
-    idempotencyKey: 'abc'
   }
 });
 
 const preference = new Preference(client);
+const payment = new Payment(client);
 
 // Preços dos planos em centavos (BRL)
 export const PLAN_PRICES = {
@@ -39,64 +39,90 @@ export interface PixPaymentResponse {
 
 export async function createPixPayment(data: CreatePixPaymentData): Promise<PixPaymentResponse> {
   const externalReference = `payment_${nanoid()}`;
-  const transactionAmount = PLAN_PRICES[data.plan];
+  const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais
   
-  // URL base da aplicação (usar variável de ambiente ou URL atual)
-  const baseUrl = process.env.REPLIT_URL || 'http://localhost:5000';
+  // URL base da aplicação
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.REPLIT_URL || 'http://localhost:5000';
   
-  const preferenceData = {
-    items: [
-      {
-        id: `license_${data.plan}`,
-        title: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
-        description: `Acesso completo ao sistema por ${data.durationDays} dias`,
-        category_id: 'software',
-        quantity: 1,
-        unit_price: transactionAmount / 100, // Converter centavos para reais
-      }
-    ],
+  const paymentData = {
+    transaction_amount: transactionAmount,
+    description: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
+    payment_method_id: 'pix',
     payer: {
       email: data.payerEmail,
       first_name: data.payerFirstName,
       last_name: data.payerLastName,
     },
-    payment_methods: {
-      excluded_payment_types: [
-        { id: 'credit_card' },
-        { id: 'debit_card' },
-        { id: 'ticket' }
-      ],
-      excluded_payment_methods: [],
-      installments: 1,
-    },
     external_reference: externalReference,
     notification_url: `${baseUrl}/api/payments/webhook`,
-    binary_mode: true,
-    expires: true,
-    expiration_date_from: new Date().toISOString(),
-    expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
+    date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
   };
 
   try {
-    const response = await preference.create({
-      body: preferenceData
+    // Criar pagamento PIX diretamente
+    const response = await payment.create({
+      body: paymentData
     });
 
     if (!response.id) {
-      throw new Error('Falha ao criar preferência no Mercado Pago');
+      throw new Error('Falha ao criar pagamento PIX no Mercado Pago');
     }
 
-    // Extrair informações do PIX (se disponível na resposta)
-    const pixQrCode = (response as any).point_of_interaction?.transaction_data?.qr_code || '';
-    const pixQrCodeBase64 = (response as any).point_of_interaction?.transaction_data?.qr_code_base64 || '';
+    // Extrair informações do PIX
+    const pixQrCode = response.point_of_interaction?.transaction_data?.qr_code || '';
+    const pixQrCodeBase64 = response.point_of_interaction?.transaction_data?.qr_code_base64 || '';
+    const ticketUrl = response.point_of_interaction?.transaction_data?.ticket_url || '';
+
+    // Se não tiver QR Code direto, criar uma preferência como fallback
+    let initPoint = '';
+    let preferenceId = '';
+    
+    if (!pixQrCode) {
+      const preferenceData = {
+        items: [
+          {
+            id: `license_${data.plan}`,
+            title: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
+            description: `Acesso completo ao sistema por ${data.durationDays} dias`,
+            category_id: 'software',
+            quantity: 1,
+            unit_price: transactionAmount,
+          }
+        ],
+        payer: {
+          email: data.payerEmail,
+          first_name: data.payerFirstName,
+          last_name: data.payerLastName,
+        },
+        payment_methods: {
+          excluded_payment_types: [
+            { id: 'credit_card' },
+            { id: 'debit_card' },
+            { id: 'ticket' }
+          ],
+        },
+        external_reference: externalReference,
+        notification_url: `${baseUrl}/api/payments/webhook`,
+        expires: true,
+        expiration_date_from: new Date().toISOString(),
+        expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      };
+
+      const prefResponse = await preference.create({
+        body: preferenceData
+      });
+      
+      initPoint = prefResponse.init_point || '';
+      preferenceId = prefResponse.id || '';
+    }
 
     return {
-      preferenceId: response.id,
+      preferenceId: preferenceId || response.id.toString(),
       externalReference,
-      initPoint: response.init_point || '',
-      pixQrCode,
+      initPoint,
+      pixQrCode: pixQrCode || ticketUrl,
       pixQrCodeBase64,
-      transactionAmount,
+      transactionAmount: PLAN_PRICES[data.plan], // Retornar em centavos
       currency: 'BRL',
     };
   } catch (error) {
@@ -107,12 +133,8 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
 
 export async function getPaymentInfo(paymentId: string) {
   try {
-    // Aqui você pode usar a API do Mercado Pago para obter informações do pagamento
-    // const payment = await mercadopago.payment.findById(paymentId);
-    // return payment;
-    
-    // Por enquanto, retornamos null já que isso será usado principalmente via webhook
-    return null;
+    const response = await payment.get({ id: paymentId });
+    return response;
   } catch (error) {
     console.error('Erro ao obter informações do pagamento:', error);
     return null;

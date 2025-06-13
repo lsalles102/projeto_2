@@ -46,6 +46,8 @@ export interface IStorage {
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined>;
+  getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined>;
+  getPayment(id: number): Promise<Payment | undefined>;
   updatePayment(id: number, updates: Partial<Payment>): Promise<Payment>;
   
   // System operations
@@ -312,6 +314,14 @@ export class MemStorage implements IStorage {
     return this.payments.find(payment => payment.externalReference === externalReference);
   }
 
+  async getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.preferenceId === preferenceId);
+  }
+
+  async getPayment(id: number): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.id === id);
+  }
+
   async updatePayment(id: number, updates: Partial<Payment>): Promise<Payment> {
     const paymentIndex = this.payments.findIndex(payment => payment.id === id);
     if (paymentIndex === -1) {
@@ -574,6 +584,22 @@ export class PostgresStorage implements IStorage {
     const { db } = await import("./db");
     const result = await db.query.payments.findFirst({
       where: (payments, { eq }) => eq(payments.externalReference, externalReference),
+    });
+    return result;
+  }
+
+  async getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.payments.findFirst({
+      where: (payments, { eq }) => eq(payments.preferenceId, preferenceId),
+    });
+    return result;
+  }
+
+  async getPayment(id: number): Promise<Payment | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.payments.findFirst({
+      where: (payments, { eq }) => eq(payments.id, id),
     });
     return result;
   }
