@@ -38,8 +38,8 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
+        // Compare passwords directly (plain text)
+        if (password !== user.password) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
@@ -88,6 +88,4 @@ export function verifyToken(token: string): { userId: number } | null {
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
+// Password hashing removed - storing plain text passwords

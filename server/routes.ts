@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, generateToken, hashPassword } from "./auth";
+import { setupAuth, isAuthenticated, generateToken } from "./auth";
 import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
@@ -25,11 +25,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Hash password before storing
-      const hashedPassword = await hashPassword(userData.password);
+      // Store password as plain text
       const user = await storage.createUser({
         ...userData,
-        password: hashedPassword,
+        password: userData.password,
       });
 
       // Generate JWT token
@@ -388,11 +387,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Usuário não encontrado" });
       }
 
-      // Hash new password
-      const hashedPassword = await hashPassword(password);
-
-      // Update user password
-      await storage.updateUser(user.id, { password: hashedPassword });
+      // Update user password (plain text)
+      await storage.updateUser(user.id, { password: password });
 
       // Mark token as used
       await storage.markPasswordResetTokenAsUsed(token);
