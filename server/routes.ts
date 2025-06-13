@@ -909,7 +909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         initPoint: pixResponse.initPoint,
         pixQrCode: pixResponse.pixQrCode,
         pixQrCodeBase64: pixResponse.pixQrCodeBase64,
-        amount: pixResponse.transactionAmount / 100, // Converter para reais
+        amount: pixResponse.transactionAmount, // Valor já em reais
         currency: pixResponse.currency,
         externalReference: externalReference,
       });
@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: payment.id,
         status: payment.status,
         statusDetail: payment.statusDetail,
-        amount: payment.transactionAmount / 100,
+        amount: payment.transactionAmount,
         currency: payment.currency,
         plan: payment.plan,
         durationDays: payment.durationDays,
@@ -1029,7 +1029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentsFormatted = payments.map(payment => ({
         id: payment.id,
         status: payment.status,
-        amount: payment.transactionAmount / 100,
+        amount: payment.transactionAmount,
         currency: payment.currency,
         plan: payment.plan,
         durationDays: payment.durationDays,
