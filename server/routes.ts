@@ -248,22 +248,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // License routes
   app.post("/api/licenses/activate", isAuthenticated, async (req, res) => {
     try {
-      const { key, hwid } = activateKeySchema.parse(req.body);
+      const { key } = activateKeySchema.parse(req.body);
       const user = req.user as any;
 
       // Check if user already has an active license
       const existingLicense = await storage.getLicenseByUserId(user.id);
       if (existingLicense && existingLicense.status === "active") {
-        return res.status(400).json({ message: "User already has an active license" });
+        return res.status(400).json({ message: "Usuário já possui uma licença ativa" });
       }
 
       // Validate activation key
       const activationKey = await storage.getActivationKey(key);
       if (!activationKey || activationKey.isUsed) {
-        return res.status(400).json({ message: "Invalid or already used activation key" });
+        return res.status(400).json({ message: "Chave de ativação inválida ou já utilizada" });
       }
 
-      // Create license with correct duration and time tracking
+      // Create license with correct duration and time tracking (HWID will be set by loader)
       const totalMinutes = activationKey.durationDays * 24 * 60;
       const daysRemaining = Math.floor(totalMinutes / (24 * 60));
       const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
@@ -276,8 +276,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         key,
         plan: activationKey.plan,
-        status: "active",
-        hwid,
+        status: "pending", // Status pending until HWID is set by loader
+        hwid: null, // Will be set by loader
         daysRemaining,
         hoursRemaining,
         minutesRemaining,
@@ -289,16 +289,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark activation key as used
       await storage.markActivationKeyAsUsed(key, user.id);
 
-      // Update user HWID
-      await storage.updateUser(user.id, { hwid });
-
-      res.json({ license });
+      res.json({ 
+        license,
+        message: "Licença ativada com sucesso! Use o loader para vincular ao seu PC."
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("License activation error:", error);
-      res.status(500).json({ message: "License activation failed" });
+      res.status(500).json({ message: "Falha na ativação da licença" });
+    }
+  });
+
+  // Route for loader to set HWID and activate license
+  app.post("/api/licenses/set-hwid", async (req, res) => {
+    try {
+      const { licenseKey, hwid, userId } = z.object({
+        licenseKey: z.string().min(1),
+        hwid: z.string().min(1),
+        userId: z.number()
+      }).parse(req.body);
+
+      // Find license by key and user
+      const license = await storage.getLicenseByUserId(userId);
+      if (!license || license.key !== licenseKey) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+
+      if (license.status !== "pending") {
+        return res.status(400).json({ message: "Licença já foi ativada" });
+      }
+
+      // Update license with HWID and activate
+      const updatedLicense = await storage.updateLicense(license.id, {
+        hwid,
+        status: "active",
+        lastHeartbeat: new Date()
+      });
+
+      // Update user HWID
+      await storage.updateUser(userId, { hwid });
+
+      res.json({ 
+        license: updatedLicense,
+        message: "HWID vinculado e licença ativada com sucesso"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Set HWID error:", error);
+      res.status(500).json({ message: "Falha ao vincular HWID" });
     }
   });
 
@@ -308,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const license = await storage.getLicenseByUserId(user.id);
 
       if (!license) {
-        return res.status(404).json({ message: "No license found" });
+        return res.status(404).json({ message: "Nenhuma licença encontrada" });
       }
 
       // Check if license is expired
@@ -321,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ license, isValid: license.status === "active" && !isExpired });
     } catch (error) {
       console.error("License validation error:", error);
-      res.status(500).json({ message: "License validation failed" });
+      res.status(500).json({ message: "Falha na validação da licença" });
     }
   });
 

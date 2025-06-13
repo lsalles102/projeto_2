@@ -139,8 +139,7 @@ export const registerSchema = z.object({
 });
 
 export const activateKeySchema = z.object({
-  key: z.string().min(1),
-  hwid: z.string().min(1),
+  key: z.string().min(1, "Chave de ativação é obrigatória"),
 });
 
 export const licenseStatusSchema = z.object({

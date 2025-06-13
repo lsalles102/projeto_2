@@ -54,7 +54,6 @@ export default function Dashboard() {
     resolver: zodResolver(activateKeySchema),
     defaultValues: {
       key: "",
-      hwid: getHWID(),
     },
   });
 
@@ -165,6 +164,7 @@ export default function Dashboard() {
   }
 
   const isLicenseActive = license?.status === "active" && new Date(license.expiresAt) > new Date();
+  const isLicensePending = license?.status === "pending";
 
   return (
     <div className="container mx-auto px-6 py-20 max-w-6xl">
@@ -284,18 +284,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     
-                    <div>
-                      <Label htmlFor="hwid">HWID (Hardware ID)</Label>
-                      <Input
-                        id="hwid"
-                        value={form.watch("hwid")}
-                        readOnly
-                        className="bg-background/50 border-primary/20 font-mono text-sm"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Este ID será vinculado à sua licença automaticamente.
-                      </p>
-                    </div>
+
                     
                     <div className="flex gap-4">
                       <Button
