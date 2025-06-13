@@ -29,7 +29,7 @@ export default function Footer() {
             <h4 className="font-bold mb-4">Suporte</h4>
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link href="/support" className="hover:text-neon-green transition-colors duration-300">Central de Ajuda</Link></li>
-              <li><a href="#" className="hover:text-neon-green transition-colors duration-300">Discord</a></li>
+              <li><a href="https://discord.gg/nh6y9k6KVd" target="_blank" rel="noopener noreferrer" className="hover:text-neon-green transition-colors duration-300">Discord</a></li>
               <li><a href="#" className="hover:text-neon-green transition-colors duration-300">Status do Servidor</a></li>
               <li><Link href="/support" className="hover:text-neon-green transition-colors duration-300">Contato</Link></li>
             </ul>
@@ -51,7 +51,7 @@ export default function Footer() {
             © 2024 FovDark. Todos os direitos reservados.
           </p>
           <div className="flex space-x-4 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
+            <a href="https://discord.gg/nh6y9k6KVd" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
               <i className="fab fa-discord text-xl"></i>
             </a>
             <a href="#" className="text-gray-400 hover:text-neon-green transition-colors duration-300">

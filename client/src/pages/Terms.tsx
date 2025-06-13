@@ -190,8 +190,8 @@ export default function Terms() {
                 Para questões relacionadas a estes termos, entre em contato conosco:
               </p>
               <ul className="mt-4 space-y-2 text-gray-300">
-                <li><strong>Email:</strong> legal@fovdark.com</li>
-                <li><strong>Suporte:</strong> support@fovdark.com</li>
+                <li><strong>Email:</strong> contato@suportefovdark.shop</li>
+                <li><strong>Suporte:</strong> contato@suportefovdark.shop</li>
                 <li><strong>Endereço:</strong> Informações disponíveis mediante solicitação</li>
               </ul>
             </div>

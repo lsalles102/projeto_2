@@ -230,7 +230,10 @@ export default function Support() {
               <i className="fab fa-discord text-indigo-500 text-4xl mb-4"></i>
               <h3 className="text-xl font-bold mb-2">Discord</h3>
               <p className="text-gray-400 mb-4">Suporte em tempo real</p>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300">
+              <Button 
+                onClick={() => window.open('https://discord.gg/nh6y9k6KVd', '_blank')}
+                className="bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300"
+              >
                 Entrar no Discord
               </Button>
             </CardContent>
@@ -240,8 +243,11 @@ export default function Support() {
             <CardContent className="p-6">
               <Mail className="text-neon-green text-4xl mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Email</h3>
-              <p className="text-gray-400 mb-4">support@fovdark.com</p>
-              <Button className="bg-neon-green text-black hover:scale-105 transition-all duration-300">
+              <p className="text-gray-400 mb-4">contato@suportefovdark.shop</p>
+              <Button 
+                onClick={() => window.open('mailto:contato@suportefovdark.shop', '_blank')}
+                className="bg-neon-green text-black hover:scale-105 transition-all duration-300"
+              >
                 Enviar Email
               </Button>
             </CardContent>
