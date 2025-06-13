@@ -29,6 +29,7 @@
   --neon-green: hsl(142, 100%, 50%);
   --neon-purple: hsl(270, 95%, 75%);
   --neon-yellow: hsl(60, 100%, 50%);
+  --neon-red: hsl(0, 100%, 50%);
   --dark-bg: hsl(0, 0%, 4%);
   --dark-surface: hsl(240, 10%, 10%);
   --glass: hsla(0, 0%, 100%, 0.1);

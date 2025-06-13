@@ -61,6 +61,15 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
+        // Gaming theme colors
+        "neon-green": "var(--neon-green)",
+        "neon-purple": "var(--neon-purple)", 
+        "neon-yellow": "var(--neon-yellow)",
+        "neon-red": "var(--neon-red)",
+        "dark-bg": "var(--dark-bg)",
+        "dark-surface": "var(--dark-surface)",
+        "glass": "var(--glass)",
+        "glass-border": "var(--glass-border)",
       },
       keyframes: {
         "accordion-down": {

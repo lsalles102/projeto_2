@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { contactSchema } from "@shared/schema";
+import { z } from "zod";
 import {
   Mail,
   MessageCircle,
@@ -20,6 +25,7 @@ import {
   ChevronUp,
   Send,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 
 interface ContactFormData {
