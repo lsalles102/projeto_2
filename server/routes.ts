@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[CONTACT] New message from: ${contactData.email}`);
       
       // Configure email transporter (same as password reset)
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.hostinger.com',
         port: parseInt(process.env.SMTP_PORT || '587'),
         secure: false,

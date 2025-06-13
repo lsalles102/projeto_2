@@ -28,18 +28,14 @@ import {
   Loader2,
 } from "lucide-react";
 
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
+type ContactFormData = z.infer<typeof contactSchema>;
 
 export default function Support() {
   const { toast } = useToast();
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   const form = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -48,13 +44,26 @@ export default function Support() {
     },
   });
 
+  const contactMutation = useMutation({
+    mutationFn: (data: ContactFormData) => apiRequest("POST", "/api/contact", data),
+    onSuccess: () => {
+      toast({
+        title: "Mensagem enviada com sucesso!",
+        description: "Recebemos sua mensagem e responderemos em breve. Você receberá uma confirmação por email.",
+      });
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: error.message || "Tente novamente ou entre em contato pelo Discord.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ContactFormData) => {
-    // Simulate form submission
-    toast({
-      title: "Mensagem enviada",
-      description: "Recebemos sua mensagem e responderemos em breve!",
-    });
-    form.reset();
+    contactMutation.mutate(data);
   };
 
   const faqItems = [
@@ -127,8 +136,11 @@ export default function Support() {
                     id="name"
                     placeholder="Seu nome"
                     className="bg-dark-surface border-glass-border focus:border-neon-green"
-                    {...form.register("name", { required: true })}
+                    {...form.register("name")}
                   />
+                  {form.formState.errors.name && (
+                    <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -140,8 +152,11 @@ export default function Support() {
                     type="email"
                     placeholder="seu@email.com"
                     className="bg-dark-surface border-glass-border focus:border-neon-green"
-                    {...form.register("email", { required: true })}
+                    {...form.register("email")}
                   />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -177,16 +192,29 @@ export default function Support() {
                     rows={5}
                     placeholder="Descreva sua dúvida ou problema..."
                     className="bg-dark-surface border-glass-border focus:border-neon-green"
-                    {...form.register("message", { required: true })}
+                    {...form.register("message")}
                   />
+                  {form.formState.errors.message && (
+                    <p className="text-sm text-red-500">{form.formState.errors.message.message}</p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
                   className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
+                  disabled={contactMutation.isPending}
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  Enviar Mensagem
+                  {contactMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Enviar Mensagem
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
