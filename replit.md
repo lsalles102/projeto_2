@@ -133,6 +133,8 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 13, 2025. Fixed admin authentication system and session management
 - June 13, 2025. Translated all error messages to Portuguese
 - June 13, 2025. Admin login credentials: lsalles102@gmail.com / admin123
+- June 13, 2025. Fixed user registration issue - migrated from MemStorage to PostgresStorage
+- June 13, 2025. Successfully verified Supabase database integration and user creation
 
 ## User Preferences
 
