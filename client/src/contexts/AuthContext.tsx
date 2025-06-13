@@ -65,14 +65,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const response = await apiRequest('POST', '/api/auth/register', {
-      email,
-      password,
-      firstName,
-      lastName,
+    const data = await apiRequest('/api/auth/register', {
+      method: 'POST',
+      body: {
+        email,
+        password,
+        firstName,
+        lastName,
+      }
     });
     
-    const data = await response.json();
     if (data.user) {
       setUser(data.user);
     }
@@ -81,12 +83,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    const response = await apiRequest('POST', '/api/auth/login', {
-      email,
-      password,
+    const data = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email,
+        password,
+      }
     });
     
-    const data = await response.json();
     if (data.user) {
       setUser(data.user);
     }
@@ -95,12 +99,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await apiRequest('POST', '/api/auth/logout', {});
+    await apiRequest('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
   const resetPassword = async (email: string) => {
-    return await apiRequest('POST', '/api/auth/forgot-password', { email });
+    return await apiRequest('/api/auth/forgot-password', { 
+      method: 'POST', 
+      body: { email } 
+    });
   };
 
   const value = {
