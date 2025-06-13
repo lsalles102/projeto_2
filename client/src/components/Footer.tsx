@@ -55,9 +55,6 @@ export default function Footer() {
               <i className="fab fa-discord text-xl"></i>
             </a>
             <a href="#" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
-              <i className="fab fa-telegram text-xl"></i>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
               <i className="fab fa-youtube text-xl"></i>
             </a>
           </div>

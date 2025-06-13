@@ -224,7 +224,7 @@ export default function Support() {
         </div>
 
         {/* Contact Options */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8">
           <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
             <CardContent className="p-6">
               <i className="fab fa-discord text-indigo-500 text-4xl mb-4"></i>
@@ -232,17 +232,6 @@ export default function Support() {
               <p className="text-gray-400 mb-4">Suporte em tempo real</p>
               <Button className="bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300">
                 Entrar no Discord
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect border-glass-border text-center hover:scale-105 transition-all duration-300">
-            <CardContent className="p-6">
-              <i className="fab fa-telegram text-blue-500 text-4xl mb-4"></i>
-              <h3 className="text-xl font-bold mb-2">Telegram</h3>
-              <p className="text-gray-400 mb-4">Chat direto</p>
-              <Button className="bg-blue-500 hover:bg-blue-600 transition-colors duration-300">
-                Abrir Telegram
               </Button>
             </CardContent>
           </Card>
