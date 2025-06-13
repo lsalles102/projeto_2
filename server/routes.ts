@@ -4,9 +4,11 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
-import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema } from "@shared/schema";
+import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
+import { nanoid } from "nanoid";
 
 
 
@@ -853,6 +855,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Password change error:", error);
       res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
+  // PIX Payment routes
+  app.post("/api/payments/pix/create", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const paymentData = createPixPaymentSchema.parse(req.body);
+
+      // Verificar se o usuário já tem uma licença ativa
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      if (existingLicense && existingLicense.status === "active") {
+        return res.status(400).json({ 
+          message: "Você já possui uma licença ativa. Aguarde o vencimento para adquirir uma nova." 
+        });
+      }
+
+      // Criar referência externa única
+      const externalReference = `payment_${user.id}_${nanoid()}`;
+      
+      // Criar preferência no Mercado Pago
+      const pixResponse = await createPixPayment({
+        userId: user.id,
+        plan: paymentData.plan,
+        durationDays: paymentData.durationDays,
+        payerEmail: paymentData.payerEmail,
+        payerFirstName: paymentData.payerFirstName,
+        payerLastName: paymentData.payerLastName,
+      });
+
+      // Salvar pagamento no banco de dados
+      const payment = await storage.createPayment({
+        userId: user.id,
+        externalReference: externalReference,
+        preferenceId: pixResponse.preferenceId,
+        status: 'pending',
+        transactionAmount: pixResponse.transactionAmount,
+        currency: pixResponse.currency,
+        plan: paymentData.plan,
+        durationDays: paymentData.durationDays,
+        payerEmail: paymentData.payerEmail,
+        payerFirstName: paymentData.payerFirstName,
+        payerLastName: paymentData.payerLastName,
+        paymentMethodId: 'pix',
+        pixQrCode: pixResponse.pixQrCode,
+        pixQrCodeBase64: pixResponse.pixQrCodeBase64,
+        notificationUrl: `${process.env.REPLIT_URL || 'http://localhost:5000'}/api/payments/webhook`,
+      });
+
+      res.json({
+        paymentId: payment.id,
+        preferenceId: pixResponse.preferenceId,
+        initPoint: pixResponse.initPoint,
+        pixQrCode: pixResponse.pixQrCode,
+        pixQrCodeBase64: pixResponse.pixQrCodeBase64,
+        amount: pixResponse.transactionAmount / 100, // Converter para reais
+        currency: pixResponse.currency,
+        externalReference: externalReference,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("PIX payment creation error:", error);
+      res.status(500).json({ message: "Erro ao criar pagamento PIX" });
+    }
+  });
+
+  // Webhook do Mercado Pago
+  app.post("/api/payments/webhook", async (req, res) => {
+    try {
+      const webhookData = mercadoPagoWebhookSchema.parse(req.body);
+      
+      console.log('Webhook recebido:', JSON.stringify(webhookData, null, 2));
+
+      if (webhookData.type === 'payment') {
+        const paymentId = webhookData.data.id;
+        
+        // Buscar informações do pagamento no Mercado Pago
+        // Por enquanto, vamos simular a aprovação para desenvolvimento
+        console.log(`Processando pagamento: ${paymentId}`);
+        
+        // Buscar pagamento local pelo ID externo ou preferência
+        // Para webhook real, você precisaria fazer uma consulta ao MP API
+        // const mercadoPagoPayment = await getPaymentInfo(paymentId);
+        
+        // Simular pagamento aprovado para desenvolvimento
+        const mockPaymentStatus = 'approved';
+        
+        if (mockPaymentStatus === 'approved') {
+          // Encontrar pagamento local
+          const payment = await storage.getPaymentByPreferenceId(webhookData.data.id);
+          
+          if (payment && payment.status === 'pending') {
+            // Atualizar status do pagamento
+            await storage.updatePayment(payment.id, {
+              status: 'approved',
+              mercadoPagoId: paymentId,
+            });
+
+            // Criar licença para o usuário
+            const totalMinutes = payment.durationDays * 24 * 60;
+            const daysRemaining = Math.floor(totalMinutes / (24 * 60));
+            const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+            const minutesRemaining = totalMinutes % 60;
+            
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + payment.durationDays);
+
+            // Gerar chave da licença
+            const licenseKey = `MP-${payment.plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+
+            await storage.createLicense({
+              userId: payment.userId,
+              key: licenseKey,
+              plan: payment.plan,
+              status: "active",
+              daysRemaining,
+              hoursRemaining,
+              minutesRemaining,
+              totalMinutesRemaining: totalMinutes,
+              expiresAt,
+              activatedAt: new Date(),
+            });
+
+            console.log(`Licença criada para usuário ${payment.userId}: ${licenseKey}`);
+          }
+        }
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Webhook processing error:", error);
+      res.status(500).json({ message: "Erro ao processar webhook" });
+    }
+  });
+
+  // Verificar status do pagamento
+  app.get("/api/payments/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const paymentId = parseInt(req.params.id);
+      
+      const payment = await storage.getPayment(paymentId);
+      
+      if (!payment || payment.userId !== user.id) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        amount: payment.transactionAmount / 100,
+        currency: payment.currency,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      });
+    } catch (error) {
+      console.error("Payment status check error:", error);
+      res.status(500).json({ message: "Erro ao verificar status do pagamento" });
+    }
+  });
+
+  // Listar pagamentos do usuário
+  app.get("/api/payments", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const payments = await storage.getUserPayments(user.id);
+      
+      const paymentsFormatted = payments.map(payment => ({
+        id: payment.id,
+        status: payment.status,
+        amount: payment.transactionAmount / 100,
+        currency: payment.currency,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      }));
+
+      res.json({ payments: paymentsFormatted });
+    } catch (error) {
+      console.error("User payments fetch error:", error);
+      res.status(500).json({ message: "Erro ao buscar pagamentos" });
+    }
+  });
+
+  // Admin - Listar todos os pagamentos
+  app.get("/api/admin/payments", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const payments = await storage.getAllPayments();
+      res.json({ payments });
+    } catch (error) {
+      console.error("Admin payments fetch error:", error);
+      res.status(500).json({ message: "Erro ao buscar pagamentos" });
     }
   });
 

@@ -792,6 +792,8 @@ export class PostgresStorage implements IStorage {
       totalActivationKeys: allKeys.length,
       unusedActivationKeys: unusedKeys.length,
       totalDownloads: allDownloads.length,
+      totalPayments: allPayments.length,
+      approvedPayments: approvedPayments.length,
     };
   }
 
@@ -813,6 +815,10 @@ export class PostgresStorage implements IStorage {
     await db.delete(downloadLogs).where(eq(downloadLogs.licenseId, id));
     // Delete license
     await db.delete(licenses).where(eq(licenses.id, id));
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    await db.delete(payments).where(eq(payments.id, id));
   }
 }
 
