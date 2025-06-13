@@ -389,22 +389,7 @@ export default function Settings() {
                   <Switch />
                 </div>
                 
-                <Separator />
-                
-                <div>
-                  <h3 className="font-medium mb-2">Tema da Interface</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button variant="outline" size="sm" className="text-xs">
-                      Escuro
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-xs">
-                      Claro
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-xs">
-                      Sistema
-                    </Button>
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
           )}
