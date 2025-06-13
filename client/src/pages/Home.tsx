@@ -155,9 +155,7 @@ export default function Home() {
             <Card className="glass-effect border-glass-border hover:bg-glass-border transition-all duration-300 group">
               <CardContent className="p-8 text-center">
                 <Shield className="text-neon-yellow text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
-                <h3 className="text-xl font-bold mb-4">
-                  ANTI-DETECÇÃO PREMIUM
-                </h3>
+                <h3 className="text-xl font-bold mb-4">ANTI-DETECÇÃO</h3>
                 <p className="text-gray-300">
                   Sistema anti-cheat com atualizações em tempo real para
                   garantir 100% de segurança no BloodStrike.

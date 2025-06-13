@@ -278,8 +278,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
       });
 
-      // Create reset URL
-      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+      // Create reset URL - Use Replit URL for correct routing
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
       // Configure email transporter (SMTP)
       const transporter = nodemailer.createTransport({
