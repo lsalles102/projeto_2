@@ -38,8 +38,9 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
-        // Compare passwords directly (plain text)
-        if (password !== user.password) {
+        // Compare hashed passwords
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
