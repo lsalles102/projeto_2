@@ -15,6 +15,8 @@ import Dashboard from "@/pages/Dashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Pricing from "@/pages/Pricing";
 import Checkout from "@/pages/Checkout";
+import Payment from "@/pages/Payment";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import Settings from "@/pages/Settings";
 import Support from "@/pages/Support";
 import Terms from "@/pages/Terms";
@@ -38,6 +40,16 @@ function Router() {
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/checkout" component={Checkout} />
+          <Route path="/payment">
+            <ProtectedRoute>
+              <Payment />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/payment/success">
+            <ProtectedRoute>
+              <PaymentSuccess />
+            </ProtectedRoute>
+          </Route>
           <Route path="/settings">
             <ProtectedRoute>
               <Settings />
