@@ -35,13 +35,13 @@ export async function setupAuth(app: Express) {
       try {
         const user = await storage.getUserByEmail(email);
         if (!user || !user.password) {
-          return done(null, false, { message: "Invalid credentials" });
+          return done(null, false, { message: "Credenciais inválidas" });
         }
 
         // Compare hashed passwords
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
-          return done(null, false, { message: "Invalid credentials" });
+          return done(null, false, { message: "Credenciais inválidas" });
         }
 
         return done(null, user);
@@ -63,7 +63,8 @@ export async function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      done(null, user);
+      // Certificar que isAdmin está disponível no objeto user
+      done(null, { ...user, isAdmin: user.isAdmin || false });
     } catch (error) {
       done(error);
     }
