@@ -69,11 +69,11 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center py-20">
       <div className="max-w-md w-full mx-auto px-6">
-        <Card className="glass-effect border-glass-border">
+        <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
           <CardContent className="p-8">
             <div className="text-center mb-8">
-              <Crosshair className="text-neon-green text-4xl mx-auto mb-4" />
-              <h2 className="text-3xl font-orbitron font-bold text-glow">CADASTRAR</h2>
+              <Crosshair className="text-primary text-4xl mx-auto mb-4" />
+              <h2 className="text-3xl font-orbitron font-bold">CADASTRAR</h2>
               <p className="text-gray-400 mt-2">Crie sua conta FovDark</p>
             </div>
 

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@shared/schema";
 import { Crosshair, Eye, EyeOff } from "lucide-react";
 import type { z } from "zod";
@@ -57,11 +57,11 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center py-20">
       <div className="max-w-md w-full mx-auto px-6">
-        <Card className="glass-effect border-glass-border">
+        <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
           <CardContent className="p-8">
             <div className="text-center mb-8">
-              <Crosshair className="text-neon-green text-4xl mx-auto mb-4" />
-              <h2 className="text-3xl font-orbitron font-bold text-glow">ENTRAR</h2>
+              <Crosshair className="text-primary text-4xl mx-auto mb-4" />
+              <h2 className="text-3xl font-orbitron font-bold">ENTRAR</h2>
               <p className="text-gray-400 mt-2">Acesse sua conta FovDark</p>
             </div>
 
@@ -74,7 +74,7 @@ export default function Login() {
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
-                  className="bg-dark-surface border-glass-border focus:border-neon-green"
+                  className="bg-background/50 border-primary/20 focus:border-primary"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email && (
@@ -91,7 +91,7 @@ export default function Login() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="bg-dark-surface border-glass-border focus:border-neon-green pr-10"
+                    className="bg-background/50 border-primary/20 focus:border-primary pr-10"
                     {...form.register("password")}
                   />
                   <button
