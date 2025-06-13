@@ -14,14 +14,13 @@ const preference = new Preference(client);
 
 // Preços dos planos em centavos (BRL)
 export const PLAN_PRICES = {
-  basic: 2999, // R$ 29,99
-  premium: 4999, // R$ 49,99
-  vip: 9999, // R$ 99,99
+  '7days': 1990, // R$ 19,90
+  '15days': 3490, // R$ 34,90
 } as const;
 
 export interface CreatePixPaymentData {
   userId: number;
-  plan: 'basic' | 'premium' | 'vip';
+  plan: '7days' | '15days';
   durationDays: number;
   payerEmail: string;
   payerFirstName: string;
@@ -49,7 +48,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
     items: [
       {
         id: `license_${data.plan}`,
-        title: `Licença ${data.plan.charAt(0).toUpperCase() + data.plan.slice(1)} - ${data.durationDays} dias`,
+        title: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
         description: `Acesso completo ao sistema por ${data.durationDays} dias`,
         category_id: 'software',
         quantity: 1,

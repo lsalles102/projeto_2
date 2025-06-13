@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, Star, Crown, ExternalLink, CheckCircle } from "lucide-react";
+import { Check, Star, Crown, ExternalLink, CheckCircle, QrCode, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { initMercadoPago } from "@/lib/mercadopago";
 
 const plans = [
   {
@@ -48,11 +49,28 @@ const plans = [
   }
 ];
 
+interface PaymentData {
+  paymentId: string;
+  preferenceId: string;
+  initPoint: string;
+  pixQrCode: string;
+  pixQrCodeBase64: string;
+  amount: number;
+  currency: string;
+  externalReference: string;
+}
+
 export default function Checkout() {
   const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
-  const [step, setStep] = useState<'select' | 'payment'>('select');
+  const [step, setStep] = useState<'select' | 'payment' | 'pix'>('select');
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    initMercadoPago().catch(console.error);
+  }, []);
 
   const handleSelectPlan = (plan: typeof plans[0]) => {
     setSelectedPlan(plan);
@@ -69,8 +87,10 @@ export default function Checkout() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const response = await fetch('/api/payments/create-pix', {
+      const response = await fetch('/api/payments/pix/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,23 +106,36 @@ export default function Checkout() {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao processar pagamento');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao processar pagamento');
       }
 
-      const paymentData = await response.json();
+      const data = await response.json();
+      setPaymentData(data);
+      setStep('pix');
       
       toast({
         title: "Pagamento PIX criado",
-        description: "Redirecionando para o pagamento...",
+        description: "Escaneie o QR Code ou copie o código PIX",
       });
       
-      console.log('Payment data:', paymentData);
-      
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Erro ao processar pagamento PIX",
+        description: error.message || "Erro ao processar pagamento PIX",
         variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const copyPixCode = () => {
+    if (paymentData?.pixQrCode) {
+      navigator.clipboard.writeText(paymentData.pixQrCode);
+      toast({
+        title: "Código PIX copiado!",
+        description: "Cole no seu app do banco para fazer o pagamento",
       });
     }
   };
