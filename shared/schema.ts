@@ -109,6 +109,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+export const createUserSchema = insertUserSchema.omit({
+  username: true,
+});
+
 export const insertLicenseSchema = createInsertSchema(licenses).omit({
   id: true,
   createdAt: true,
@@ -129,7 +133,6 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email(),
-  username: z.string().min(3, "Nome de usuário deve ter pelo menos 3 caracteres"),
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),

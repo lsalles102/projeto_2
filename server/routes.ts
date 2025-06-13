@@ -4,7 +4,7 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
-import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
+import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
@@ -31,8 +31,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password before storing
       const hashedPassword = await bcrypt.hash(userData.password, 12);
       
+      // Generate username from first and last name
+      const username = `${userData.firstName}${userData.lastName}`.toLowerCase().replace(/\s+/g, '');
+      
       const user = await storage.createUser({
         ...userData,
+        username,
         password: hashedPassword,
       });
 
