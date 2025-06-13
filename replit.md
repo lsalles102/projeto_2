@@ -142,6 +142,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 13, 2025. Added profile update and password change functionality to settings
 - June 13, 2025. Removed theme interface selection from system preferences
 - June 13, 2025. Removed system preferences section entirely, keeping only Profile and Security tabs
+- June 13, 2025. Modified license activation to remove HWID field from user interface
+- June 13, 2025. HWID now collected automatically by loader via /api/licenses/set-hwid endpoint
+- June 13, 2025. Added "pending" license status until HWID is set by loader
 
 ## User Preferences
 

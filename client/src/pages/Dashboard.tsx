@@ -186,6 +186,11 @@ export default function Dashboard() {
                     <span className="w-3 h-3 bg-primary rounded-full mr-2 animate-pulse"></span>
                     <span className="text-primary font-semibold">ATIVA</span>
                   </>
+                ) : isLicensePending ? (
+                  <>
+                    <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2 animate-pulse"></span>
+                    <span className="text-yellow-500 font-semibold">PENDENTE</span>
+                  </>
                 ) : (
                   <>
                     <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
@@ -282,6 +287,21 @@ export default function Dashboard() {
                       {form.formState.errors.key && (
                         <p className="text-sm text-red-500 mt-1">{form.formState.errors.key.message}</p>
                       )}
+                    </div>
+                    
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <Monitor className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-400 mb-1">
+                            Hardware ID Automático
+                          </h4>
+                          <p className="text-xs text-blue-300/80">
+                            O HWID (Hardware ID) será coletado automaticamente pelo loader e vinculado à sua licença. 
+                            Após ativar, use o loader para finalizar a vinculação ao seu PC.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     
 
