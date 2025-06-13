@@ -53,7 +53,7 @@ export default function Footer() {
             <a href="https://discord.gg/nh6y9k6KVd" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
               <i className="fab fa-discord text-xl"></i>
             </a>
-            <a href="#" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
+            <a href="https://www.youtube.com/channel/UCAdVU21jtqmsRkYwjqVDDKg" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-neon-green transition-colors duration-300">
               <i className="fab fa-youtube text-xl"></i>
             </a>
           </div>

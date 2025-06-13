@@ -28,9 +28,10 @@ Bem-vindos ao canal oficial da FovDark! Aqui você encontra:
 ---
 
 📱 **Conecte-se conosco:**
-🌐 Site: [URL do site]
+🌐 Site: https://fovdark.com
 💬 Discord: discord.gg/nh6y9k6KVd
 📧 Suporte: contato@suportefovdark.shop
+🎥 YouTube: https://www.youtube.com/channel/UCAdVU21jtqmsRkYwjqVDDKg
 
 ⚠️ **Aviso:** Nosso conteúdo é apenas para fins educacionais e de entretenimento. Sempre jogue com responsabilidade e respeite os termos de serviço dos jogos.
 
