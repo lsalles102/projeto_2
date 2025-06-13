@@ -15,7 +15,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/auth/logout"),
+    mutationFn: () => apiRequest("/api/auth/logout", { method: "POST", body: {} }),
     onSuccess: () => {
       toast({
         title: "Logout realizado",

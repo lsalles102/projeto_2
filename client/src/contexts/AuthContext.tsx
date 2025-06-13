@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await apiRequest('/api/auth/logout', { method: 'POST' });
+    await apiRequest('/api/auth/logout', { method: 'POST', body: {} });
     setUser(null);
   };
 
