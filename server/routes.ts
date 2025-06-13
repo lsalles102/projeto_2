@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
-        return res.status(400).json({ message: "User already exists" });
+        return res.status(400).json({ message: "Usuário já existe" });
       }
 
       // Hash password before storing
@@ -46,16 +46,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the user in
       req.login(user, (err) => {
         if (err) {
-          return res.status(500).json({ message: "Login failed after registration" });
+          return res.status(500).json({ message: "Falha no login após registro" });
         }
         res.json({ user: { ...user, password: undefined }, token });
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(500).json({ message: "Falha no registro" });
     }
   });
 
@@ -64,21 +64,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       loginSchema.parse(req.body);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
     }
 
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
-        return res.status(500).json({ message: "Authentication error" });
+        return res.status(500).json({ message: "Erro de autenticação" });
       }
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
       }
 
       req.login(user, (err) => {
         if (err) {
-          return res.status(500).json({ message: "Login failed" });
+          return res.status(500).json({ message: "Falha no login" });
         }
         
         const token = generateToken(user.id);
@@ -99,9 +99,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
-        return res.status(500).json({ message: "Logout failed" });
+        return res.status(500).json({ message: "Falha no logout" });
       }
-      res.json({ message: "Logged out successfully" });
+      res.json({ message: "Logout realizado com sucesso" });
     });
   });
 
@@ -117,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Falha ao buscar usuário" });
     }
   });
 
@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard data" });
+      res.status(500).json({ message: "Falha ao carregar dados do dashboard" });
     }
   });
 
