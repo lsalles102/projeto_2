@@ -78,6 +78,30 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Mercado Pago payments table
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  mercadoPagoId: varchar("mercado_pago_id").unique(), // ID do pagamento no Mercado Pago
+  preferenceId: varchar("preference_id").unique(), // ID da preferência criada
+  externalReference: varchar("external_reference").unique().notNull(), // Referência externa única
+  status: varchar("status").notNull().default("pending"), // pending, approved, rejected, cancelled
+  statusDetail: varchar("status_detail"), // Detalhe do status
+  transactionAmount: integer("transaction_amount").notNull(), // Valor em centavos
+  currency: varchar("currency").notNull().default("BRL"),
+  plan: varchar("plan").notNull(), // basic, premium, vip
+  durationDays: integer("duration_days").notNull(),
+  payerEmail: varchar("payer_email"),
+  payerFirstName: varchar("payer_first_name"),
+  payerLastName: varchar("payer_last_name"),
+  paymentMethodId: varchar("payment_method_id"), // pix, credit_card, etc
+  notificationUrl: varchar("notification_url"),
+  pixQrCode: text("pix_qr_code"), // Código QR do PIX
+  pixQrCodeBase64: text("pix_qr_code_base64"), // QR Code em base64
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Schema validations
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -143,6 +167,12 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
   createdAt: true,
 });
 
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const contactSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
@@ -171,6 +201,30 @@ export const updateLicenseSchema = z.object({
   minutesRemaining: z.number().min(0).max(59).optional(),
 });
 
+// PIX payment schemas
+export const createPixPaymentSchema = z.object({
+  plan: z.enum(["basic", "premium", "vip"]),
+  durationDays: z.number().min(1).max(365),
+  payerEmail: z.string().email(),
+  payerFirstName: z.string().min(1),
+  payerLastName: z.string().min(1),
+});
+
+export const mercadoPagoWebhookSchema = z.object({
+  id: z.number(),
+  live_mode: z.boolean(),
+  type: z.string(),
+  date_created: z.string(),
+  application_id: z.number(),
+  user_id: z.number(),
+  version: z.number(),
+  api_version: z.string(),
+  action: z.string(),
+  data: z.object({
+    id: z.string(),
+  }),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -181,3 +235,5 @@ export type InsertActivationKey = z.infer<typeof insertActivationKeySchema>;
 export type DownloadLog = typeof downloadLogs.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;

@@ -8,11 +8,14 @@ import {
   type DownloadLog,
   type PasswordResetToken,
   type InsertPasswordResetToken,
+  type Payment,
+  type InsertPayment,
   users,
   licenses,
   activationKeys,
   downloadLogs,
-  passwordResetTokens
+  passwordResetTokens,
+  payments
 } from "@shared/schema";
 import { eq, and, gt, lt, sql } from 'drizzle-orm';
 import { db } from './db';
