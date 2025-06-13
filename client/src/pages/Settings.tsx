@@ -16,8 +16,6 @@ import {
   Settings as SettingsIcon,
   User,
   Shield,
-  Bell,
-  Monitor,
   Key,
   Trash2,
   Save
@@ -174,17 +172,7 @@ export default function Settings() {
                   <Shield className="w-4 h-4 inline mr-2" />
                   Segurança
                 </button>
-                <button
-                  onClick={() => setActiveTab("preferences")}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                    activeTab === "preferences" 
-                      ? "bg-primary/20 text-primary" 
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  <Monitor className="w-4 h-4 inline mr-2" />
-                  Preferências
-                </button>
+
               </nav>
             </CardContent>
           </Card>
@@ -351,48 +339,7 @@ export default function Settings() {
             </div>
           )}
 
-          {/* Preferences Tab */}
-          {activeTab === "preferences" && (
-            <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Monitor className="w-5 h-5 mr-2 text-primary" />
-                  Preferências do Sistema
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Notificações por Email</h3>
-                    <p className="text-sm text-gray-400">Receber atualizações por email</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Auto-Download</h3>
-                    <p className="text-sm text-gray-400">Baixar atualizações automaticamente</p>
-                  </div>
-                  <Switch />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Modo Desenvolvedor</h3>
-                    <p className="text-sm text-gray-400">Ativar logs detalhados</p>
-                  </div>
-                  <Switch />
-                </div>
-                
 
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
