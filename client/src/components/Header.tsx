@@ -78,6 +78,13 @@ export default function Header() {
                     Painel
                   </Button>
                 </Link>
+                {user?.isAdmin && (
+                  <Link href="/admin">
+                    <Button variant="outline" className="border-neon-purple text-neon-purple hover:bg-neon-purple/10">
+                      Admin
+                    </Button>
+                  </Link>
+                )}
                 <Button
                   variant="ghost"
                   onClick={handleLogout}

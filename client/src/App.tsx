@@ -20,6 +20,7 @@ import Privacy from "@/pages/Privacy";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,7 +45,9 @@ function Router() {
           </Route>
           <Route path="/admin">
             <ProtectedRoute>
-              <AdminDashboard />
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
             </ProtectedRoute>
           </Route>
           <Route component={NotFound} />

@@ -43,10 +43,10 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/dashboard"],
   });
 
-  const stats = adminData?.stats || {};
-  const users = adminData?.users || [];
-  const licenses = adminData?.licenses || [];
-  const activationKeys = adminData?.activationKeys || [];
+  const stats = (adminData as any)?.stats || {};
+  const users = (adminData as any)?.users || [];
+  const licenses = (adminData as any)?.licenses || [];
+  const activationKeys = (adminData as any)?.activationKeys || [];
 
   // Create activation keys form
   const createKeyForm = useForm<CreateKeyFormData>({
