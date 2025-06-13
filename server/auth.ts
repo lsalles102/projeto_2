@@ -11,13 +11,13 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-change-in-producti
 
 export function getSession() {
   return session({
-    secret: process.env.SESSION_SECRET || "your-session-secret-change-in-production",
+    secret: process.env.SESSION_SECRET || "your-jwt-secret-change-in-production",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+      secure: false, // Desabilitado para desenvolvimento
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
     },
   });
 }
