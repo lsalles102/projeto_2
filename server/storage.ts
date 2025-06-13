@@ -94,6 +94,7 @@ export class MemStorage implements IStorage {
     const testUser: User = {
       id: 1,
       email: 'lsalles102@gmail.com',
+      username: 'lsalles',
       password: preHashedPassword,
       firstName: 'Lucas',
       lastName: 'Salles',
@@ -147,6 +148,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       id: this.nextUserId++,
       email: userData.email,
+      username: userData.username,
       password: userData.password || null,
       firstName: userData.firstName || null,
       lastName: userData.lastName || null,
@@ -435,62 +437,62 @@ export class PostgresStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.email, email));
+    const result = await db.select().from(users).where(eq(users.email, email));
     return result[0];
   }
 
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.googleId, googleId));
+    const result = await db.select().from(users).where(eq(users.googleId, googleId));
     return result[0];
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const result = await this.db.insert(users).values(userData).returning();
+    const result = await db.insert(users).values(userData).returning();
     return result[0];
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
-    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
+    const result = await db.update(users).set(updates).where(eq(users.id, id)).returning();
     return result[0];
   }
 
   async getLicense(id: number): Promise<License | undefined> {
-    const result = await this.db.select().from(licenses).where(eq(licenses.id, id));
+    const result = await db.select().from(licenses).where(eq(licenses.id, id));
     return result[0];
   }
 
   async getLicenseByUserId(userId: number): Promise<License | undefined> {
-    const result = await this.db.select().from(licenses).where(eq(licenses.userId, userId));
+    const result = await db.select().from(licenses).where(eq(licenses.userId, userId));
     return result[0];
   }
 
   async getLicenseByKey(key: string): Promise<License | undefined> {
-    const result = await this.db.select().from(licenses).where(eq(licenses.key, key));
+    const result = await db.select().from(licenses).where(eq(licenses.key, key));
     return result[0];
   }
 
   async createLicense(licenseData: InsertLicense): Promise<License> {
-    const result = await this.db.insert(licenses).values(licenseData).returning();
+    const result = await db.insert(licenses).values(licenseData).returning();
     return result[0];
   }
 
   async updateLicense(id: number, updates: Partial<License>): Promise<License> {
-    const result = await this.db.update(licenses).set(updates).where(eq(licenses.id, id)).returning();
+    const result = await db.update(licenses).set(updates).where(eq(licenses.id, id)).returning();
     return result[0];
   }
 
   async getActivationKey(key: string): Promise<ActivationKey | undefined> {
-    const result = await this.db.select().from(activationKeys).where(eq(activationKeys.key, key));
+    const result = await db.select().from(activationKeys).where(eq(activationKeys.key, key));
     return result[0];
   }
 
   async createActivationKey(activationKeyData: InsertActivationKey): Promise<ActivationKey> {
-    const result = await this.db.insert(activationKeys).values(activationKeyData).returning();
+    const result = await db.insert(activationKeys).values(activationKeyData).returning();
     return result[0];
   }
 
   async markActivationKeyAsUsed(key: string, userId: number): Promise<ActivationKey> {
-    const result = await this.db.update(activationKeys)
+    const result = await db.update(activationKeys)
       .set({ isUsed: true, usedBy: userId, usedAt: new Date() })
       .where(eq(activationKeys.key, key))
       .returning();
@@ -498,23 +500,23 @@ export class PostgresStorage implements IStorage {
   }
 
   async logDownload(userId: number, licenseId: number, fileName: string): Promise<DownloadLog> {
-    const result = await this.db.insert(downloadLogs)
+    const result = await db.insert(downloadLogs)
       .values({ userId, licenseId, fileName, downloadedAt: new Date() })
       .returning();
     return result[0];
   }
 
   async getUserDownloads(userId: number): Promise<DownloadLog[]> {
-    return await this.db.select().from(downloadLogs).where(eq(downloadLogs.userId, userId));
+    return await db.select().from(downloadLogs).where(eq(downloadLogs.userId, userId));
   }
 
   async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
-    const result = await this.db.insert(passwordResetTokens).values(tokenData).returning();
+    const result = await db.insert(passwordResetTokens).values(tokenData).returning();
     return result[0];
   }
 
   async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
-    const result = await this.db.select().from(passwordResetTokens)
+    const result = await db.select().from(passwordResetTokens)
       .where(and(
         eq(passwordResetTokens.token, token),
         eq(passwordResetTokens.used, false),
@@ -524,7 +526,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async markPasswordResetTokenAsUsed(token: string): Promise<PasswordResetToken> {
-    const result = await this.db.update(passwordResetTokens)
+    const result = await db.update(passwordResetTokens)
       .set({ used: true })
       .where(eq(passwordResetTokens.token, token))
       .returning();
@@ -532,13 +534,13 @@ export class PostgresStorage implements IStorage {
   }
 
   async deleteExpiredPasswordResetTokens(): Promise<void> {
-    await this.db.delete(passwordResetTokens)
+    await db.delete(passwordResetTokens)
       .where(lt(passwordResetTokens.expiresAt, new Date()));
   }
 
   // HWID-based license operations
   async getLicenseByHwid(hwid: string): Promise<License | undefined> {
-    const result = await this.db.select()
+    const result = await db.select()
       .from(licenses)
       .where(and(
         eq(licenses.hwid, hwid),
@@ -549,7 +551,7 @@ export class PostgresStorage implements IStorage {
 
   async updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined> {
     // First get the current license
-    const currentLicense = await this.db.select()
+    const currentLicense = await db.select()
       .from(licenses)
       .where(and(
         eq(licenses.key, licenseKey),
@@ -576,7 +578,7 @@ export class PostgresStorage implements IStorage {
     }
 
     // Update the license
-    const result = await this.db.update(licenses)
+    const result = await db.update(licenses)
       .set({
         lastHeartbeat: new Date(),
         totalMinutesRemaining: newTotalMinutes,
@@ -592,7 +594,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async decrementLicenseTime(licenseId: number, minutes: number): Promise<License> {
-    const currentLicense = await this.db.select()
+    const currentLicense = await db.select()
       .from(licenses)
       .where(eq(licenses.id, licenseId));
 
@@ -611,7 +613,7 @@ export class PostgresStorage implements IStorage {
     // Check if license expired
     const newStatus = newTotalMinutes <= 0 ? 'expired' : license.status;
 
-    const result = await this.db.update(licenses)
+    const result = await db.update(licenses)
       .set({
         totalMinutesRemaining: newTotalMinutes,
         daysRemaining: days,
@@ -627,15 +629,15 @@ export class PostgresStorage implements IStorage {
 
   // Admin operations
   async getAllUsers(): Promise<User[]> {
-    return await this.db.select().from(users);
+    return await db.select().from(users);
   }
 
   async getAllLicenses(): Promise<License[]> {
-    return await this.db.select().from(licenses);
+    return await db.select().from(licenses);
   }
 
   async getAllActivationKeys(): Promise<ActivationKey[]> {
-    return await this.db.select().from(activationKeys);
+    return await db.select().from(activationKeys);
   }
 
   async getSystemStats(): Promise<{
@@ -646,12 +648,12 @@ export class PostgresStorage implements IStorage {
     unusedActivationKeys: number;
     totalDownloads: number;
   }> {
-    const allUsers = await this.db.select().from(users);
-    const allLicenses = await this.db.select().from(licenses);
-    const activeLicenses = await this.db.select().from(licenses).where(eq(licenses.status, 'active'));
-    const allKeys = await this.db.select().from(activationKeys);
-    const unusedKeys = await this.db.select().from(activationKeys).where(eq(activationKeys.isUsed, false));
-    const allDownloads = await this.db.select().from(downloadLogs);
+    const allUsers = await db.select().from(users);
+    const allLicenses = await db.select().from(licenses);
+    const activeLicenses = await db.select().from(licenses).where(eq(licenses.status, 'active'));
+    const allKeys = await db.select().from(activationKeys);
+    const unusedKeys = await db.select().from(activationKeys).where(eq(activationKeys.isUsed, false));
+    const allDownloads = await db.select().from(downloadLogs);
 
     return {
       totalUsers: allUsers.length,
@@ -664,23 +666,23 @@ export class PostgresStorage implements IStorage {
   }
 
   async deleteActivationKey(id: number): Promise<void> {
-    await this.db.delete(activationKeys).where(eq(activationKeys.id, id));
+    await db.delete(activationKeys).where(eq(activationKeys.id, id));
   }
 
   async deleteUser(id: number): Promise<void> {
     // Delete related data first
-    await this.db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
-    await this.db.delete(licenses).where(eq(licenses.userId, id));
-    await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+    await db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
+    await db.delete(licenses).where(eq(licenses.userId, id));
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
     // Delete user
-    await this.db.delete(users).where(eq(users.id, id));
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async deleteLicense(id: number): Promise<void> {
     // Delete related download logs first
-    await this.db.delete(downloadLogs).where(eq(downloadLogs.licenseId, id));
+    await db.delete(downloadLogs).where(eq(downloadLogs.licenseId, id));
     // Delete license
-    await this.db.delete(licenses).where(eq(licenses.id, id));
+    await db.delete(licenses).where(eq(licenses.id, id));
   }
 }
 
