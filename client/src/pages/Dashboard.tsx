@@ -163,8 +163,8 @@ export default function Dashboard() {
         <CardContent className="p-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-orbitron font-bold text-glow mb-2">
-                Bem-vindo, <span className="text-neon-green">{user?.firstName}</span>
+              <h1 className="text-3xl font-orbitron font-bold mb-2">
+                Bem-vindo, <span className="text-primary">{user?.firstName}</span>
               </h1>
               <p className="text-gray-400">Painel de controle FovDark Premium</p>
             </div>
@@ -173,8 +173,8 @@ export default function Dashboard() {
               <div className="flex items-center mt-1">
                 {isLicenseActive ? (
                   <>
-                    <span className="w-3 h-3 bg-neon-green rounded-full mr-2 animate-pulse"></span>
-                    <span className="text-neon-green font-semibold">ATIVA</span>
+                    <span className="w-3 h-3 bg-primary rounded-full mr-2 animate-pulse"></span>
+                    <span className="text-primary font-semibold">ATIVA</span>
                   </>
                 ) : (
                   <>
@@ -197,7 +197,7 @@ export default function Dashboard() {
           <Card className="glass-effect border-glass-border">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl font-orbitron">
-                <Key className="text-neon-green mr-3" />
+                <Key className="text-primary mr-3" />
                 Informações da Licença
               </CardTitle>
             </CardHeader>

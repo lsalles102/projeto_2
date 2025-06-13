@@ -114,14 +114,14 @@ export default function Login() {
                     Lembrar-me
                   </Label>
                 </div>
-                <Link href="/forgot-password" className="text-neon-green text-sm hover:underline">
+                <Link href="/forgot-password" className="text-primary text-sm hover:underline">
                   Esqueci minha senha
                 </Link>
               </div>
 
               <Button
                 type="submit"
-                className="w-full py-3 bg-neon-green text-black rounded-lg neon-glow font-bold hover:scale-105 transition-all duration-300"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:scale-105 transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -139,7 +139,7 @@ export default function Login() {
 
             <p className="text-center text-sm text-gray-400 mt-6">
               Não tem uma conta?{" "}
-              <Link href="/register" className="text-neon-green hover:underline">
+              <Link href="/register" className="text-primary hover:underline">
                 Cadastre-se
               </Link>
             </p>
