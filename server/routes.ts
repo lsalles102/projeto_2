@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, generateToken } from "./auth";
+import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
 import { registerSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
@@ -259,6 +259,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Download error:", error);
+      res.status(500).json({ message: "Download failed" });
+    }
+  });
+
+  // Secure file download endpoint
+  app.get("/api/download/file/:token/:filename", async (req, res) => {
+    try {
+      const { token, filename } = req.params;
+      
+      // Verify token
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({ message: "Invalid download token" });
+      }
+
+      // Verify user has active license
+      const license = await storage.getLicenseByUserId(decoded.userId);
+      if (!license || license.status !== 'active') {
+        return res.status(403).json({ message: "No active license" });
+      }
+
+      const path = require('path');
+      const fs = require('fs');
+      const filePath = path.join(__dirname, 'downloads', filename);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Set headers for download
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      
+      // Send file
+      res.sendFile(filePath);
+    } catch (error) {
+      console.error("Secure download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
   });

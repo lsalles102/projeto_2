@@ -81,12 +81,23 @@ export default function Dashboard() {
   const downloadMutation = useMutation({
     mutationFn: () => apiRequest("GET", "/api/download/cheat"),
     onSuccess: (data: any) => {
+      // Trigger actual file download
+      const downloadUrl = (data as any).downloadUrl;
+      const fileName = (data as any).fileName;
+      
+      // Create a temporary link and click it to start download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
       toast({
-        title: "Download autorizado",
-        description: `${(data as any).fileName} está pronto para download!`,
+        title: "Download iniciado",
+        description: `${fileName} está sendo baixado...`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      // In a real app, you would trigger the actual file download here
     },
     onError: (error: Error) => {
       toast({
