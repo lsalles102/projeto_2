@@ -17,6 +17,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: varchar("email").unique().notNull(),
+  username: varchar("username").notNull(),
   password: varchar("password"), // nullable for OAuth users
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -104,6 +105,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email(),
+  username: z.string().min(3, "Nome de usuário deve ter pelo menos 3 caracteres"),
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),

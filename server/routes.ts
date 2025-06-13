@@ -811,6 +811,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User profile update routes
+  app.patch("/api/user/profile", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { username, email } = req.body;
+
+      // Check if email is already taken by another user
+      if (email !== user.email) {
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser && existingUser.id !== user.id) {
+          return res.status(400).json({ message: "Email já está em uso" });
+        }
+      }
+
+      const updatedUser = await storage.updateUser(user.id, { username, email });
+      res.json({ user: { ...updatedUser, password: undefined } });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+  });
+
+  app.patch("/api/user/password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = req.body;
+
+      // Verify current password
+      const bcrypt = require('bcrypt');
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
