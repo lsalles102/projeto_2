@@ -1,10 +1,13 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Crown, Star, Gem } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Pricing() {
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const plans = [
     {
       name: "7 DIAS",
@@ -98,22 +101,32 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <Link href="/checkout">
+                {isAuthenticated ? (
+                  <Link href="/checkout">
+                    <Button
+                      className={`w-full py-3 font-bold transition-all duration-300 ${
+                        plan.buttonVariant === "default"
+                          ? "bg-primary text-black neon-glow hover:scale-105"
+                          : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
+                      }`}
+                      variant={plan.buttonVariant}
+                    >
+                      {plan.name === "PREMIUM" && (
+                        <Crown className="w-4 h-4 mr-2" />
+                      )}
+                      {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
+                      {plan.buttonText}
+                    </Button>
+                  </Link>
+                ) : (
                   <Button
-                    className={`w-full py-3 font-bold transition-all duration-300 ${
-                      plan.buttonVariant === "default"
-                        ? "bg-primary text-black neon-glow hover:scale-105"
-                        : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
-                    }`}
-                    variant={plan.buttonVariant}
+                    className="w-full py-3 font-bold bg-gray-600 text-gray-300 cursor-not-allowed"
+                    disabled
+                    onClick={() => navigate("/login")}
                   >
-                    {plan.name === "PREMIUM" && (
-                      <Crown className="w-4 h-4 mr-2" />
-                    )}
-                    {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
-                    {plan.buttonText}
+                    Faça login para comprar
                   </Button>
-                </Link>
+                )}
               </CardContent>
             </Card>
           ))}
