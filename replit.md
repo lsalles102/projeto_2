@@ -24,10 +24,11 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - **API Design**: RESTful API with comprehensive error handling
 
 ### Database Architecture
-- **Primary Database**: PostgreSQL with Drizzle ORM
-- **Connection**: Neon serverless PostgreSQL with connection pooling
+- **Primary Database**: PostgreSQL with Drizzle ORM (migrated from Neon to Supabase)
+- **Connection**: Supabase PostgreSQL with postgres-js connection pooling
 - **Schema Management**: Drizzle Kit for migrations and schema evolution
 - **Session Management**: PostgreSQL session store for authentication
+- **Supabase Integration**: Client available for additional features if needed
 
 ## Key Components
 
@@ -80,7 +81,8 @@ FovDark is a comprehensive software licensing platform designed specifically for
 ## External Dependencies
 
 ### Core Dependencies
-- **@neondatabase/serverless**: PostgreSQL database connection
+- **@supabase/supabase-js**: Supabase client for PostgreSQL
+- **postgres**: PostgreSQL driver for Node.js
 - **drizzle-orm**: Type-safe database ORM
 - **passport**: Authentication middleware
 - **bcrypt**: Password hashing
@@ -123,6 +125,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 ## Changelog
 
 - June 13, 2025. Initial setup
+- June 13, 2025. Migrated from Neon to Supabase for PostgreSQL database
+- June 13, 2025. Comprehensive code review and bug fixes completed
+- June 13, 2025. Updated database connection to use postgres-js driver
+- June 13, 2025. Fixed username field requirements in user schema
 
 ## User Preferences
 
