@@ -98,20 +98,22 @@ export default function Pricing() {
                   ))}
                 </ul>
 
-                <Button
-                  className={`w-full py-3 font-bold transition-all duration-300 ${
-                    plan.buttonVariant === "default"
-                      ? "bg-primary text-black neon-glow hover:scale-105"
-                      : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
-                  }`}
-                  variant={plan.buttonVariant}
-                >
-                  {plan.name === "PREMIUM" && (
-                    <Crown className="w-4 h-4 mr-2" />
-                  )}
-                  {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
-                  {plan.buttonText}
-                </Button>
+                <Link href="/checkout">
+                  <Button
+                    className={`w-full py-3 font-bold transition-all duration-300 ${
+                      plan.buttonVariant === "default"
+                        ? "bg-primary text-black neon-glow hover:scale-105"
+                        : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
+                    }`}
+                    variant={plan.buttonVariant}
+                  >
+                    {plan.name === "PREMIUM" && (
+                      <Crown className="w-4 h-4 mr-2" />
+                    )}
+                    {plan.name === "VIP" && <Gem className="w-4 h-4 mr-2" />}
+                    {plan.buttonText}
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

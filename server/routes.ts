@@ -244,14 +244,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log the download
-      await storage.logDownload(user.id, license.id, "FovDark_Cheat_v2.4.1.zip");
+      const fileName = "bloodstrike_cheat.exe";
+      await storage.logDownload(user.id, license.id, fileName);
 
-      // In a real implementation, you would serve the actual file
-      // For now, we'll return download info
+      // Generate secure download token
+      const downloadToken = generateToken(user.id);
+      
       res.json({
         message: "Download authorized",
-        fileName: "FovDark_Cheat_v2.4.1.zip",
-        downloadUrl: "/downloads/FovDark_Cheat_v2.4.1.zip", // This would be a real file path
+        fileName,
+        downloadUrl: `/api/download/file/${downloadToken}/${fileName}`,
         version: "2.4.1",
         size: "15.2 MB",
       });

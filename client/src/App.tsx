@@ -14,6 +14,7 @@ import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Pricing from "@/pages/Pricing";
+import Checkout from "@/pages/Checkout";
 import Support from "@/pages/Support";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
@@ -35,6 +36,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/pricing" component={Pricing} />
+          <Route path="/checkout" component={Checkout} />
           <Route path="/support" component={Support} />
           <Route path="/terms" component={Terms} />
           <Route path="/privacy" component={Privacy} />
