@@ -9,6 +9,7 @@ import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
 import { nanoid } from "nanoid";
+import bcrypt from "bcrypt";
 
 
 
@@ -28,7 +29,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Hash password before storing
-      const bcrypt = require('bcrypt');
       const hashedPassword = await bcrypt.hash(userData.password, 12);
       
       const user = await storage.createUser({
@@ -841,7 +841,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { currentPassword, newPassword } = req.body;
 
       // Verify current password
-      const bcrypt = require('bcrypt');
       const isValidPassword = await bcrypt.compare(currentPassword, user.password);
       if (!isValidPassword) {
         return res.status(400).json({ message: "Senha atual incorreta" });
