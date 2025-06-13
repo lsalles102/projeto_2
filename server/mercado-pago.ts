@@ -14,8 +14,8 @@ const preference = new Preference(client);
 
 // Preços dos planos em centavos (BRL)
 export const PLAN_PRICES = {
-  '7days': 1990, // R$ 19,90
-  '15days': 3490, // R$ 34,90
+  '7days': 19.90, // R$ 19,90
+  '15days': 34.90, // R$ 34,90
 } as const;
 
 export interface CreatePixPaymentData {
@@ -52,7 +52,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
         description: `Acesso completo ao sistema por ${data.durationDays} dias`,
         category_id: 'software',
         quantity: 1,
-        unit_price: transactionAmount / 100, // Mercado Pago espera em reais, não centavos
+        unit_price: transactionAmount, // Valor já em reais
       }
     ],
     payer: {
