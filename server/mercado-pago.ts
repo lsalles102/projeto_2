@@ -41,97 +41,117 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   const externalReference = `payment_${nanoid()}`;
   const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais
   
-  // URL base da aplicação - usar URL pública válida para webhook
-  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.REPLIT_URL || 'https://webhook.site/b5811f56-ae85-4342-9a1f-c1df4876e770';
-  
-  const paymentData = {
-    transaction_amount: transactionAmount,
-    description: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
-    payment_method_id: 'pix',
-    payer: {
-      email: data.payerEmail,
-      first_name: data.payerFirstName,
-      last_name: data.payerLastName,
-    },
-    external_reference: externalReference,
-    date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
-  };
-
-  // Adicionar notification_url apenas se tivermos uma URL válida do Render
-  if (process.env.RENDER_EXTERNAL_URL) {
-    paymentData.notification_url = `${process.env.RENDER_EXTERNAL_URL}/api/payments/webhook`;
-  }
+  // URL base da aplicação
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : process.env.REPLIT_URL || 'http://localhost:5000';
 
   try {
-    // Criar pagamento PIX diretamente
-    const response = await payment.create({
-      body: paymentData
+    // Criar preferência de pagamento com PIX
+    const preferenceData = {
+      items: [
+        {
+          id: `license_${data.plan}`,
+          title: `FovDark Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
+          description: `Acesso completo ao sistema por ${data.durationDays} dias`,
+          category_id: 'software',
+          quantity: 1,
+          unit_price: transactionAmount,
+        }
+      ],
+      payer: {
+        email: data.payerEmail,
+        first_name: data.payerFirstName,
+        last_name: data.payerLastName,
+      },
+      payment_methods: {
+        excluded_payment_methods: [
+          { id: 'master' },
+          { id: 'visa' },
+          { id: 'amex' },
+          { id: 'diners' },
+          { id: 'elo' },
+          { id: 'hipercard' },
+        ],
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' },
+        ],
+        installments: 1,
+      },
+      external_reference: externalReference,
+      notification_url: `${baseUrl}/api/payments/webhook`,
+      expires: true,
+      expiration_date_from: new Date().toISOString(),
+      expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
+      auto_return: 'approved',
+      back_urls: {
+        success: `${baseUrl}/payment/success`,
+        failure: `${baseUrl}/payment`,
+        pending: `${baseUrl}/payment`,
+      },
+    };
+
+    console.log('Criando preferência Mercado Pago:', JSON.stringify(preferenceData, null, 2));
+
+    const prefResponse = await preference.create({
+      body: preferenceData
     });
 
-    if (!response.id) {
-      throw new Error('Falha ao criar pagamento PIX no Mercado Pago');
+    console.log('Resposta da preferência:', JSON.stringify(prefResponse, null, 2));
+
+    if (!prefResponse.id) {
+      throw new Error('Falha ao criar preferência no Mercado Pago');
     }
 
-    // Extrair informações do PIX
-    const pixQrCode = response.point_of_interaction?.transaction_data?.qr_code || '';
-    const pixQrCodeBase64 = response.point_of_interaction?.transaction_data?.qr_code_base64 || '';
-    const ticketUrl = response.point_of_interaction?.transaction_data?.ticket_url || '';
+    // Tentar criar pagamento PIX diretamente para obter QR Code
+    let pixQrCode = '';
+    let pixQrCodeBase64 = '';
 
-    // Se não tiver QR Code direto, criar uma preferência como fallback
-    let initPoint = '';
-    let preferenceId = '';
-    
-    if (!pixQrCode) {
-      const preferenceData = {
-        items: [
-          {
-            id: `license_${data.plan}`,
-            title: `BloodStrike Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
-            description: `Acesso completo ao sistema por ${data.durationDays} dias`,
-            category_id: 'software',
-            quantity: 1,
-            unit_price: transactionAmount,
-          }
-        ],
+    try {
+      const paymentData = {
+        transaction_amount: transactionAmount,
+        description: `FovDark Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
+        payment_method_id: 'pix',
         payer: {
           email: data.payerEmail,
           first_name: data.payerFirstName,
           last_name: data.payerLastName,
         },
-        payment_methods: {
-          excluded_payment_types: [
-            { id: 'credit_card' },
-            { id: 'debit_card' },
-            { id: 'ticket' }
-          ],
-        },
         external_reference: externalReference,
-        notification_url: baseUrl.includes('webhook.site') ? baseUrl : `${baseUrl}/api/payments/webhook`,
-        expires: true,
-        expiration_date_from: new Date().toISOString(),
-        expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        notification_url: `${baseUrl}/api/payments/webhook`,
       };
 
-      const prefResponse = await preference.create({
-        body: preferenceData
+      console.log('Criando pagamento PIX:', JSON.stringify(paymentData, null, 2));
+
+      const pixResponse = await payment.create({
+        body: paymentData
       });
-      
-      initPoint = prefResponse.init_point || '';
-      preferenceId = prefResponse.id || '';
+
+      console.log('Resposta do pagamento PIX:', JSON.stringify(pixResponse, null, 2));
+
+      pixQrCode = pixResponse.point_of_interaction?.transaction_data?.qr_code || '';
+      pixQrCodeBase64 = pixResponse.point_of_interaction?.transaction_data?.qr_code_base64 || '';
+    } catch (pixError) {
+      console.warn('Erro ao criar pagamento PIX direto, usando apenas preferência:', pixError);
     }
 
     return {
-      preferenceId: preferenceId || response.id.toString(),
+      preferenceId: prefResponse.id,
       externalReference,
-      initPoint,
-      pixQrCode: pixQrCode || ticketUrl,
+      initPoint: prefResponse.init_point || '',
+      pixQrCode,
       pixQrCodeBase64,
       transactionAmount: PLAN_PRICES[data.plan], // Retornar em centavos
       currency: 'BRL',
     };
   } catch (error) {
     console.error('Erro ao criar pagamento PIX:', error);
-    throw new Error('Erro interno do servidor ao processar pagamento');
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
+    throw new Error(`Erro ao processar pagamento PIX: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 }
 
