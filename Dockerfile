@@ -1,43 +1,35 @@
-# Use Node.js 20 Alpine for smaller image size
-FROM node:20-alpine AS base
+# Use Node.js 20 as base image
+FROM node:20-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
+# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package*.json ./
 
-# Build the application
-FROM base AS builder
-WORKDIR /app
-COPY package.json package-lock.json* ./
+# Install dependencies (including devDependencies for build)
 RUN npm ci
 
+# Copy source code
 COPY . .
-RUN npm run build
 
-# Production image
-FROM base AS runner
-WORKDIR /app
+# Build the application
+RUN npm run build:prod
 
-ENV NODE_ENV=production
-ENV PORT=5000
+# Remove devDependencies to reduce image size
+RUN npm ci --only=production && npm cache clean --force
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create public directory for static files
+RUN mkdir -p public
 
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Copy built frontend files to public directory
+RUN cp -r dist/client/* public/ 2>/dev/null || echo "No client files to copy"
 
-USER nextjs
-
+# Expose port
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/api/health || exit 1
+# Set environment to production
+ENV NODE_ENV=production
 
-CMD ["node", "dist/index.js"]
+# Start the application
+CMD ["npm", "run", "start:prod"]

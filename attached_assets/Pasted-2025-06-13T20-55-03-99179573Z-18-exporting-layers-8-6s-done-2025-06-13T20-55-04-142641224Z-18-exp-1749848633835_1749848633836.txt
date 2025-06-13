@@ -1,0 +1,50 @@
+2025-06-13T20:55:03.99179573Z #18 exporting layers 8.6s done
+2025-06-13T20:55:04.142641224Z #18 exporting manifest sha256:376d0b4a5689f58c7e710fc7cf7221b15b3e4d5ee3284aa33aeec053852e547a
+2025-06-13T20:55:04.252845374Z #18 exporting manifest sha256:376d0b4a5689f58c7e710fc7cf7221b15b3e4d5ee3284aa33aeec053852e547a 0.3s done
+2025-06-13T20:55:04.252868844Z #18 exporting config sha256:c931e8101d1925d1debff988008f70e0223827649b9096be81301ac35647843a
+2025-06-13T20:55:04.466363935Z #18 exporting config sha256:c931e8101d1925d1debff988008f70e0223827649b9096be81301ac35647843a 0.1s done
+2025-06-13T20:55:05.28832674Z #18 DONE 9.9s
+2025-06-13T20:55:05.438828067Z 
+2025-06-13T20:55:05.438851967Z #19 exporting cache to client directory
+2025-06-13T20:55:05.438856367Z #19 preparing build cache for export
+2025-06-13T20:55:39.358029199Z #19 writing cache manifest sha256:6c3d78bc062c11cba16ba62231d42e45bafcc36eee0a8db1ee54950bb2fda13d done
+2025-06-13T20:55:39.358051629Z #19 DONE 34.0s
+2025-06-13T20:55:43.139498597Z Pushing image to registry...
+2025-06-13T20:55:47.226159425Z Upload succeeded
+2025-06-13T20:55:51.399432837Z ==> Deploying...
+2025-06-13T20:56:01.073652141Z node:internal/modules/esm/resolve:873
+2025-06-13T20:56:01.073702075Z   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+2025-06-13T20:56:01.073720866Z         ^
+2025-06-13T20:56:01.073725677Z 
+2025-06-13T20:56:01.073728987Z Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+2025-06-13T20:56:01.073734107Z     at packageResolve (node:internal/modules/esm/resolve:873:9)
+2025-06-13T20:56:01.073736157Z     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+2025-06-13T20:56:01.073738377Z     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+2025-06-13T20:56:01.073740487Z     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:642:12)
+2025-06-13T20:56:01.073742738Z     at #cachedDefaultResolve (node:internal/modules/esm/loader:591:25)
+2025-06-13T20:56:01.073744798Z     at ModuleLoader.resolve (node:internal/modules/esm/loader:574:38)
+2025-06-13T20:56:01.073746828Z     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:236:38)
+2025-06-13T20:56:01.073748788Z     at ModuleJob._link (node:internal/modules/esm/module_job:130:49) {
+2025-06-13T20:56:01.073751258Z   code: 'ERR_MODULE_NOT_FOUND'
+2025-06-13T20:56:01.073753288Z }
+2025-06-13T20:56:01.073755248Z 
+2025-06-13T20:56:01.073757349Z Node.js v20.19.2
+2025-06-13T20:56:04.264044152Z ==> Exited with status 1
+2025-06-13T20:56:04.2803561Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-06-13T20:56:04.863311235Z node:internal/modules/esm/resolve:873
+2025-06-13T20:56:04.863351458Z   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+2025-06-13T20:56:04.863354608Z         ^
+2025-06-13T20:56:04.863356698Z 
+2025-06-13T20:56:04.863359578Z Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+2025-06-13T20:56:04.863362719Z     at packageResolve (node:internal/modules/esm/resolve:873:9)
+2025-06-13T20:56:04.863365349Z     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+2025-06-13T20:56:04.863367619Z     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+2025-06-13T20:56:04.863369559Z     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:642:12)
+2025-06-13T20:56:04.863371679Z     at #cachedDefaultResolve (node:internal/modules/esm/loader:591:25)
+2025-06-13T20:56:04.863373619Z     at ModuleLoader.resolve (node:internal/modules/esm/loader:574:38)
+2025-06-13T20:56:04.863375629Z     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:236:38)
+2025-06-13T20:56:04.86337798Z     at ModuleJob._link (node:internal/modules/esm/module_job:130:49) {
+2025-06-13T20:56:04.86338064Z   code: 'ERR_MODULE_NOT_FOUND'
+2025-06-13T20:56:04.86338267Z }
+2025-06-13T20:56:04.86338454Z 
+2025-06-13T20:56:04.86338644Z Node.js v20.19.2
