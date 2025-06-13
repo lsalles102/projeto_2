@@ -138,6 +138,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 13, 2025. Admin login credentials: lsalles102@gmail.com / admin123
 - June 13, 2025. Fixed user registration issue - migrated from MemStorage to PostgresStorage
 - June 13, 2025. Successfully verified Supabase database integration and user creation
+- June 13, 2025. Completed migration from Replit Agent to Replit environment
+- June 13, 2025. Added profile update and password change functionality to settings
+- June 13, 2025. Removed theme interface selection from system preferences
+- June 13, 2025. Removed system preferences section entirely, keeping only Profile and Security tabs
 
 ## User Preferences
 
