@@ -16,7 +16,7 @@ const plans = [
     name: "TESTE",
     price: "R$ 1,00",
     duration: "30 minutos",
-    durationDays: 1, // Use 1 day but limit to 30 minutes in license
+    durationDays: 0.021, // 30 minutos = 0.021 dias (30/1440)
     icon: <Star className="text-green-500 text-4xl" />,
     features: [
       "Aimbot Color para BloodStrike",
