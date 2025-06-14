@@ -1,5 +1,6 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { nanoid } from 'nanoid';
+import { getBaseUrl } from './config';
 
 // Configuração do Mercado Pago
 const client = new MercadoPagoConfig({
@@ -47,7 +48,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   console.log('External reference:', externalReference);
   
   // URL base da aplicação
-  const baseUrl = 'https://fovdark.shop';
+  const baseUrl = getBaseUrl();
 
   try {
     // Verificar se o token de acesso está configurado

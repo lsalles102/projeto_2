@@ -11,6 +11,7 @@ import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { sendLicenseKeyEmail } from "./email";
+import { getBaseUrl } from "./config";
 
 // Rate limiting map
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -1210,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethodId: 'pix',
         pixQrCode: pixResponse.pixQrCode,
         pixQrCodeBase64: pixResponse.pixQrCodeBase64,
-        notificationUrl: `https://fovdark.shop/api/payments/webhook`,
+        notificationUrl: `${getBaseUrl()}/api/payments/webhook`,
       });
 
       res.json({
