@@ -458,6 +458,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route for loader to update HWID for existing active license
+  app.post("/api/licenses/update-hwid", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { hwid } = z.object({
+        hwid: z.string().min(1)
+      }).parse(req.body);
+
+      // Find user's active license
+      const license = await storage.getLicenseByUserId(user.id);
+      if (!license) {
+        return res.status(404).json({ message: "Nenhuma licença encontrada" });
+      }
+
+      if (license.status !== "active") {
+        return res.status(400).json({ message: "Licença não está ativa" });
+      }
+
+      // Check if license is expired
+      const isExpired = new Date() > license.expiresAt;
+      if (isExpired) {
+        await storage.updateLicense(license.id, { status: "expired" });
+        return res.status(400).json({ message: "Licença expirada" });
+      }
+
+      // If license already has a different HWID, check if we should allow update
+      if (license.hwid && license.hwid !== hwid) {
+        // For security, we can be strict about HWID changes
+        // But for now, allow updates for better user experience
+        console.log(`HWID change detected for user ${user.id}: ${license.hwid} -> ${hwid}`);
+      }
+
+      // Update license with new HWID and heartbeat
+      const updatedLicense = await storage.updateLicense(license.id, {
+        hwid,
+        lastHeartbeat: new Date()
+      });
+
+      // Also update user HWID
+      await storage.updateUser(user.id, { hwid });
+
+      res.json({ 
+        license: updatedLicense,
+        message: "HWID atualizado com sucesso"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update HWID error:", error);
+      res.status(500).json({ message: "Falha ao atualizar HWID" });
+    }
+  });
+
   app.get("/api/licenses/validate", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
