@@ -81,24 +81,36 @@ export default function Payment() {
   // Criar pagamento PIX
   const createPaymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
+      console.log("Enviando dados para API:", data);
+      
+      const requestBody = {
+        ...data,
+        durationDays: PLAN_INFO[data.plan].duration,
+      };
+      
+      console.log("Corpo da requisição:", requestBody);
+      
       const response = await fetch("/api/payments/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          ...data,
-          durationDays: PLAN_INFO[data.plan].duration,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log("Status da resposta:", response.status);
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+        console.error("Erro da API:", error);
         throw new Error(error.message || "Erro ao criar pagamento");
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log("Resposta da API:", result);
+      return result;
     },
     onSuccess: (data) => {
+      console.log("Pagamento criado com sucesso:", data);
       setPixData(data);
       setPaymentStatus("qrcode");
       toast({
@@ -107,6 +119,8 @@ export default function Payment() {
       });
     },
     onError: (error: Error) => {
+      console.error("Erro ao criar pagamento:", error);
+      setPaymentStatus("form"); // Voltar ao formulário em caso de erro
       toast({
         title: "Erro",
         description: error.message,
@@ -148,6 +162,7 @@ export default function Payment() {
   }, [pixData?.paymentId, queryClient, toast]);
 
   const onSubmit = (data: PaymentFormData) => {
+    console.log("Iniciando criação de pagamento:", data);
     setPaymentStatus("processing");
     createPaymentMutation.mutate(data);
   };
