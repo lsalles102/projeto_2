@@ -182,6 +182,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Removed profile section from settings page per user request - only security settings remain
 - June 14, 2025. Verified PostgreSQL (Supabase) integration working correctly with all authentication and data operations
 - June 14, 2025. All checklist items completed - project fully operational in Replit environment
+- June 14, 2025. Optimized Mercado Pago integration with all recommended fields for improved approval rates
+- June 14, 2025. Added items.quantity, items.unit_price, payer names, category_id, detailed descriptions, and unique IDs
+- June 14, 2025. Enhanced payment data structure for both preference creation and direct PIX payments
 
 ## User Preferences
 

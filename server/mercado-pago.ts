@@ -61,16 +61,16 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
       throw new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado');
     }
 
-    // Criar preferência de pagamento com PIX
+    // Criar preferência de pagamento com PIX - incluindo todos os campos recomendados pelo MP
     const preferenceData = {
       items: [
         {
-          id: `license_${data.plan}`,
-          title: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
-          description: `Acesso completo ao sistema por ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}`,
-          category_id: 'software',
-          quantity: 1,
-          unit_price: transactionAmount,
+          id: `license_${data.plan}_${Date.now()}`, // ID único do item
+          title: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`, // Nome do item
+          description: `Acesso completo ao FovDark Cheat por ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}. Sistema profissional de cheats para games com suporte técnico incluído.`, // Descrição detalhada
+          category_id: 'software', // Categoria do item
+          quantity: 1, // Quantidade do produto/serviço
+          unit_price: transactionAmount, // Preço do item
         }
       ],
       payer: {
@@ -126,15 +126,28 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
     try {
       const paymentData = {
         transaction_amount: transactionAmount,
-        description: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}`,
+        description: `Acesso completo ao FovDark Cheat por ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}. Sistema profissional de cheats para games com suporte técnico incluído.`,
         payment_method_id: 'pix',
         payer: {
-          email: data.payerEmail,
-          first_name: data.payerFirstName,
-          last_name: data.payerLastName,
+          email: data.payerEmail, // Email do comprador
+          first_name: data.payerFirstName, // Nome do comprador
+          last_name: data.payerLastName, // Sobrenome do comprador
         },
         external_reference: externalReference,
         notification_url: `${baseUrl}/api/payments/webhook`,
+        // Informações adicionais do item para melhorar aprovação
+        additional_info: {
+          items: [
+            {
+              id: `license_${data.plan}_${Date.now()}`, // Código do item
+              title: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`, // Nome do item
+              description: `Acesso completo ao FovDark Cheat por ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}. Sistema profissional de cheats para games com suporte técnico incluído.`, // Descrição do item
+              category_id: 'software', // Categoria do item
+              quantity: 1, // Quantidade do produto/serviço
+              unit_price: transactionAmount, // Preço do item
+            }
+          ]
+        }
       };
 
       console.log('Criando pagamento PIX:', JSON.stringify(paymentData, null, 2));
