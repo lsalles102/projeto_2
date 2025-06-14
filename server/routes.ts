@@ -88,6 +88,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Endpoint de teste para simular webhook do Mercado Pago
+  app.post("/api/test/simulate-webhook", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userEmail, plan = "test", transactionAmount = 100 } = req.body;
+      
+      if (!userEmail) {
+        return res.status(400).json({ message: "Email do usuário é obrigatório" });
+      }
+
+      console.log(`=== SIMULANDO WEBHOOK DO MERCADO PAGO ===`);
+      console.log(`Email: ${userEmail}, Plano: ${plan}, Valor: R$ ${transactionAmount/100}`);
+      
+      // Simular dados do webhook
+      const mockPaymentId = `TEST-${Date.now()}`;
+      const mockWebhookData = {
+        type: "payment",
+        data: {
+          id: mockPaymentId
+        }
+      };
+      
+      // Simular dados do pagamento aprovado
+      const mockPaymentInfo = {
+        id: mockPaymentId,
+        status: "approved",
+        status_detail: "accredited",
+        transaction_amount: transactionAmount,
+        currency_id: "BRL",
+        external_reference: `TEST-REF-${Date.now()}`,
+        payer: {
+          email: userEmail,
+          first_name: "Usuario",
+          last_name: "Teste"
+        }
+      };
+      
+      console.log("Dados simulados do pagamento:", JSON.stringify(mockPaymentInfo, null, 2));
+      
+      // Encontrar usuário pelo email
+      const user = await storage.getUserByEmail(userEmail);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      console.log(`✅ Usuário encontrado: ${user.id} - ${user.email}`);
+      
+      // Determinar plano baseado no valor
+      let finalPlan = "test";
+      let durationDays = 1;
+      
+      if (transactionAmount >= 1000) { // R$ 10,00 ou mais
+        finalPlan = "15days";
+        durationDays = 15;
+      } else if (transactionAmount >= 500) { // R$ 5,00 ou mais  
+        finalPlan = "7days";
+        durationDays = 7;
+      } else {
+        finalPlan = "test";
+        durationDays = 1;
+      }
+      
+      console.log(`Plano determinado: ${finalPlan} (${durationDays} dias)`);
+      
+      // Criar pagamento de teste
+      const payment = await storage.createPayment({
+        userId: user.id,
+        plan: finalPlan,
+        durationDays,
+        transactionAmount,
+        currency: "BRL",
+        status: "approved",
+        mercadoPagoId: mockPaymentId,
+        externalReference: mockPaymentInfo.external_reference,
+        statusDetail: "accredited",
+        payerEmail: userEmail,
+        payerFirstName: "Usuario",
+        payerLastName: "Teste",
+      });
+      
+      console.log(`✅ Pagamento criado: ${payment.id}`);
+      
+      // Gerar chave de ativação
+      const activationKey = `FOVD-${finalPlan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      console.log(`🔑 Gerando chave: ${activationKey}`);
+      
+      await storage.createActivationKey({
+        key: activationKey,
+        plan: finalPlan,
+        durationDays,
+      });
+      
+      // Criar ou atualizar licença
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      
+      const now = new Date();
+      let expiryDate: Date;
+      let totalMinutes: number;
+      
+      if (finalPlan === "test") {
+        expiryDate = new Date(now.getTime() + (30 * 60 * 1000)); // 30 minutos
+        totalMinutes = 30;
+      } else {
+        expiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+        totalMinutes = durationDays * 24 * 60;
+      }
+      
+      if (existingLicense) {
+        console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
+        
+        await storage.updateLicense(existingLicense.id, {
+          key: activationKey,
+          plan: finalPlan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null
+        });
+        
+        console.log(`✅ LICENÇA RENOVADA - Nova chave: ${activationKey}`);
+      } else {
+        console.log(`=== CRIANDO NOVA LICENÇA ===`);
+        
+        await storage.createLicense({
+          userId: user.id,
+          key: activationKey,
+          plan: finalPlan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`✅ NOVA LICENÇA CRIADA - Chave: ${activationKey}`);
+      }
+      
+      // Enviar email
+      const planName = finalPlan === "test" ? "Teste (30 minutos)" : 
+                       finalPlan === "7days" ? "7 Dias" : "15 Dias";
+      
+      try {
+        console.log(`=== ENVIANDO EMAIL DE TESTE ===`);
+        await sendLicenseKeyEmail(userEmail, activationKey, planName);
+        console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
+        
+        res.json({
+          success: true,
+          message: "Webhook simulado com sucesso!",
+          data: {
+            paymentId: mockPaymentId,
+            user: user.email,
+            plan: finalPlan,
+            licenseKey: activationKey,
+            expiresAt: expiryDate.toISOString(),
+            emailSent: true
+          }
+        });
+      } catch (emailError) {
+        console.error("❌ ERRO AO ENVIAR EMAIL:", emailError);
+        
+        res.json({
+          success: true,
+          message: "Webhook simulado com sucesso, mas falha no email",
+          data: {
+            paymentId: mockPaymentId,
+            user: user.email,
+            plan: finalPlan,
+            licenseKey: activationKey,
+            expiresAt: expiryDate.toISOString(),
+            emailSent: false,
+            emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error("❌ ERRO NA SIMULAÇÃO:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao simular webhook",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
   // Endpoint de teste para simular confirmação de pagamento e geração de licença
   app.post("/api/test/simulate-payment", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -449,155 +641,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Valor: ${paymentInfo.transaction_amount}, Moeda: ${paymentInfo.currency_id}`);
           console.log(`Comprador: ${paymentInfo.payer?.email || 'N/A'}`);
           
-          // Find payment in database by external_reference
-          let payment = null;
-          
-          if (paymentInfo.external_reference) {
-            console.log(`Buscando pagamento por external_reference: ${paymentInfo.external_reference}`);
-            payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
-            console.log(`Pagamento encontrado por external_reference: ${payment ? 'SIM' : 'NÃO'}`);
-          }
-          
-          // If not found by external_reference, try by mercadoPagoId
-          if (!payment) {
-            console.log(`Buscando pagamento por mercadoPagoId: ${paymentId}`);
-            payment = await storage.getPaymentByMercadoPagoId(paymentId);
-            console.log(`Pagamento encontrado por mercadoPagoId: ${payment ? 'SIM' : 'NÃO'}`);
-          }
-          
-          // If still not found, try to find by email for renewal cases
-          if (!payment && paymentInfo.payer?.email) {
-            console.log(`Buscando usuário por email: ${paymentInfo.payer.email}`);
+          // NOVA LÓGICA MELHORADA: Sempre criar licença e chave, independente de encontrar pagamento pendente
+          if (paymentInfo.payer?.email) {
+            console.log(`=== PROCESSANDO PAGAMENTO APROVADO ===`);
+            
+            // 1. Encontrar usuário pelo email
             const user = await storage.getUserByEmail(paymentInfo.payer.email);
             
             if (user) {
-              console.log(`Usuário encontrado: ${user.id} - ${user.email}`);
+              console.log(`✅ Usuário encontrado: ${user.id} - ${user.email}`);
               
-              // Check for recent pending payments from this user
-              const pendingPayments = await storage.getPendingPayments();
-              const userPendingPayments = pendingPayments.filter(p => p.userId === user.id);
+              // 2. Determinar plano baseado no valor do pagamento
+              let plan = "test";
+              let durationDays = 1; // Para teste, usar 1 dia no banco mas 30 min na lógica
+              const transactionAmount = paymentInfo.transaction_amount ?? 100;
               
-              console.log(`Pagamentos pendentes do usuário: ${userPendingPayments.length}`);
-              
-              if (userPendingPayments.length > 0) {
-                payment = userPendingPayments.sort((a, b) => {
-                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                  return dateB - dateA;
-                })[0];
-                console.log(`Usando pagamento pendente do usuário: ${payment.id}`);
+              if (transactionAmount >= 1000) { // R$ 10,00 ou mais
+                plan = "15days";
+                durationDays = 15;
+              } else if (transactionAmount >= 500) { // R$ 5,00 ou mais  
+                plan = "7days";
+                durationDays = 7;
+              } else {
+                plan = "test";
+                durationDays = 1; // Será convertido para 30 minutos na lógica
               }
-            }
-          }
-          
-          // If still not found, try to find the most recent pending payment
-          if (!payment) {
-            console.log(`Buscando pagamentos pendentes gerais...`);
-            const pendingPayments = await storage.getPendingPayments();
-            console.log(`Pagamentos pendentes encontrados: ${pendingPayments.length}`);
-            
-            if (pendingPayments.length > 0) {
-              payment = pendingPayments.sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return dateB - dateA;
-              })[0];
-              console.log(`Usando pagamento pendente mais recente: ${payment.id}`);
-            }
-          }
-          
-          if (payment && payment.status === "pending") {
-            console.log(`Pagamento encontrado no banco: ID ${payment.id}, Status atual: ${payment.status}`);
-            
-            // Update payment status
-            await storage.updatePayment(payment.id, {
-              status: "approved",
-              mercadoPagoId: paymentId,
-              statusDetail: paymentInfo.status_detail,
-            });
-
-            // Create activation key
-            const activationKey = `FOVD-${payment.plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
-            
-            console.log(`Criando chave de ativação: ${activationKey}`);
-            
-            await storage.createActivationKey({
-              key: activationKey,
-              plan: payment.plan,
-              durationDays: payment.durationDays,
-            });
-
-            // CRIAR/ATUALIZAR LICENÇA AUTOMATICAMENTE - CORRIGIDO
-            try {
-              // Check if user already has a license
-              const existingLicense = await storage.getLicenseByUserId(payment.userId);
+              
+              console.log(`Plano determinado: ${plan} (${durationDays} dias) para valor R$ ${transactionAmount/100}`);
+              
+              // 3. Verificar se já existe um pagamento registrado
+              let payment = null;
+              if (paymentInfo.external_reference) {
+                payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
+              }
+              if (!payment && paymentId) {
+                payment = await storage.getPaymentByMercadoPagoId(paymentId);
+              }
+              
+              // 4. Se não encontrar pagamento, criar um novo
+              if (!payment) {
+                console.log("Criando novo registro de pagamento...");
+                payment = await storage.createPayment({
+                  userId: user.id,
+                  plan,
+                  durationDays,
+                  transactionAmount,
+                  currency: paymentInfo.currency_id || "BRL",
+                  status: "approved",
+                  mercadoPagoId: paymentId,
+                  externalReference: paymentInfo.external_reference || `WEBHOOK-${paymentId}`,
+                  statusDetail: paymentInfo.status_detail || "approved",
+                  payerEmail: paymentInfo.payer.email,
+                  payerFirstName: paymentInfo.payer.first_name || "Usuario",
+                  payerLastName: paymentInfo.payer.last_name || "FovDark",
+                });
+                console.log(`✅ Pagamento criado: ${payment.id}`);
+              } else if (payment.status === "pending") {
+                console.log("Atualizando pagamento pendente para aprovado...");
+                await storage.updatePayment(payment.id, {
+                  status: "approved",
+                  mercadoPagoId: paymentId,
+                  statusDetail: paymentInfo.status_detail || "approved",
+                });
+                console.log(`✅ Pagamento atualizado: ${payment.id}`);
+              } else {
+                console.log(`Pagamento já processado: ${payment.id} (Status: ${payment.status})`);
+                // Mesmo assim, vamos gerar uma nova chave para o usuário
+              }
+              
+              // 5. SEMPRE gerar nova chave de ativação
+              const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+              console.log(`🔑 Gerando nova chave: ${activationKey}`);
+              
+              await storage.createActivationKey({
+                key: activationKey,
+                plan,
+                durationDays,
+              });
+              
+              // 6. Criar ou atualizar licença do usuário
+              const existingLicense = await storage.getLicenseByUserId(user.id);
+              
+              const now = new Date();
+              let expiryDate: Date;
+              let totalMinutes: number;
+              
+              if (plan === "test") {
+                expiryDate = new Date(now.getTime() + (30 * 60 * 1000)); // 30 minutos
+                totalMinutes = 30;
+              } else {
+                expiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+                totalMinutes = durationDays * 24 * 60;
+              }
               
               if (existingLicense) {
                 console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
-                console.log(`Licença atual - ID: ${existingLicense.id}, Chave: ${existingLicense.key}, Status: ${existingLicense.status}`);
-                console.log(`Expira em: ${existingLicense.expiresAt}, Plano: ${existingLicense.plan}`);
-                console.log(`Nova chave: ${activationKey}, Novo plano: ${payment.plan}`);
+                console.log(`Licença atual: ${existingLicense.key} (Status: ${existingLicense.status})`);
                 
-                // SEMPRE usar data atual como base para renovação (não somar tempo)
-                const now = new Date();
-                let newExpiryDate: Date;
-                let totalMinutes: number;
-                
-                if (payment.plan === "test") {
-                  // 30 minutes for test
-                  newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
-                  totalMinutes = 30;
-                } else {
-                  // Add days for other plans
-                  newExpiryDate = new Date(now.getTime() + (payment.durationDays * 24 * 60 * 60 * 1000));
-                  totalMinutes = payment.durationDays * 24 * 60;
-                }
-                
-                console.log(`Data de expiração calculada: ${newExpiryDate.toISOString()}`);
-                
-                // Update existing license with new key and expiration
-                const updateData = {
+                await storage.updateLicense(existingLicense.id, {
                   key: activationKey,
-                  plan: payment.plan,
-                  status: "active" as const,
-                  expiresAt: newExpiryDate,
+                  plan,
+                  status: "active",
+                  expiresAt: expiryDate,
                   totalMinutesRemaining: totalMinutes,
                   daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
                   hoursRemaining: Math.ceil(totalMinutes / 60),
                   minutesRemaining: totalMinutes,
                   activatedAt: new Date(),
-                  hwid: null // Reset HWID para permitir nova ativação
-                };
+                  hwid: null // Reset HWID para nova ativação
+                });
                 
-                console.log(`Atualizando licença com dados:`, updateData);
-                
-                const updatedLicense = await storage.updateLicense(existingLicense.id, updateData);
-                
-                console.log(`✅ LICENÇA RENOVADA COM SUCESSO!`);
-                console.log(`ID: ${updatedLicense.id}, Nova chave: ${updatedLicense.key}`);
-                console.log(`Status: ${updatedLicense.status}, Expira: ${updatedLicense.expiresAt}`);
-                
+                console.log(`✅ LICENÇA RENOVADA - Nova chave: ${activationKey}`);
+                console.log(`📅 Nova expiração: ${expiryDate.toISOString()}`);
               } else {
-                console.log("Criando nova licença para o usuário");
-                
-                // Create new license
-                let expiryDate: Date;
-                let totalMinutes: number;
-                
-                if (payment.plan === "test") {
-                  // 30 minutes for test
-                  expiryDate = new Date(Date.now() + (30 * 60 * 1000));
-                  totalMinutes = 30;
-                } else {
-                  // Add days for other plans
-                  expiryDate = new Date(Date.now() + (payment.durationDays * 24 * 60 * 60 * 1000));
-                  totalMinutes = payment.durationDays * 24 * 60;
-                }
+                console.log(`=== CRIANDO NOVA LICENÇA ===`);
                 
                 await storage.createLicense({
-                  userId: payment.userId,
+                  userId: user.id,
                   key: activationKey,
-                  plan: payment.plan,
+                  plan,
                   status: "active",
                   expiresAt: expiryDate,
                   totalMinutesRemaining: totalMinutes,
@@ -607,197 +769,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   activatedAt: new Date(),
                 });
                 
-                console.log(`✅ Nova licença criada até: ${expiryDate.toISOString()}`);
+                console.log(`✅ NOVA LICENÇA CRIADA - Chave: ${activationKey}`);
+                console.log(`📅 Expira em: ${expiryDate.toISOString()}`);
               }
-            } catch (licenseError) {
-              console.error("Erro ao criar/atualizar licença:", licenseError);
-            }
-
-            // Send license key via email - SEMPRE enviar nova chave
-            if (payment.payerEmail) {
-              try {
-                const planName = payment.plan === "test" ? "Teste (30 minutos)" : 
-                                 payment.plan === "7days" ? "7 Dias" : "15 Dias";
-                
-                console.log(`=== ENVIANDO EMAIL COM NOVA CHAVE ===`);
-                console.log(`Email destino: ${payment.payerEmail}`);
-                console.log(`Chave: ${activationKey}`);
-                console.log(`Plano: ${planName}`);
-                
-                await sendLicenseKeyEmail(payment.payerEmail, activationKey, planName);
-                console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${payment.payerEmail}`);
-              } catch (emailError) {
-                console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
-                console.error("Detalhes do erro:", emailError);
-                console.error("Chave que deveria ser enviada:", activationKey);
-                console.error("Email que deveria receber:", payment.payerEmail);
-                
-                // Log para debug em produção
-                console.error("=== FALHA NO ENVIO DE EMAIL - CHAVE NÃO ENTREGUE ===");
-              }
-            } else {
-              console.log("❌ Email do pagador não encontrado - não será possível enviar chave");
-              console.log("Dados do pagamento:", {
-                userId: payment.userId,
-                payerEmail: payment.payerEmail,
-                payerFirstName: payment.payerFirstName,
-                payerLastName: payment.payerLastName
-              });
-            }
-
-            console.log(`✅ PAGAMENTO PROCESSADO COM SUCESSO - Chave: ${activationKey}`);
-          } else {
-            console.error(`❌ PAGAMENTO NÃO ENCONTRADO OU JÁ PROCESSADO`);
-            console.error(`Status do pagamento encontrado: ${payment?.status || 'N/A'}`);
-            console.error(`PaymentId buscado: ${paymentId}`);
-            console.error(`External reference: ${paymentInfo.external_reference}`);
-            
-            // Tentar criar um pagamento retroativo se não encontrado
-            if (!payment && paymentInfo.payer?.email) {
-              console.log(`Tentando criar pagamento retroativo para: ${paymentInfo.payer.email}`);
+              
+              // 7. SEMPRE enviar email com a chave
+              const planName = plan === "test" ? "Teste (30 minutos)" : 
+                               plan === "7days" ? "7 Dias" : "15 Dias";
               
               try {
-                // Encontrar usuário pelo email
-                const user = await storage.getUserByEmail(paymentInfo.payer.email);
+                console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
+                console.log(`📧 Destinatário: ${paymentInfo.payer.email}`);
+                console.log(`🔑 Chave: ${activationKey}`);
+                console.log(`📦 Plano: ${planName}`);
                 
-                if (user) {
-                  console.log(`Usuário encontrado: ${user.id} - ${user.email}`);
-                  
-                  // Determinar plano baseado no valor
-                  let plan = "test";
-                  let durationDays = 1; // Para teste, usar 1 dia no banco mas 30 min na lógica
-                  const transactionAmount = paymentInfo.transaction_amount ?? 100;
-                  
-                  if (transactionAmount >= 500) { // R$ 5,00 ou mais
-                    plan = "7days";
-                    durationDays = 7;
-                  } else if (transactionAmount >= 1000) { // R$ 10,00 ou mais
-                    plan = "15days";
-                    durationDays = 15;
-                  }
-                  
-                  // Criar pagamento retroativo
-                  const retroPayment = await storage.createPayment({
-                    userId: user.id,
-                    plan,
-                    durationDays,
-                    transactionAmount,
-                    currency: paymentInfo.currency_id || "BRL",
-                    status: "approved",
-                    mercadoPagoId: paymentId,
-                    externalReference: paymentInfo.external_reference || `RETRO-${paymentId}`,
-                    statusDetail: paymentInfo.status_detail || "accredited",
-                    payerEmail: paymentInfo.payer.email,
-                    payerFirstName: paymentInfo.payer.first_name || "Usuario",
-                    payerLastName: paymentInfo.payer.last_name || "FovDark",
-                  });
-                  
-                  console.log(`Pagamento retroativo criado: ${retroPayment.id}`);
-                  
-                  // Processar este pagamento agora
-                  payment = retroPayment;
-                  
-                  // Continuar com o fluxo normal de processamento
-                  const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
-                  
-                  await storage.createActivationKey({
-                    key: activationKey,
-                    plan,
-                    durationDays,
-                  });
-                  
-                  // Verificar licença existente
-                  const existingLicense = await storage.getLicenseByUserId(user.id);
-                  
-                  if (existingLicense) {
-                    console.log(`=== RENOVANDO LICENÇA RETROATIVA ===`);
-                    
-                    const now = new Date();
-                    let newExpiryDate: Date;
-                    let totalMinutes: number;
-                    
-                    if (plan === "test") {
-                      newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
-                      totalMinutes = 30;
-                    } else {
-                      newExpiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
-                      totalMinutes = durationDays * 24 * 60;
-                    }
-                    
-                    await storage.updateLicense(existingLicense.id, {
-                      key: activationKey,
-                      plan,
-                      status: "active",
-                      expiresAt: newExpiryDate,
-                      totalMinutesRemaining: totalMinutes,
-                      daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-                      hoursRemaining: Math.ceil(totalMinutes / 60),
-                      minutesRemaining: totalMinutes,
-                      activatedAt: new Date(),
-                      hwid: null
-                    });
-                    
-                    console.log(`✅ LICENÇA RENOVADA RETROATIVAMENTE`);
-                  } else {
-                    // Criar nova licença
-                    const now = new Date();
-                    let expiryDate: Date;
-                    let totalMinutes: number;
-                    
-                    if (plan === "test") {
-                      expiryDate = new Date(now.getTime() + (30 * 60 * 1000));
-                      totalMinutes = 30;
-                    } else {
-                      expiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
-                      totalMinutes = durationDays * 24 * 60;
-                    }
-                    
-                    await storage.createLicense({
-                      userId: user.id,
-                      key: activationKey,
-                      plan,
-                      status: "active",
-                      expiresAt: expiryDate,
-                      totalMinutesRemaining: totalMinutes,
-                      daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-                      hoursRemaining: Math.ceil(totalMinutes / 60),
-                      minutesRemaining: totalMinutes,
-                      activatedAt: new Date(),
-                    });
-                    
-                    console.log(`✅ NOVA LICENÇA CRIADA RETROATIVAMENTE`);
-                  }
-                  
-                  // Enviar email com a nova chave
-                  const planName = plan === "test" ? "Teste (30 minutos)" : 
-                                   plan === "7days" ? "7 Dias" : "15 Dias";
-                  
-                  try {
-                    console.log(`=== ENVIANDO EMAIL RETROATIVO ===`);
-                    await sendLicenseKeyEmail(paymentInfo.payer.email, activationKey, planName);
-                    console.log(`✅ EMAIL RETROATIVO ENVIADO COM SUCESSO`);
-                  } catch (emailError) {
-                    console.error("❌ ERRO AO ENVIAR EMAIL RETROATIVO:", emailError);
-                  }
-                  
-                } else {
-                  console.error(`Usuário não encontrado para email: ${paymentInfo.payer.email}`);
-                }
-              } catch (retroError) {
-                console.error("Erro ao criar pagamento retroativo:", retroError);
+                await sendLicenseKeyEmail(paymentInfo.payer.email, activationKey, planName);
+                console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
+              } catch (emailError) {
+                console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
+                console.error("Detalhes:", emailError);
+                console.error(`🔑 Chave não entregue: ${activationKey}`);
+                console.error(`📧 Email destinatário: ${paymentInfo.payer.email}`);
+                
+                // Log crítico para monitoramento
+                console.error("=== FALHA NO ENVIO DE EMAIL - INTERVENÇÃO MANUAL NECESSÁRIA ===");
               }
+              
+              console.log(`🎉 WEBHOOK PROCESSADO COM SUCESSO!`);
+              console.log(`💰 Pagamento: ${paymentId} (R$ ${transactionAmount/100})`);
+              console.log(`👤 Usuário: ${user.email}`);
+              console.log(`🔑 Chave gerada: ${activationKey}`);
+              console.log(`⏰ Válida até: ${expiryDate.toISOString()}`);
+              
+            } else {
+              console.error(`❌ USUÁRIO NÃO ENCONTRADO para email: ${paymentInfo.payer.email}`);
+              console.error("O usuário deve estar registrado no sistema antes de fazer o pagamento");
             }
+          } else {
+            console.error("❌ Email do pagador não encontrado no webhook");
           }
         } else {
           console.log(`Pagamento não aprovado. Status: ${paymentInfo?.status || 'unknown'}`);
         }
       } else {
-        console.log(`Tipo de webhook ignorado ou ID de pagamento não encontrado`);
+        console.log(`Webhook ignorado - tipo não é payment ou ID não encontrado`);
       }
       
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error("❌ ERRO NO WEBHOOK:", error);
+      console.error("❌ ERRO CRÍTICO NO WEBHOOK:", error);
       if (error instanceof Error) {
         console.error("Stack trace:", error.stack);
       }
