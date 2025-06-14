@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔐 SECURE LICENSE VALIDATION WITH HWID CHECK
+  // 🔐 SECURE LICENSE VALIDATION WITH HWID CHECK (FREQUENT DATABASE VERIFICATION)
   app.post("/api/licenses/validate", rateLimit(20, 60 * 1000), async (req, res) => {
     try {
       const { licenseKey, hwid } = z.object({
@@ -269,36 +269,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hwid: z.string().min(1)
       }).parse(req.body);
 
+      // FREQUENT DATABASE CHECK: Always fetch fresh data from database
       const license = await storage.getLicenseByKey(licenseKey);
       if (!license) {
         securityLog.logSuspiciousActivity(req.ip!, "invalid_license_validation", { licenseKey });
         return res.status(404).json({ message: "Licença não encontrada" });
       }
 
-      // Check license status
+      // FREQUENT CHECK: Verify user still exists and is valid
+      const user = await storage.getUser(license.userId);
+      if (!user) {
+        securityLog.logSuspiciousActivity(req.ip!, "orphaned_license", { licenseId: license.id });
+        return res.status(404).json({ message: "Usuário da licença não encontrado" });
+      }
+
+      // FREQUENT CHECK: Cross-validate license status in real-time
       if (license.status !== "active") {
         return res.status(400).json({ message: "Licença não está ativa" });
       }
 
-      // Check expiration
-      const isExpired = new Date() > license.expiresAt;
+      // FREQUENT CHECK: Real-time expiration verification
+      const now = new Date();
+      const isExpired = now > license.expiresAt;
       if (isExpired) {
+        // Immediately update expired status in database
         await storage.updateLicense(license.id, { status: "expired" });
         return res.status(400).json({ message: "Licença expirada" });
       }
 
-      // 🔐 CRITICAL HWID VALIDATION
+      // FREQUENT CHECK: Verify HWID hasn't been tampered with
+      const freshLicenseCheck = await storage.getLicense(license.id);
+      if (!freshLicenseCheck || freshLicenseCheck.hwid !== license.hwid) {
+        securityLog.logSuspiciousActivity(req.ip!, "license_tampering_detected", {
+          licenseId: license.id,
+          originalHwid: license.hwid,
+          currentHwid: freshLicenseCheck?.hwid
+        });
+        return res.status(403).json({ message: "Inconsistência detectada na licença" });
+      }
+
+      // 🔐 CRITICAL HWID VALIDATION WITH FREQUENT CHECK
       if (license.hwid && license.hwid !== hwid) {
+        // Additional check: Verify if HWID was recently reset
+        const recentReset = await storage.getLastHwidReset(license.userId, license.id);
+        if (recentReset && new Date(recentReset.createdAt).getTime() > (Date.now() - 5 * 60 * 1000)) {
+          // If reset was within last 5 minutes, allow HWID to be empty for re-binding
+          if (!license.hwid || license.hwid.trim() === "") {
+            return res.json({
+              valid: true,
+              requiresHwidBinding: true,
+              message: "HWID precisa ser vinculado novamente"
+            });
+          }
+        }
+        
         securityLog.logSuspiciousActivity(req.ip!, "hwid_mismatch", {
           licenseId: license.id,
           expectedHwid: license.hwid,
-          providedHwid: hwid
+          providedHwid: hwid,
+          userId: license.userId
         });
         return res.status(403).json({ message: "HWID não autorizado" });
       }
 
-      // Update heartbeat
-      await storage.updateLicense(license.id, { lastHeartbeat: new Date() });
+      // FREQUENT CHECK: Update heartbeat and verify timing consistency
+      const lastHeartbeat = license.lastHeartbeat;
+      const timeSinceLastHeartbeat = lastHeartbeat ? now.getTime() - new Date(lastHeartbeat).getTime() : 0;
+      
+      // Detect suspicious rapid requests (less than 10 seconds apart)
+      if (timeSinceLastHeartbeat < 10000 && timeSinceLastHeartbeat > 0) {
+        securityLog.logSuspiciousActivity(req.ip!, "rapid_validation_requests", {
+          licenseId: license.id,
+          timeBetweenRequests: timeSinceLastHeartbeat
+        });
+      }
+
+      // Update heartbeat with database verification
+      await storage.updateLicense(license.id, { lastHeartbeat: now });
+
+      // FREQUENT CHECK: Verify the update was successful
+      const updatedLicense = await storage.getLicense(license.id);
+      if (!updatedLicense || !updatedLicense.lastHeartbeat) {
+        securityLog.logSuspiciousActivity(req.ip!, "heartbeat_update_failed", { licenseId: license.id });
+        return res.status(500).json({ message: "Falha na atualização do heartbeat" });
+      }
 
       res.json({
         valid: true,
@@ -309,7 +363,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expiresAt: license.expiresAt,
           daysRemaining: license.daysRemaining,
           hoursRemaining: license.hoursRemaining,
-          minutesRemaining: license.minutesRemaining
+          minutesRemaining: license.minutesRemaining,
+          lastVerified: now.toISOString()
         }
       });
     } catch (error) {
@@ -318,6 +373,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("License validation error:", error);
       res.status(500).json({ message: "Falha na validação" });
+    }
+  });
+
+  // 🕐 FREQUENT DATABASE INTEGRITY CHECK ENDPOINT
+  app.post("/api/licenses/heartbeat", rateLimit(30, 60 * 1000), async (req, res) => {
+    try {
+      const { licenseKey, hwid } = heartbeatSchema.parse(req.body);
+
+      // Fresh database lookup every time
+      const license = await storage.getLicenseByKey(licenseKey);
+      if (!license) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+
+      // Real-time status verification
+      if (license.status !== "active") {
+        return res.status(400).json({ 
+          message: "Licença inativa",
+          status: license.status 
+        });
+      }
+
+      // Continuous expiration monitoring
+      const now = new Date();
+      if (now > license.expiresAt) {
+        await storage.updateLicense(license.id, { status: "expired" });
+        return res.status(400).json({ message: "Licença expirou" });
+      }
+
+      // HWID consistency check
+      if (license.hwid !== hwid) {
+        securityLog.logSuspiciousActivity(req.ip!, "heartbeat_hwid_mismatch", {
+          licenseId: license.id,
+          expectedHwid: license.hwid,
+          providedHwid: hwid
+        });
+        return res.status(403).json({ message: "HWID inválido" });
+      }
+
+      // Time decrement with database verification
+      const updatedLicense = await storage.updateLicenseHeartbeat(licenseKey, hwid);
+      if (!updatedLicense) {
+        return res.status(500).json({ message: "Falha na atualização" });
+      }
+
+      // Double-check the update was applied correctly
+      const verificationLicense = await storage.getLicense(license.id);
+      if (!verificationLicense) {
+        securityLog.logSuspiciousActivity(req.ip!, "license_disappeared", { licenseId: license.id });
+        return res.status(500).json({ message: "Erro crítico: licença não encontrada após atualização" });
+      }
+
+      res.json({
+        valid: true,
+        timeRemaining: {
+          days: updatedLicense.daysRemaining,
+          hours: updatedLicense.hoursRemaining,
+          minutes: updatedLicense.minutesRemaining,
+          totalMinutes: updatedLicense.totalMinutesRemaining
+        },
+        status: updatedLicense.status,
+        nextCheckIn: new Date(Date.now() + 60000).toISOString() // Next check in 1 minute
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Heartbeat error:", error);
+      res.status(500).json({ message: "Falha no heartbeat" });
     }
   });
 
