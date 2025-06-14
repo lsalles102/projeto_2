@@ -52,6 +52,23 @@ export interface IStorage {
   
   // System operations
   getSystemStats(): Promise<any>;
+  
+  // Admin operations
+  getAllUsers(): Promise<User[]>;
+  getAllLicenses(): Promise<License[]>;
+  getAllActivationKeys(): Promise<ActivationKey[]>;
+  getAllPayments(): Promise<Payment[]>;
+  deleteUser(id: number): Promise<void>;
+  deleteLicense(id: number): Promise<void>;
+  deleteActivationKey(id: number): Promise<void>;
+  
+  // License management
+  getLicenseByHwid(hwid: string): Promise<License | undefined>;
+  updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined>;
+  decrementLicenseTime(licenseId: number, minutes: number): Promise<License>;
+  
+  // Payment operations
+  getUserPayments(userId: number): Promise<Payment[]>;
 }
 
 // In-memory storage implementation
@@ -643,6 +660,167 @@ export class PostgresStorage implements IStorage {
       downloadLogs: downloadLogsCount[0].count,
       passwordResetTokens: passwordResetTokensCount[0].count,
     };
+  }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    const { db } = await import("./db");
+    const result = await db.query.users.findMany({
+      orderBy: (users, { desc }) => desc(users.createdAt),
+    });
+    return result;
+  }
+
+  async getAllLicenses(): Promise<License[]> {
+    const { db } = await import("./db");
+    const result = await db.query.licenses.findMany({
+      orderBy: (licenses, { desc }) => desc(licenses.createdAt),
+    });
+    return result;
+  }
+
+  async getAllActivationKeys(): Promise<ActivationKey[]> {
+    const { db } = await import("./db");
+    const result = await db.query.activationKeys.findMany({
+      orderBy: (activationKeys, { desc }) => desc(activationKeys.createdAt),
+    });
+    return result;
+  }
+
+  async getAllPayments(): Promise<Payment[]> {
+    const { db } = await import("./db");
+    const result = await db.query.payments.findMany({
+      orderBy: (payments, { desc }) => desc(payments.createdAt),
+    });
+    return result;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    const { db } = await import("./db");
+    const { users } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async deleteLicense(id: number): Promise<void> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    await db.delete(licenses).where(eq(licenses.id, id));
+  }
+
+  async deleteActivationKey(id: number): Promise<void> {
+    const { db } = await import("./db");
+    const { activationKeys } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    await db.delete(activationKeys).where(eq(activationKeys.id, id));
+  }
+
+  // License management  
+  async getLicenseByHwid(hwid: string): Promise<License | undefined> {
+    const { db } = await import("./db");
+    const result = await db.query.licenses.findFirst({
+      where: (licenses, { eq }) => eq(licenses.hwid, hwid),
+    });
+    return result;
+  }
+
+  async updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    const { eq, and } = await import("drizzle-orm");
+    
+    // Find license by key and hwid
+    const existingLicense = await db.query.licenses.findFirst({
+      where: (licenses, { eq, and }) => and(
+        eq(licenses.key, licenseKey),
+        eq(licenses.hwid, hwid)
+      ),
+    });
+    
+    if (!existingLicense || existingLicense.status !== 'active') {
+      return undefined;
+    }
+    
+    // Decrement 1 minute from license
+    const totalMinutes = (existingLicense.totalMinutesRemaining || 0) - 1;
+    
+    if (totalMinutes <= 0) {
+      // License expired
+      const result = await db.update(licenses)
+        .set({
+          status: 'expired',
+          totalMinutesRemaining: 0,
+          daysRemaining: 0,
+          hoursRemaining: 0,
+          minutesRemaining: 0,
+          lastActivity: new Date(),
+        })
+        .where(eq(licenses.id, existingLicense.id))
+        .returning();
+        
+      return result[0];
+    }
+    
+    // Calculate remaining time
+    const daysRemaining = Math.floor(totalMinutes / (24 * 60));
+    const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const minutesRemaining = totalMinutes % 60;
+    
+    const result = await db.update(licenses)
+      .set({
+        totalMinutesRemaining: totalMinutes,
+        daysRemaining,
+        hoursRemaining,
+        minutesRemaining,
+        lastActivity: new Date(),
+      })
+      .where(eq(licenses.id, existingLicense.id))
+      .returning();
+      
+    return result[0];
+  }
+
+  async decrementLicenseTime(licenseId: number, minutes: number): Promise<License> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const existingLicense = await this.getLicense(licenseId);
+    if (!existingLicense) {
+      throw new Error("License not found");
+    }
+    
+    const totalMinutes = Math.max(0, (existingLicense.totalMinutesRemaining || 0) - minutes);
+    const daysRemaining = Math.floor(totalMinutes / (24 * 60));
+    const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const minutesRemaining = totalMinutes % 60;
+    
+    const result = await db.update(licenses)
+      .set({
+        totalMinutesRemaining: totalMinutes,
+        daysRemaining,
+        hoursRemaining,
+        minutesRemaining,
+        status: totalMinutes <= 0 ? 'expired' : existingLicense.status,
+      })
+      .where(eq(licenses.id, licenseId))
+      .returning();
+      
+    return result[0];
+  }
+
+  // Payment operations
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    const { db } = await import("./db");
+    const result = await db.query.payments.findMany({
+      where: (payments, { eq }) => eq(payments.userId, userId),
+      orderBy: (payments, { desc }) => desc(payments.createdAt),
+    });
+    return result;
   }
 }
 

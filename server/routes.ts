@@ -35,6 +35,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test email connection endpoint
+  app.get("/api/test-email", async (req, res) => {
+    try {
+      const { testEmailConnection } = await import("./email");
+      const isConnected = await testEmailConnection();
+      
+      res.json({
+        status: isConnected ? "connected" : "error",
+        timestamp: new Date().toISOString(),
+        message: isConnected ? "Conexão de email funcionando" : "Erro na conexão de email"
+      });
+    } catch (error) {
+      console.error("Email test error:", error);
+      res.status(500).json({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        message: "Falha ao testar conexão de email",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Setup authentication
   await setupAuth(app);
 
