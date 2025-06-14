@@ -88,6 +88,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Endpoint de teste para simular confirmação de pagamento e geração de licença
+  app.post("/api/test/simulate-payment", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userEmail, plan = "test" } = req.body;
+      
+      if (!userEmail) {
+        return res.status(400).json({ message: "Email do usuário é obrigatório" });
+      }
+
+      console.log(`=== SIMULANDO CONFIRMAÇÃO DE PAGAMENTO E GERAÇÃO DE LICENÇA ===`);
+      console.log(`Email: ${userEmail}, Plano: ${plan}`);
+
+      // Encontrar usuário pelo email
+      const user = await storage.getUserByEmail(userEmail);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Determinar duração baseada no plano
+      let durationDays = 1;
+      let transactionAmount = 100;
+      
+      if (plan === "7days") {
+        durationDays = 7;
+        transactionAmount = 500;
+      } else if (plan === "15days") {
+        durationDays = 15;
+        transactionAmount = 1000;
+      }
+
+      // Criar pagamento aprovado no banco
+      const paymentId = `SIMULATION-${Date.now()}`;
+      const testPayment = await storage.createPayment({
+        userId: user.id,
+        plan,
+        durationDays,
+        transactionAmount,
+        currency: "BRL",
+        status: "approved",
+        mercadoPagoId: paymentId,
+        externalReference: `SIM-${paymentId}`,
+        statusDetail: "accredited",
+        payerEmail: userEmail,
+        payerFirstName: user.firstName || "Teste",
+        payerLastName: user.lastName || "Usuario",
+      });
+
+      console.log(`Pagamento simulado criado: ${testPayment.id}`);
+
+      // Gerar chave de ativação
+      const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      
+      await storage.createActivationKey({
+        key: activationKey,
+        plan,
+        durationDays,
+      });
+
+      console.log(`Chave de ativação gerada: ${activationKey}`);
+
+      // Processar licença (renovar existente ou criar nova)
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      
+      if (existingLicense) {
+        console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
+        const now = new Date();
+        let newExpiryDate: Date;
+        let totalMinutes: number;
+        
+        if (plan === "test") {
+          newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          newExpiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = durationDays * 24 * 60;
+        }
+        
+        await storage.updateLicense(existingLicense.id, {
+          key: activationKey,
+          plan,
+          status: "active",
+          expiresAt: newExpiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null
+        });
+        
+        console.log(`Licença renovada para usuário ${user.id}`);
+      } else {
+        console.log(`=== CRIANDO NOVA LICENÇA ===`);
+        let expiryDate: Date;
+        let totalMinutes: number;
+        
+        if (plan === "test") {
+          expiryDate = new Date(Date.now() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          expiryDate = new Date(Date.now() + (durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = durationDays * 24 * 60;
+        }
+        
+        await storage.createLicense({
+          userId: user.id,
+          key: activationKey,
+          plan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`Nova licença criada para usuário ${user.id}`);
+      }
+
+      // Testar envio de email
+      try {
+        const planName = plan === "test" ? "Teste (30 minutos)" : 
+                         plan === "7days" ? "7 Dias" : "15 Dias";
+        
+        console.log(`=== ENVIANDO EMAIL COM CHAVE DE LICENÇA ===`);
+        console.log(`Email destino: ${userEmail}`);
+        console.log(`Chave: ${activationKey}`);
+        console.log(`Plano: ${planName}`);
+        
+        await sendLicenseKeyEmail(userEmail, activationKey, planName);
+        console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${userEmail}`);
+        
+        res.json({
+          success: true,
+          message: "Pagamento simulado, licença gerada e email enviado com sucesso",
+          data: {
+            userId: user.id,
+            userEmail,
+            activationKey,
+            plan,
+            planName,
+            paymentId: testPayment.id,
+            licenseAction: existingLicense ? "renovada" : "criada",
+            emailSent: true
+          }
+        });
+      } catch (emailError) {
+        console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
+        console.error("Detalhes do erro:", emailError);
+        console.error("Chave que deveria ser enviada:", activationKey);
+        console.error("Email que deveria receber:", userEmail);
+        
+        res.json({
+          success: true,
+          message: "Licença gerada mas houve erro no envio do email",
+          data: {
+            userId: user.id,
+            userEmail,
+            activationKey,
+            plan,
+            paymentId: testPayment.id,
+            licenseAction: existingLicense ? "renovada" : "criada",
+            emailSent: false,
+            emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error("Erro na simulação de pagamento:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno na simulação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
 
 
   // Registration route
