@@ -167,6 +167,8 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Corrected PIX payment validation schema to accept decimal durationDays for test plan
 - June 14, 2025. Enhanced download system with better error handling and file path resolution
 - June 14, 2025. Updated test plan configuration: 30 minutes = 0.021 days for proper validation
+- June 14, 2025. Configured download system to use direct Supabase Storage link for file distribution
+- June 14, 2025. Added DOWNLOAD_URL environment variable support for easy link updates
 
 ## User Preferences
 

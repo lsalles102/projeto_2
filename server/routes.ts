@@ -561,13 +561,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileName = "FovDarkloader.exe";
       await storage.logDownload(user.id, license.id, fileName);
 
-      // Generate secure download token
-      const downloadToken = generateToken(user.id);
+      // Use direct Supabase Storage link (can be configured via environment variable)
+      const supabaseDownloadUrl = process.env.DOWNLOAD_URL || "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/FovDarkloader.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9Gb3ZEYXJrbG9hZGVyLmV4ZSIsImlhdCI6MTc0OTkyMDMzNCwiZXhwIjoxNzgxNDU2MzM0fQ.C0hNoVrwxINjd_bve57G0bYCD7HdRBuQrm62ICq3o5g";
       
       res.json({
         message: "Download autorizado",
         fileName,
-        downloadUrl: `/api/download/file/${downloadToken}/${fileName}`,
+        downloadUrl: supabaseDownloadUrl,
         version: "2.4.1",
         size: "26.5 MB",
       });
