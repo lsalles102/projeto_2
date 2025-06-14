@@ -133,7 +133,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
           last_name: data.payerLastName, // Sobrenome do comprador
         },
         external_reference: externalReference,
-        notification_url: `${baseUrl}/api/payments/webhook`,
+        notification_url: process.env.NODE_ENV === 'production' ? `https://fovdark.shop/api/payments/webhook` : undefined,
         // Informações adicionais do item para melhorar aprovação
         additional_info: {
           items: [
