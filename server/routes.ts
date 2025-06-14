@@ -1174,7 +1174,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("PIX payment creation error:", error);
-      res.status(500).json({ message: "Erro ao criar pagamento PIX" });
+      if (error instanceof Error) {
+        console.error("Error stack:", error.stack);
+        console.error("Error details:", {
+          message: error.message,
+          name: error.name,
+          cause: error.cause
+        });
+        res.status(500).json({ message: "Erro ao criar pagamento PIX", error: error.message });
+      } else {
+        console.error("Unknown error:", error);
+        res.status(500).json({ message: "Erro ao criar pagamento PIX", error: "Erro desconhecido" });
+      }
     }
   });
 

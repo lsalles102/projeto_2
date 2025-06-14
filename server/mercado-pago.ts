@@ -41,12 +41,21 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   const externalReference = `payment_${nanoid()}`;
   const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais
   
+  console.log('CreatePixPayment called with data:', JSON.stringify(data, null, 2));
+  console.log('Transaction amount:', transactionAmount);
+  console.log('External reference:', externalReference);
+  
   // URL base da aplicação
   const baseUrl = process.env.REPLIT_DEV_DOMAIN 
     ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
     : process.env.REPLIT_URL || 'http://localhost:5000';
 
   try {
+    // Verificar se o token de acesso está configurado
+    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+      throw new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado');
+    }
+
     // Criar preferência de pagamento com PIX
     const preferenceData = {
       items: [
