@@ -907,7 +907,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Payment status check
+  // Payment status check by external reference
+  app.get("/api/payments/check-status", isAuthenticated, async (req, res) => {
+    try {
+      const { ref } = req.query;
+      
+      if (!ref || typeof ref !== 'string') {
+        return res.status(400).json({ message: "Referência externa é obrigatória" });
+      }
+
+      // Find payment in database by external reference
+      const payment = await storage.getPaymentByExternalReference(ref);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+
+      res.json({
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        transactionAmount: payment.transactionAmount,
+        plan: payment.plan,
+        durationDays: payment.durationDays
+      });
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      res.status(500).json({ message: "Erro ao verificar status do pagamento" });
+    }
+  });
+
+  // Payment status check by payment ID
   app.get("/api/payments/:paymentId/status", isAuthenticated, async (req, res) => {
     try {
       const { paymentId } = req.params;

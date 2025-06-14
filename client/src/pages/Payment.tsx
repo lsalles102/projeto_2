@@ -187,27 +187,34 @@ export default function Payment() {
 
   // Polling para verificar pagamento
   useEffect(() => {
-    if (!pixData?.paymentId) return;
+    if (!pixData?.preferenceId) return;
 
     const interval = setInterval(async () => {
       try {
-        const status = await checkPaymentStatus(pixData.paymentId);
-        if (status.status === "approved") {
-          setPaymentStatus("success");
-          clearInterval(interval);
-          toast({
-            title: "Pagamento aprovado!",
-            description: "Sua licença foi ativada automaticamente",
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+        // Check payment status via external reference
+        const response = await fetch(`/api/payments/check-status?ref=${pixData.externalReference}`, {
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const status = await response.json();
+          if (status.status === "approved") {
+            setPaymentStatus("success");
+            clearInterval(interval);
+            toast({
+              title: "Pagamento aprovado!",
+              description: "Sua licença foi ativada automaticamente",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+          }
         }
       } catch (error) {
         console.error("Erro ao verificar status:", error);
       }
-    }, 3000); // Verifica a cada 3 segundos
+    }, 5000); // Verifica a cada 5 segundos
 
     return () => clearInterval(interval);
-  }, [pixData?.paymentId, queryClient, toast]);
+  }, [pixData?.preferenceId, pixData?.externalReference, queryClient, toast]);
 
   const onSubmit = (data: PaymentFormData) => {
     console.log("Iniciando criação de pagamento:", data);
@@ -308,7 +315,7 @@ export default function Payment() {
               </div>
               
               <div className="space-y-2">
-                <p className="text-sm font-medium">Valor: R$ {pixData.amount.toFixed(2)}</p>
+                <p className="text-sm font-medium">Valor: R$ {(pixData.transactionAmount / 100).toFixed(2)}</p>
                 <p className="text-sm text-gray-600">
                   Plano: {PLAN_INFO[selectedPlan].name}
                 </p>
