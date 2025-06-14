@@ -2,11 +2,30 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,36 +43,49 @@ const paymentSchema = z.object({
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
 const PLAN_INFO = {
-  "test": {
+  test: {
     name: "Plano Teste",
-    price: 1.00,
+    price: 1.0,
     duration: 0.021, // 30 minutes in days
-    description: "Teste completo por 30 minutos",
-    features: ["Acesso completo", "Teste de todas as funcionalidades", "Aimbot Color", "Smooth aim configurável"]
+    description: "Teste por 30 minutos",
+    features: [
+      "Acesso completo",
+      "Teste de todas as funcionalidades",
+      "Aimbot Color",
+      "Smooth aim configurável",
+    ],
   },
   "7days": {
     name: "Plano 7 Dias",
-    price: 19.90,
+    price: 19.9,
     duration: 7,
-    description: "Acesso completo por 7 dias",
-    features: ["Download ilimitado", "Suporte 24/7", "Atualizações automáticas"]
+    description: "Acesso por 7 dias",
+    features: ["Download liberado", "Atualizações automáticas"],
   },
   "15days": {
     name: "Plano 15 Dias",
-    price: 34.90,
+    price: 34.9,
     duration: 15,
-    description: "Acesso completo por 15 dias",
-    features: ["Download ilimitado", "Suporte 24/7", "Atualizações automáticas", "Melhor custo-benefício"]
-  }
+    description: "Acesso por 15 dias",
+    features: [
+      "Download liberado",
+      "Atualizações automáticas",
+      "Melhor custo-benefício",
+    ],
+  },
 };
 
 export default function Payment() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedPlan, setSelectedPlan] = useState<"test" | "7days" | "15days">("test");
+  const [selectedPlan, setSelectedPlan] = useState<"test" | "7days" | "15days">(
+    "test",
+  );
   const [pixData, setPixData] = useState<any>(null);
-  const [paymentStatus, setPaymentStatus] = useState<"form" | "processing" | "qrcode" | "success">("form");
+  const [paymentStatus, setPaymentStatus] = useState<
+    "form" | "processing" | "qrcode" | "success"
+  >("form");
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -73,9 +105,12 @@ export default function Payment() {
   // Processar parâmetros da URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const planParam = urlParams.get('plan');
-    
-    if (planParam && (planParam === 'test' || planParam === '7days' || planParam === '15days')) {
+    const planParam = urlParams.get("plan");
+
+    if (
+      planParam &&
+      (planParam === "test" || planParam === "7days" || planParam === "15days")
+    ) {
       setSelectedPlan(planParam as "test" | "7days" | "15days");
       form.setValue("plan", planParam as "test" | "7days" | "15days");
     }
@@ -83,7 +118,7 @@ export default function Payment() {
 
   // Preencher formulário automaticamente quando usuário carregar
   useEffect(() => {
-    if (user && typeof user === 'object' && 'email' in user) {
+    if (user && typeof user === "object" && "email" in user) {
       const userData = user as any;
       form.setValue("payerEmail", userData.email || "");
       form.setValue("payerFirstName", userData.firstName || "");
@@ -93,13 +128,15 @@ export default function Payment() {
 
   // Carregar SDK do Mercado Pago
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://sdk.mercadopago.com/js/v2';
+    const script = document.createElement("script");
+    script.src = "https://sdk.mercadopago.com/js/v2";
     script.async = true;
     document.body.appendChild(script);
-    
+
     return () => {
-      const existingScript = document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]');
+      const existingScript = document.querySelector(
+        'script[src="https://sdk.mercadopago.com/js/v2"]',
+      );
       if (existingScript) {
         document.body.removeChild(existingScript);
       }
@@ -110,14 +147,14 @@ export default function Payment() {
   const createPaymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
       console.log("Enviando dados para API:", data);
-      
+
       const requestBody = {
         ...data,
         durationDays: PLAN_INFO[data.plan].duration,
       };
-      
+
       console.log("Corpo da requisição:", requestBody);
-      
+
       const response = await fetch("/api/payments/create-pix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,7 +190,7 @@ export default function Payment() {
         console.error("Erro ao fazer parse da resposta:", parseError);
         throw new Error("Resposta inválida do servidor");
       }
-      
+
       console.log("Resposta da API:", result);
       return result;
     },
@@ -192,10 +229,13 @@ export default function Payment() {
     const interval = setInterval(async () => {
       try {
         // Check payment status via external reference
-        const response = await fetch(`/api/payments/check-status?ref=${pixData.externalReference}`, {
-          credentials: "include",
-        });
-        
+        const response = await fetch(
+          `/api/payments/check-status?ref=${pixData.externalReference}`,
+          {
+            credentials: "include",
+          },
+        );
+
         if (response.ok) {
           const status = await response.json();
           if (status.status === "approved") {
@@ -218,7 +258,7 @@ export default function Payment() {
 
   const onSubmit = (data: PaymentFormData) => {
     console.log("Iniciando criação de pagamento:", data);
-    
+
     // Validar dados antes de enviar
     if (!data.payerEmail || !data.payerFirstName || !data.payerLastName) {
       toast({
@@ -262,7 +302,9 @@ export default function Payment() {
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <CardTitle className="text-green-600">Pagamento Aprovado!</CardTitle>
+            <CardTitle className="text-green-600">
+              Pagamento Aprovado!
+            </CardTitle>
             <CardDescription>
               Sua licença foi ativada automaticamente
             </CardDescription>
@@ -273,11 +315,16 @@ export default function Payment() {
                 Plano: <strong>{PLAN_INFO[selectedPlan].name}</strong>
               </p>
               <p className="text-sm text-gray-600">
-                Duração: <strong>{selectedPlan === 'test' ? '30 minutos' : `${PLAN_INFO[selectedPlan].duration} dias`}</strong>
+                Duração:{" "}
+                <strong>
+                  {selectedPlan === "test"
+                    ? "30 minutos"
+                    : `${PLAN_INFO[selectedPlan].duration} dias`}
+                </strong>
               </p>
             </div>
-            <Button 
-              onClick={() => setLocation("/dashboard")} 
+            <Button
+              onClick={() => setLocation("/dashboard")}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               Ir para Dashboard
@@ -302,20 +349,24 @@ export default function Payment() {
             <div className="text-center space-y-4">
               <div className="bg-white p-4 rounded-lg inline-block">
                 {pixData.pixQrCodeBase64 ? (
-                  <img 
+                  <img
                     src={`data:image/png;base64,${pixData.pixQrCodeBase64}`}
                     alt="QR Code PIX"
                     className="w-48 h-48"
                   />
                 ) : (
                   <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">QR Code não disponível</span>
+                    <span className="text-gray-500">
+                      QR Code não disponível
+                    </span>
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-2">
-                <p className="text-sm font-medium">Valor: R$ {(pixData.transactionAmount / 100).toFixed(2)}</p>
+                <p className="text-sm font-medium">
+                  Valor: R$ {(pixData.transactionAmount / 100).toFixed(2)}
+                </p>
                 <p className="text-sm text-gray-600">
                   Plano: {PLAN_INFO[selectedPlan].name}
                 </p>
@@ -323,11 +374,13 @@ export default function Payment() {
 
               {pixData.pixQrCode && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Código PIX (Copia e Cola):</Label>
+                  <Label className="text-sm font-medium">
+                    Código PIX (Copia e Cola):
+                  </Label>
                   <div className="relative">
-                    <Input 
-                      value={pixData.pixQrCode} 
-                      readOnly 
+                    <Input
+                      value={pixData.pixQrCode}
+                      readOnly
                       className="text-xs"
                     />
                     <Button
@@ -338,7 +391,8 @@ export default function Payment() {
                         navigator.clipboard.writeText(pixData.pixQrCode);
                         toast({
                           title: "Copiado!",
-                          description: "Código PIX copiado para a área de transferência",
+                          description:
+                            "Código PIX copiado para a área de transferência",
                         });
                       }}
                     >
@@ -364,8 +418,8 @@ export default function Payment() {
               </div>
             </div>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setPaymentStatus("form");
                 setPixData(null);
@@ -384,7 +438,9 @@ export default function Payment() {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-green-900 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full">
         <CardHeader>
-          <CardTitle className="text-center text-green-600">Adquirir Licença</CardTitle>
+          <CardTitle className="text-center text-green-600">
+            Adquirir Licença
+          </CardTitle>
           <CardDescription className="text-center">
             Escolha seu plano e efetue o pagamento via PIX
           </CardDescription>
@@ -395,12 +451,12 @@ export default function Payment() {
               {/* Seleção do Plano */}
               <div className="grid md:grid-cols-2 gap-4">
                 {Object.entries(PLAN_INFO).map(([planKey, plan]) => (
-                  <Card 
+                  <Card
                     key={planKey}
                     className={`cursor-pointer transition-all ${
-                      selectedPlan === planKey 
-                        ? 'ring-2 ring-green-500 border-green-500' 
-                        : 'hover:border-green-300'
+                      selectedPlan === planKey
+                        ? "ring-2 ring-green-500 border-green-500"
+                        : "hover:border-green-300"
                     }`}
                     onClick={() => {
                       setSelectedPlan(planKey as "7days" | "15days");
@@ -438,7 +494,7 @@ export default function Payment() {
               {/* Dados do Pagador */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Dados para Pagamento</h3>
-                
+
                 <FormField
                   control={form.control}
                   name="payerEmail"
@@ -492,18 +548,22 @@ export default function Payment() {
                     R$ {PLAN_INFO[selectedPlan].price.toFixed(2)}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
                   <Shield className="w-4 h-4" />
                   <span>Pagamento seguro via PIX - Mercado Pago</span>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={createPaymentMutation.isPending || paymentStatus === "processing"}
+                  disabled={
+                    createPaymentMutation.isPending ||
+                    paymentStatus === "processing"
+                  }
                 >
-                  {createPaymentMutation.isPending || paymentStatus === "processing" ? (
+                  {createPaymentMutation.isPending ||
+                  paymentStatus === "processing" ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                       Processando...

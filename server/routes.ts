@@ -1011,6 +1011,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form route
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const contactData = contactSchema.parse(req.body);
+      console.log(`[CONTACT] New message from: ${contactData.email}`);
+      
+      // Configure email transporter
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false
+        },
+      });
+
+      // Email to support team
+      const supportMailOptions = {
+        from: process.env.SMTP_USER,
+        to: 'contato@suportefovdark.shop',
+        subject: `[FovDark Support] ${contactData.subject}`,
+        html: `
+          <h2>Nova mensagem de contato</h2>
+          <p><strong>Nome:</strong> ${contactData.name}</p>
+          <p><strong>Email:</strong> ${contactData.email}</p>
+          <p><strong>Assunto:</strong> ${contactData.subject}</p>
+          <p><strong>Mensagem:</strong></p>
+          <p style="background: #f5f5f5; padding: 15px; border-radius: 5px;">${contactData.message}</p>
+          <hr>
+          <p><small>Enviado através do formulário de contato do FovDark</small></p>
+        `,
+      };
+
+      // Confirmation email to user
+      const userMailOptions = {
+        from: process.env.SMTP_USER,
+        to: contactData.email,
+        subject: 'Confirmação - Mensagem recebida pela FovDark',
+        html: `
+          <h2>Obrigado pelo contato!</h2>
+          <p>Olá ${contactData.name},</p>
+          <p>Recebemos sua mensagem sobre: <strong>${contactData.subject}</strong></p>
+          <p>Nossa equipe analisará sua solicitação e responderá em breve através deste email.</p>
+          <p>Tempo médio de resposta: 24 horas</p>
+          <hr>
+          <p>Atenciosamente,<br>Equipe FovDark<br>contato@suportefovdark.shop</p>
+        `,
+      };
+
+      try {
+        // Send both emails
+        await Promise.all([
+          transporter.sendMail(supportMailOptions),
+          transporter.sendMail(userMailOptions)
+        ]);
+        
+        console.log(`[CONTACT] Emails sent successfully for: ${contactData.email}`);
+        res.json({ 
+          message: "Mensagem enviada com sucesso! Você receberá uma confirmação por email.",
+          success: true 
+        });
+      } catch (emailError) {
+        console.error('Contact email sending error:', emailError);
+        res.status(500).json({ 
+          message: "Erro ao enviar email. Tente novamente ou envie diretamente para contato@suportefovdark.shop",
+          error: true 
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   const server = createServer(app);
   return server;
 }
