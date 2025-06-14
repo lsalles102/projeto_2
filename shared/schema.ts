@@ -286,7 +286,7 @@ export const mercadoPagoWebhookSchema = z.object({
   action: z.string().optional(),
   data: z.object({
     id: z.string(),
-  }),
+  }).optional(),
 });
 
 // Types
