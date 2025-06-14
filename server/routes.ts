@@ -776,11 +776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
       }
 
-      // Check if user already has an active license
+      // Buscar licença existente para sobrescrever
       const existingLicense = await storage.getLicenseByUserId(user.id);
-      if (existingLicense && existingLicense.status === "active") {
-        return res.status(400).json({ message: "Usuário já possui uma licença ativa" });
-      }
 
       // Calculate expiration date based on plan
       let totalMinutes: number;
@@ -799,9 +796,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt.setDate(expiresAt.getDate() + activationKey.durationDays);
       }
 
-      // Create or update license
+      // SEMPRE sobrescrever licença existente ou criar nova
       if (existingLicense) {
+        console.log(`=== SOBRESCREVENDO LICENÇA EXISTENTE ===`);
+        console.log(`Usuário: ${user.id}, Licença atual: ${existingLicense.key}`);
+        console.log(`Nova chave: ${key}, Novo plano: ${activationKey.plan}`);
+        
         await storage.updateLicense(existingLicense.id, {
+          key: key, // Sobrescrever com nova chave
           status: "active",
           plan: activationKey.plan,
           expiresAt,
@@ -810,8 +812,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hoursRemaining: Math.ceil(totalMinutes / 60),
           minutesRemaining: totalMinutes,
           activatedAt: new Date(),
+          hwid: null, // Reset HWID para permitir nova ativação
         });
+        
+        console.log(`✅ LICENÇA SOBRESCRITA COM SUCESSO`);
       } else {
+        console.log(`=== CRIANDO NOVA LICENÇA ===`);
+        console.log(`Usuário: ${user.id}, Chave: ${key}, Plano: ${activationKey.plan}`);
+        
         await storage.createLicense({
           userId: user.id,
           key,
@@ -824,6 +832,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           minutesRemaining: totalMinutes,
           activatedAt: new Date(),
         });
+        
+        console.log(`✅ NOVA LICENÇA CRIADA COM SUCESSO`);
       }
 
       // Mark activation key as used
@@ -1305,6 +1315,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
+  // Endpoint de teste para verificar geração e envio de chaves
+  app.post("/api/test/generate-key", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { email, plan = "test" } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      console.log(`=== TESTE: GERANDO CHAVE DE LICENÇA ===`);
+      console.log(`Email: ${email}, Plano: ${plan}`);
+      
+      // Gerar chave de ativação
+      const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      console.log(`Chave gerada: ${activationKey}`);
+      
+      // Criar chave no banco
+      await storage.createActivationKey({
+        key: activationKey,
+        plan,
+        durationDays: plan === "test" ? 0.021 : (plan === "7days" ? 7 : 15),
+      });
+      
+      // Enviar email
+      const planName = plan === "test" ? "Teste (30 minutos)" : 
+                       plan === "7days" ? "7 Dias" : "15 Dias";
+      
+      try {
+        console.log(`=== TESTE: ENVIANDO EMAIL ===`);
+        await sendLicenseKeyEmail(email, activationKey, planName);
+        console.log(`✅ EMAIL ENVIADO COM SUCESSO`);
+        
+        res.json({
+          success: true,
+          message: "Chave gerada e email enviado com sucesso",
+          activationKey,
+          email,
+          plan: planName
+        });
+      } catch (emailError) {
+        console.error("❌ ERRO AO ENVIAR EMAIL:", emailError);
+        res.json({
+          success: false,
+          message: "Chave gerada mas falha no envio do email",
+          activationKey,
+          email,
+          plan: planName,
+          emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
+        });
+      }
+      
+    } catch (error) {
+      console.error("Erro no teste de geração de chave:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao gerar chave de teste",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
     }
   });
 

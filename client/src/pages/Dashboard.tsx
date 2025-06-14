@@ -292,6 +292,54 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Seção de Ativação Manual de Licença */}
+              <div className="mt-6 border-t border-primary/20 pt-6">
+                <div className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2 flex items-center">
+                    <Key className="w-5 h-5 mr-2 text-primary" />
+                    Ativação Manual de Licença
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Insira sua chave de ativação para renovar ou ativar uma nova licença
+                  </p>
+                  
+                  <form onSubmit={form.handleSubmit(onActivateSubmit)} className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <Input
+                          {...form.register("key")}
+                          placeholder="FOVD-XXXX-XXXX-XXXX"
+                          className="bg-background/50 border-primary/30"
+                          disabled={activateMutation.isPending}
+                        />
+                        {form.formState.errors.key && (
+                          <p className="text-red-400 text-sm mt-1">
+                            {form.formState.errors.key.message}
+                          </p>
+                        )}
+                      </div>
+                      <Button 
+                        type="submit" 
+                        disabled={activateMutation.isPending}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        {activateMutation.isPending ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Ativando...
+                          </>
+                        ) : (
+                          <>
+                            <Key className="w-4 h-4 mr-2" />
+                            Ativar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
               {/* Activate Key Form */}
               {showActivateForm && (
                 <div className="mt-6 border-t border-primary/20 pt-6">
