@@ -757,7 +757,7 @@ export class PostgresStorage implements IStorage {
           daysRemaining: 0,
           hoursRemaining: 0,
           minutesRemaining: 0,
-          lastActivity: new Date(),
+          lastHeartbeat: new Date(),
         })
         .where(eq(licenses.id, existingLicense.id))
         .returning();
@@ -776,7 +776,7 @@ export class PostgresStorage implements IStorage {
         daysRemaining,
         hoursRemaining,
         minutesRemaining,
-        lastActivity: new Date(),
+        lastHeartbeat: new Date(),
       })
       .where(eq(licenses.id, existingLicense.id))
       .returning();

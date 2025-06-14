@@ -7,16 +7,31 @@ import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production');
+  }
+  console.warn('⚠️ Using default JWT secret in development - CHANGE IN PRODUCTION');
+  return "dev-jwt-secret-never-use-in-production";
+})();
 
 export function getSession() {
+  const sessionSecret = process.env.SESSION_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET environment variable is required in production');
+    }
+    console.warn('⚠️ Using default session secret in development - CHANGE IN PRODUCTION');
+    return "dev-session-secret-never-use-in-production";
+  })();
+
   return session({
-    secret: process.env.SESSION_SECRET || "your-jwt-secret-change-in-production",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Desabilitado para desenvolvimento
+      secure: process.env.NODE_ENV === 'production' ? true : false,
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
     },
   });

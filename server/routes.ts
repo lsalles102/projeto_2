@@ -148,19 +148,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+  app.get("/api/auth/user", async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Não autorizado" });
+      }
+      
       const user = req.user as any;
       const userWithLicense = await storage.getUser(user.id);
       const license = await storage.getLicenseByUserId(user.id);
       
       res.json({
-        user: { ...userWithLicense, password: undefined },
+        ...userWithLicense,
+        password: undefined,
         license,
       });
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Falha ao buscar usuário" });
+      res.status(401).json({ message: "Não autorizado" });
     }
   });
 
@@ -1105,10 +1110,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Para webhook real, você precisaria fazer uma consulta ao MP API
         // const mercadoPagoPayment = await getPaymentInfo(paymentId);
         
-        // Simular pagamento aprovado para desenvolvimento
-        const mockPaymentStatus = 'approved';
+        // Buscar status real do pagamento no Mercado Pago
+        const { getPaymentInfo } = await import("./mercado-pago");
+        let paymentStatus = 'pending';
         
-        if (mockPaymentStatus === 'approved') {
+        try {
+          const mercadoPagoPayment = await getPaymentInfo(paymentId);
+          paymentStatus = mercadoPagoPayment?.status || 'pending';
+        } catch (error) {
+          console.error('Erro ao buscar pagamento no Mercado Pago:', error);
+          // Em caso de erro, simular aprovado apenas em desenvolvimento
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ Simulando pagamento aprovado em desenvolvimento');
+            paymentStatus = 'approved';
+          }
+        }
+        
+        if (paymentStatus === 'approved') {
           // Encontrar pagamento local
           const payment = await storage.getPaymentByPreferenceId(webhookData.data.id);
           
