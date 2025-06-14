@@ -47,9 +47,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   console.log('External reference:', externalReference);
   
   // URL base da aplicação
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : 'https://fovdark.shop';
+  const baseUrl = 'https://fovdark.shop';
 
   try {
     // Verificar se o token de acesso está configurado
