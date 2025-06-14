@@ -6,27 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { 
   ArrowLeft,
   Settings as SettingsIcon,
-  User,
   Shield,
   Key,
-  Trash2,
-  Save
+  Trash2
 } from "lucide-react";
 import { z } from "zod";
-
-const updateProfileSchema = z.object({
-  firstName: z.string().min(1, "Nome é obrigatório"),
-  lastName: z.string().min(1, "Sobrenome é obrigatório"),
-  email: z.string().email("Email inválido"),
-});
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Senha atual é obrigatória"),
@@ -37,7 +27,6 @@ const changePasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type UpdateProfileData = z.infer<typeof updateProfileSchema>;
 type ChangePasswordData = z.infer<typeof changePasswordSchema>;
 
 export default function Settings() {
@@ -50,16 +39,6 @@ export default function Settings() {
   });
 
   const user = userData as any;
-
-  // Profile form
-  const profileForm = useForm<UpdateProfileData>({
-    resolver: zodResolver(updateProfileSchema),
-    defaultValues: {
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      email: user?.email || "",
-    },
-  });
 
   // Password form
   const passwordForm = useForm<ChangePasswordData>({
@@ -92,9 +71,7 @@ export default function Settings() {
     },
   });
 
-  const onUpdateProfile = (data: UpdateProfileData) => {
-    updateProfileMutation.mutate(data);
-  };
+
 
   const onChangePassword = (data: ChangePasswordData) => {
     changePasswordMutation.mutate(data);
