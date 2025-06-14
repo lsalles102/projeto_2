@@ -537,14 +537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download routes
-  app.get("/api/download/cheat", async (req, res) => {
+  app.get("/api/download/cheat", isAuthenticated, async (req, res) => {
     try {
-      // Check authentication manually to debug
-      if (!req.user) {
-        console.log("No user in request for download");
-        return res.status(401).json({ message: "Usuário não autenticado. Faça login primeiro." });
-      }
-
       const user = req.user as any;
       console.log("Download request from user:", user.id, user.email);
       
@@ -556,7 +550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if license is expired
-      const isExpired = new Date() > license.expiresAt;
+      const now = new Date();
+      const isExpired = now > license.expiresAt;
       if (isExpired) {
         await storage.updateLicense(license.id, { status: "expired" });
         return res.status(403).json({ message: "Licença expirada" });
@@ -570,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const downloadToken = generateToken(user.id);
       
       res.json({
-        message: "Download authorized",
+        message: "Download autorizado",
         fileName,
         downloadUrl: `/api/download/file/${downloadToken}/${fileName}`,
         version: "2.4.1",

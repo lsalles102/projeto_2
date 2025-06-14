@@ -163,6 +163,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Fixed R$ 1.00 test product (30 minutes) - corrected duration calculation and expiration logic
 - June 14, 2025. Updated test plan to use proper 30-minute duration instead of fractional days
 - June 14, 2025. Completed migration from Replit Agent to standard Replit environment - all systems operational
+- June 14, 2025. Fixed R$ 1.00 test plan (30 minutes) payment and download issues - fully functional
+- June 14, 2025. Corrected PIX payment validation schema to accept decimal durationDays for test plan
+- June 14, 2025. Enhanced download system with better error handling and file path resolution
+- June 14, 2025. Updated test plan configuration: 30 minutes = 0.021 days for proper validation
 
 ## User Preferences
 
