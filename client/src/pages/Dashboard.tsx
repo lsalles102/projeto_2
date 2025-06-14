@@ -397,7 +397,7 @@ export default function Dashboard() {
                   <div className="flex items-center">
                     <Archive className="text-primary text-xl mr-4" />
                     <div>
-                      <div className="font-semibold">FovDark Cheat v2.4.1</div>
+                      <div className="font-semibold">FovDarkloader.exe</div>
                       <div className="text-sm text-gray-400">Última atualização: há 2 horas</div>
                     </div>
                   </div>

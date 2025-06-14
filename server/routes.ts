@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log the download
-      const fileName = "bloodstrike_cheat.exe";
+      const fileName = "FovDarkloader.exe";
       await storage.logDownload(user.id, license.id, fileName);
 
       // Generate secure download token
@@ -1173,9 +1173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const paymentData = createPixPaymentSchema.parse(req.body);
 
-      // Verificar se o usuário já tem uma licença ativa
+      // Verificar se o usuário já tem uma licença ativa (exceto para plano de teste)
       const existingLicense = await storage.getLicenseByUserId(user.id);
-      if (existingLicense && existingLicense.status === "active") {
+      if (existingLicense && existingLicense.status === "active" && paymentData.plan !== "test") {
         return res.status(400).json({ 
           message: "Você já possui uma licença ativa. Aguarde o vencimento para adquirir uma nova." 
         });
