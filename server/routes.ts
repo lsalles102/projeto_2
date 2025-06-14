@@ -1181,6 +1181,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook do Mercado Pago
   app.post("/api/payments/webhook", async (req, res) => {
     try {
+      console.log('Webhook body recebido:', JSON.stringify(req.body, null, 2));
+      
+      // Verificar se o corpo da requisição tem os campos necessários
+      if (!req.body || typeof req.body !== 'object') {
+        console.warn('Webhook inválido - corpo vazio ou inválido');
+        return res.status(200).send('OK'); // Retornar 200 para evitar re-tentativas
+      }
+
       const webhookData = mercadoPagoWebhookSchema.parse(req.body);
       
       console.log('Webhook recebido:', JSON.stringify(webhookData, null, 2));
