@@ -230,7 +230,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!payment) {
             const pendingPayments = await storage.getPendingPayments();
             if (pendingPayments.length > 0) {
-              payment = pendingPayments.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0];
+              payment = pendingPayments.sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA;
+              })[0];
               console.log(`Usando pagamento pendente mais recente: ${payment.id}`);
             }
           }
@@ -671,6 +675,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Erro ao processar teste de ativação",
         error: error instanceof Error ? error.message : "Erro desconhecido"
       });
+    }
+  });
+
+  // Endpoint de teste para simular renovação de licença expirada
+  app.post("/api/test/renew-license", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Primeiro, vamos expirar a licença atual se existir
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      if (existingLicense) {
+        console.log(`Expirando licença atual: ${existingLicense.key}`);
+        await storage.updateLicense(existingLicense.id, {
+          status: "expired",
+          expiresAt: new Date(Date.now() - 1000), // 1 segundo atrás
+          totalMinutesRemaining: 0,
+          daysRemaining: 0,
+          hoursRemaining: 0,
+          minutesRemaining: 0,
+        });
+      }
+      
+      // Agora simular uma nova compra
+      const testPayment = await storage.createPayment({
+        userId: user.id,
+        plan: "test",
+        durationDays: 0.021,
+        transactionAmount: 100,
+        currency: "BRL",
+        status: "pending",
+        externalReference: `TEST-RENEW-${Date.now()}`,
+        payerEmail: user.email,
+        payerFirstName: user.name || "Usuário",
+        payerLastName: "Teste",
+      });
+      
+      // Simular aprovação do pagamento (como seria feito pelo webhook)
+      await storage.updatePayment(testPayment.id, {
+        status: "approved",
+        mercadoPagoId: `TEST-${Date.now()}`,
+        statusDetail: "accredited",
+      });
+      
+      // Criar nova chave de ativação
+      const newActivationKey = `FOVD-RENEWED-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      
+      await storage.createActivationKey({
+        key: newActivationKey,
+        plan: "test",
+        durationDays: 0.021,
+      });
+      
+      // Renovar a licença (como seria feito pelo webhook)
+      if (existingLicense) {
+        const newExpiryDate = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutos
+        
+        await storage.updateLicense(existingLicense.id, {
+          key: newActivationKey, // Nova chave
+          plan: "test",
+          status: "active",
+          expiresAt: newExpiryDate,
+          totalMinutesRemaining: 30,
+          daysRemaining: 1,
+          hoursRemaining: 1,
+          minutesRemaining: 30,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`✅ Licença renovada: ${existingLicense.key} -> ${newActivationKey}`);
+        
+        res.json({
+          success: true,
+          message: "Licença renovada com sucesso - teste de renovação completo",
+          oldKey: existingLicense.key,
+          newKey: newActivationKey,
+          expiresAt: newExpiryDate,
+          testPaymentId: testPayment.id
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "Nenhuma licença encontrada para renovar"
+        });
+      }
+      
+    } catch (error) {
+      console.error("Erro no teste de renovação:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao processar teste de renovação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Debug endpoint para verificar status de licenças e pagamentos de um usuário
+  app.get("/api/debug/user/:userId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "ID de usuário inválido" });
+      }
+      
+      const user = await storage.getUser(userId);
+      const license = await storage.getLicenseByUserId(userId);
+      const payments = await storage.getUserPayments(userId);
+      
+      res.json({
+        user: user ? { ...user, password: undefined } : null,
+        license,
+        payments: payments.map(p => ({
+          id: p.id,
+          status: p.status,
+          plan: p.plan,
+          amount: p.transactionAmount / 100,
+          externalReference: p.externalReference,
+          mercadoPagoId: p.mercadoPagoId,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt
+        })),
+        debug: {
+          hasUser: !!user,
+          hasLicense: !!license,
+          licenseExpired: license ? new Date(license.expiresAt) < new Date() : null,
+          licenseExpiresAt: license ? license.expiresAt : null,
+          paymentsCount: payments.length,
+          currentTime: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error("Debug endpoint error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
 

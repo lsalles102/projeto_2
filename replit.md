@@ -196,6 +196,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Fixed contact form system to use contato@suportefovdark.shop email address
 - June 14, 2025. All systems verified operational: authentication, payments, licensing, support contact
 - June 14, 2025. Migration checklist completed - project fully operational in standard Replit environment
+- June 14, 2025. Fixed license renewal system - expired licenses now generate new activation keys and update correctly
+- June 14, 2025. Enhanced webhook processing to handle license renewals with proper key generation and email delivery
+- June 14, 2025. Added debug endpoints for license troubleshooting and renewal testing functionality
+- June 14, 2025. Corrected license update logic to replace keys instead of accumulating time for renewals
 
 ## User Preferences
 
