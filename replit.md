@@ -157,6 +157,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Fixed Mercado Pago PIX payment system errors - fully functional
 - June 14, 2025. Completed full migration from Replit Agent to standard Replit environment
 - June 14, 2025. Fixed JavaScript variable hoisting error in Payment component - moved useQuery before useEffect
+- June 14, 2025. Updated production URL configuration to use https://fovdark.shop/
+- June 14, 2025. Fixed Mercado Pago webhook validation schema to handle flexible webhook data formats
+- June 14, 2025. Enhanced webhook error handling with better logging and fallback validation
 
 ## User Preferences
 

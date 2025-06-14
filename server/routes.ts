@@ -1156,7 +1156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethodId: 'pix',
         pixQrCode: pixResponse.pixQrCode,
         pixQrCodeBase64: pixResponse.pixQrCodeBase64,
-        notificationUrl: `${process.env.REPLIT_URL || 'http://localhost:5000'}/api/payments/webhook`,
+        notificationUrl: `https://fovdark.shop/api/payments/webhook`,
       });
 
       res.json({
@@ -1193,6 +1193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payments/webhook", async (req, res) => {
     try {
       console.log('Webhook body recebido:', JSON.stringify(req.body, null, 2));
+      console.log('Webhook headers:', JSON.stringify(req.headers, null, 2));
       
       // Verificar se o corpo da requisição tem os campos necessários
       if (!req.body || typeof req.body !== 'object') {
@@ -1200,7 +1201,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(200).send('OK'); // Retornar 200 para evitar re-tentativas
       }
 
-      const webhookData = mercadoPagoWebhookSchema.parse(req.body);
+      // Tentar parsear com validação mais flexível
+      let webhookData;
+      try {
+        webhookData = mercadoPagoWebhookSchema.parse(req.body);
+      } catch (parseError) {
+        console.log('Erro de validação do webhook:', parseError);
+        // Se falhar na validação, verificar se pelo menos tem o campo essencial
+        if (req.body.type && req.body.data && req.body.data.id) {
+          webhookData = {
+            type: req.body.type,
+            data: { id: req.body.data.id }
+          };
+          console.log('Usando dados básicos do webhook:', webhookData);
+        } else {
+          console.warn('Webhook não contém dados essenciais');
+          return res.status(200).send('OK');
+        }
+      }
       
       console.log('Webhook recebido:', JSON.stringify(webhookData, null, 2));
 

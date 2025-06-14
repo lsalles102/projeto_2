@@ -241,15 +241,15 @@ export const createPixPaymentSchema = z.object({
 });
 
 export const mercadoPagoWebhookSchema = z.object({
-  id: z.number(),
-  live_mode: z.boolean(),
+  id: z.number().optional(),
+  live_mode: z.boolean().optional(),
   type: z.string(),
-  date_created: z.string(),
-  application_id: z.number(),
-  user_id: z.number(),
-  version: z.number(),
-  api_version: z.string(),
-  action: z.string(),
+  date_created: z.string().optional(),
+  application_id: z.union([z.number(), z.string()]).optional(),
+  user_id: z.union([z.number(), z.string()]).optional(),
+  version: z.number().optional(),
+  api_version: z.string().optional(),
+  action: z.string().optional(),
   data: z.object({
     id: z.string(),
   }),
