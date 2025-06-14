@@ -12,6 +12,22 @@ import { initMercadoPago } from "@/lib/mercadopago";
 
 const plans = [
   {
+    id: "test",
+    name: "TESTE",
+    price: "R$ 0,50",
+    duration: "30 minutos",
+    durationDays: 0.021, // 30 minutes in days
+    icon: <Star className="text-green-500 text-4xl" />,
+    features: [
+      "Aimbot Color para BloodStrike",
+      "Smooth aim configurável",
+      "FOV customizável", 
+      "Configurações personalizadas",
+      "Anti-detecção avançada",
+      "Teste completo (30 min)"
+    ]
+  },
+  {
     id: "7days",
     name: "7 DIAS",
     price: "R$ 19,90",
@@ -70,6 +86,18 @@ export default function Checkout() {
 
   useEffect(() => {
     initMercadoPago().catch(console.error);
+    
+    // Check for plan parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get('plan');
+    
+    if (planParam) {
+      const plan = plans.find(p => p.id === planParam);
+      if (plan) {
+        setSelectedPlan(plan);
+        setStep('payment');
+      }
+    }
   }, []);
 
   const handleSelectPlan = (plan: typeof plans[0]) => {

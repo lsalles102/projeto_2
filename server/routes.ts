@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               const user = await storage.getUser(payment.userId);
               if (user) {
-                const planName = payment.plan === '7days' ? '7 DIAS' : '15 DIAS';
+                const planName = payment.plan === 'test' ? 'TESTE (30 MIN)' : payment.plan === '7days' ? '7 DIAS' : '15 DIAS';
                 await sendLicenseKeyEmail(user.email, licenseKey, planName);
                 console.log(`Email com chave de licença enviado para: ${user.email}`);
               }
