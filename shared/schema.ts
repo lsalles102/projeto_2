@@ -127,15 +127,24 @@ export const insertActivationKeySchema = createInsertSchema(activationKeys).omit
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().email("Email inválido").max(254, "Email muito longo"),
+  password: z.string().min(1, "Senha é obrigatória").max(128, "Senha muito longa"),
 });
 
 export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  email: z.string().email("Email inválido").max(254, "Email muito longo"),
+  password: z.string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .max(128, "Senha muito longa")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Senha deve conter pelo menos uma letra minúscula, uma maiúscula e um número"),
+  firstName: z.string()
+    .min(1, "Nome é obrigatório")
+    .max(50, "Nome muito longo")
+    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Nome deve conter apenas letras"),
+  lastName: z.string()
+    .min(1, "Sobrenome é obrigatório")
+    .max(50, "Sobrenome muito longo")
+    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Sobrenome deve conter apenas letras"),
 });
 
 export const activateKeySchema = z.object({

@@ -12,6 +12,35 @@ import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { sendLicenseKeyEmail } from "./email";
 
+// Rate limiting map
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+// Rate limiting middleware
+const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
+  return (req, res, next) => {
+    const key = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    const windowStart = now - windowMs;
+    
+    const record = rateLimitMap.get(key);
+    
+    if (!record || record.resetTime < windowStart) {
+      rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+    
+    if (record.count >= maxRequests) {
+      return res.status(429).json({ 
+        message: "Muitas tentativas. Tente novamente em alguns minutos.",
+        retryAfter: Math.ceil((record.resetTime - now) / 1000)
+      });
+    }
+    
+    record.count++;
+    next();
+  };
+};
+
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -60,8 +89,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
 
-  // Auth routes
-  app.post("/api/auth/register", async (req, res) => {
+  // Auth routes with rate limiting
+  app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => { // 5 attempts per 15 minutes
     try {
       const userData = registerSchema.parse(req.body);
       
@@ -74,8 +103,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password before storing
       const hashedPassword = await bcrypt.hash(userData.password, 12);
       
-      // Generate username from first and last name
-      const username = `${userData.firstName}${userData.lastName}`.toLowerCase().replace(/\s+/g, '');
+      // Generate username from first and last name with sanitization
+      const username = `${userData.firstName}${userData.lastName}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 50); // Limit length
       
       const user = await storage.createUser({
         ...userData,
@@ -102,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000), (req, res, next) => { // 10 attempts per 15 minutes
     try {
       loginSchema.parse(req.body);
     } catch (error) {
