@@ -1315,13 +1315,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             // Criar licença para o usuário
-            const totalMinutes = payment.durationDays * 24 * 60;
+            let totalMinutes;
+            if (payment.plan === 'test') {
+              // Plano teste: apenas 30 minutos
+              totalMinutes = 30;
+            } else {
+              // Outros planos: usar durationDays
+              totalMinutes = payment.durationDays * 24 * 60;
+            }
+            
             const daysRemaining = Math.floor(totalMinutes / (24 * 60));
             const hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
             const minutesRemaining = totalMinutes % 60;
             
             const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + payment.durationDays);
+            if (payment.plan === 'test') {
+              // Plano teste expira em 30 minutos
+              expiresAt.setMinutes(expiresAt.getMinutes() + 30);
+            } else {
+              // Outros planos usam durationDays
+              expiresAt.setDate(expiresAt.getDate() + payment.durationDays);
+            }
 
             // Gerar chave da licença
             const licenseKey = `MP-${payment.plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
