@@ -26,7 +26,7 @@ type PaymentFormData = z.infer<typeof paymentSchema>;
 const PLAN_INFO = {
   "test": {
     name: "Plano Teste",
-    price: 0.50,
+    price: 1.00,
     duration: 0.021, // 30 minutes in days
     description: "Teste completo por 30 minutos",
     features: ["Acesso completo", "Teste de todas as funcionalidades", "Aimbot Color", "Smooth aim configurável"]
@@ -69,6 +69,17 @@ export default function Payment() {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["/api/auth/user"],
   });
+
+  // Processar parâmetros da URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get('plan');
+    
+    if (planParam && (planParam === 'test' || planParam === '7days' || planParam === '15days')) {
+      setSelectedPlan(planParam as "test" | "7days" | "15days");
+      form.setValue("plan", planParam as "test" | "7days" | "15days");
+    }
+  }, [form]);
 
   // Preencher formulário automaticamente quando usuário carregar
   useEffect(() => {
@@ -235,7 +246,7 @@ export default function Payment() {
                 Plano: <strong>{PLAN_INFO[selectedPlan].name}</strong>
               </p>
               <p className="text-sm text-gray-600">
-                Duração: <strong>{PLAN_INFO[selectedPlan].duration} dias</strong>
+                Duração: <strong>{selectedPlan === 'test' ? '30 minutos' : `${PLAN_INFO[selectedPlan].duration} dias`}</strong>
               </p>
             </div>
             <Button 

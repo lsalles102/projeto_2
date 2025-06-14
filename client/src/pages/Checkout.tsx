@@ -14,7 +14,7 @@ const plans = [
   {
     id: "test",
     name: "TESTE",
-    price: "R$ 0,50",
+    price: "R$ 1,00",
     duration: "30 minutos",
     durationDays: 0.021, // 30 minutes in days
     icon: <Star className="text-green-500 text-4xl" />,

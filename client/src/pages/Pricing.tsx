@@ -11,7 +11,7 @@ export default function Pricing() {
   const plans = [
     {
       name: "TESTE",
-      price: "R$ 0,50",
+      price: "R$ 1,00",
       duration: "30 minutos",
       icon: <Gem className="text-green-500 text-4xl" />,
       features: [
