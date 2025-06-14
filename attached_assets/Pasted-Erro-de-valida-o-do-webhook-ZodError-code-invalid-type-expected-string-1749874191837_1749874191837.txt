@@ -1,0 +1,71 @@
+Erro de validação do webhook: ZodError: [
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "type"
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
+    "expected": "object",
+    "received": "undefined",
+    "path": [
+      "data"
+    ],
+    "message": "Required"
+  }
+]
+    at get error [as error] (file:///app/node_modules/zod/lib/index.mjs:587:31)
+    at ZodObject.parse (file:///app/node_modules/zod/lib/index.mjs:663:22)
+    at file:///app/dist/index.prod.js:2067:48
+    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+    at next (/app/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/app/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+    at /app/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+    at next (/app/node_modules/express/lib/router/index.js:280:10) {
+  issues: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'object',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    }
+  ],
+  addIssue: [Function (anonymous)],
+  addIssues: [Function (anonymous)],
+  errors: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'object',
+      received: 'undefined',
+      path: [Array],
+      message: 'Required'
+    }
+  ]
+}
+Webhook não contém dados essenciais
+4:08:42 AM [express] POST /api/payments/webhook 200 in 6ms
+4:08:42 AM [express] POST /api/payments/pix/create 200 in 2641ms :: {"paymentId":14,"preferenceId":"…
+4:08:49 AM [express] GET /api/auth/user 304 in 1418ms :: {"id":6,"email":"luizsalles102@gmail.com","…
+4:09:08 AM [express] GET /api/auth/user 304 in 1424ms :: {"id":6,"email":"luizsalles102@gmail.com","…
+4:09:21 AM [express] POST /api/payments/pix/create 400 in 1434ms :: {"message":"Dados inválidos","er…

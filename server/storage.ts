@@ -69,6 +69,8 @@ export interface IStorage {
   
   // Payment operations
   getUserPayments(userId: number): Promise<Payment[]>;
+  getPaymentByMercadoPagoId(mercadoPagoId: string): Promise<Payment | undefined>;
+  getPendingPayments(): Promise<Payment[]>;
 }
 
 // In-memory storage implementation
@@ -352,6 +354,88 @@ export class MemStorage implements IStorage {
     };
     
     return this.payments[paymentIndex];
+  }
+
+  async getPaymentByMercadoPagoId(mercadoPagoId: string): Promise<Payment | undefined> {
+    return this.payments.find(payment => payment.mercadoPagoId === mercadoPagoId);
+  }
+
+  async getPendingPayments(): Promise<Payment[]> {
+    return this.payments.filter(payment => payment.status === 'pending');
+  }
+
+  async getUserPayments(userId: number): Promise<Payment[]> {
+    return this.payments.filter(payment => payment.userId === userId);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.users;
+  }
+
+  async getAllLicenses(): Promise<License[]> {
+    return this.licenses;
+  }
+
+  async getAllActivationKeys(): Promise<ActivationKey[]> {
+    return this.activationKeys;
+  }
+
+  async getAllPayments(): Promise<Payment[]> {
+    return this.payments;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    this.users = this.users.filter(user => user.id !== id);
+  }
+
+  async deleteLicense(id: number): Promise<void> {
+    this.licenses = this.licenses.filter(license => license.id !== id);
+  }
+
+  async deleteActivationKey(id: number): Promise<void> {
+    this.activationKeys = this.activationKeys.filter(key => key.id !== id);
+  }
+
+  async getLicenseByHwid(hwid: string): Promise<License | undefined> {
+    return this.licenses.find(license => license.hwid === hwid);
+  }
+
+  async updateLicenseHeartbeat(licenseKey: string, hwid: string): Promise<License | undefined> {
+    const license = this.licenses.find(l => l.key === licenseKey && l.hwid === hwid);
+    if (!license) return undefined;
+
+    if (license.totalMinutesRemaining && license.totalMinutesRemaining > 0) {
+      license.totalMinutesRemaining -= 1;
+      const totalMinutes = license.totalMinutesRemaining;
+      license.daysRemaining = Math.floor(totalMinutes / (24 * 60));
+      license.hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+      license.minutesRemaining = totalMinutes % 60;
+      
+      if (license.totalMinutesRemaining <= 0) {
+        license.status = 'expired';
+      }
+    }
+    
+    return license;
+  }
+
+  async decrementLicenseTime(licenseId: number, minutes: number): Promise<License> {
+    const license = this.licenses.find(l => l.id === licenseId);
+    if (!license) throw new Error("License not found");
+
+    if (license.totalMinutesRemaining) {
+      license.totalMinutesRemaining = Math.max(0, license.totalMinutesRemaining - minutes);
+      const totalMinutes = license.totalMinutesRemaining;
+      license.daysRemaining = Math.floor(totalMinutes / (24 * 60));
+      license.hoursRemaining = Math.floor((totalMinutes % (24 * 60)) / 60);
+      license.minutesRemaining = totalMinutes % 60;
+      
+      if (license.totalMinutesRemaining <= 0) {
+        license.status = 'expired';
+      }
+    }
+    
+    return license;
   }
 
   async getSystemStats(): Promise<any> {
@@ -818,6 +902,29 @@ export class PostgresStorage implements IStorage {
     const { db } = await import("./db");
     const result = await db.query.payments.findMany({
       where: (payments, { eq }) => eq(payments.userId, userId),
+      orderBy: (payments, { desc }) => desc(payments.createdAt),
+    });
+    return result;
+  }
+
+  async getPaymentByMercadoPagoId(mercadoPagoId: string): Promise<Payment | undefined> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.query.payments.findFirst({
+      where: eq(payments.mercadoPagoId, mercadoPagoId),
+    });
+    return result;
+  }
+
+  async getPendingPayments(): Promise<Payment[]> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.query.payments.findMany({
+      where: eq(payments.status, 'pending'),
       orderBy: (payments, { desc }) => desc(payments.createdAt),
     });
     return result;
