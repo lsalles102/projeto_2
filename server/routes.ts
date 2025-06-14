@@ -1175,7 +1175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verificar se o usuário já tem uma licença ativa (exceto para plano de teste)
       const existingLicense = await storage.getLicenseByUserId(user.id);
-      if (existingLicense && existingLicense.status === "active" && paymentData.plan !== "test") {
+      if (existingLicense && existingLicense.status === "active" && (paymentData.plan as string) !== "test") {
         return res.status(400).json({ 
           message: "Você já possui uma licença ativa. Aguarde o vencimento para adquirir uma nova." 
         });

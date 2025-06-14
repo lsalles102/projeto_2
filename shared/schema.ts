@@ -212,7 +212,7 @@ export const contactSchema = z.object({
 
 // Admin schemas
 export const createActivationKeySchema = z.object({
-  plan: z.enum(["7days", "15days"]),
+  plan: z.enum(["test", "7days", "15days"]),
   durationDays: z.number().min(1).max(365),
   quantity: z.number().min(1).max(100).default(1),
 });
@@ -233,7 +233,7 @@ export const updateLicenseSchema = z.object({
 
 // PIX payment schemas
 export const createPixPaymentSchema = z.object({
-  plan: z.enum(["7days", "15days"]),
+  plan: z.enum(["test", "7days", "15days"]),
   durationDays: z.number().min(1).max(365),
   payerEmail: z.string().email(),
   payerFirstName: z.string().min(1),
