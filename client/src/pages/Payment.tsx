@@ -58,6 +58,11 @@ export default function Payment() {
     },
   });
 
+  // Verificar autenticação
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+
   // Preencher formulário automaticamente quando usuário carregar
   useEffect(() => {
     if (user && typeof user === 'object' && 'email' in user) {
@@ -82,11 +87,6 @@ export default function Payment() {
       }
     };
   }, []);
-
-  // Verificar autenticação
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ["/api/auth/user"],
-  });
 
   // Criar pagamento PIX
   const createPaymentMutation = useMutation({
