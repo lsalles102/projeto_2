@@ -234,7 +234,7 @@ export const updateLicenseSchema = z.object({
 // PIX payment schemas
 export const createPixPaymentSchema = z.object({
   plan: z.enum(["test", "7days", "15days"]),
-  durationDays: z.number().min(1).max(365),
+  durationDays: z.number().min(0.001).max(365), // Permitir valores decimais para plano de teste (30 minutos = 0.021 dias)
   payerEmail: z.string().email(),
   payerFirstName: z.string().min(1),
   payerLastName: z.string().min(1),

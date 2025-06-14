@@ -47,6 +47,11 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
   console.log('Transaction amount:', transactionAmount);
   console.log('External reference:', externalReference);
   
+  // Validar se o valor está correto para o plano de teste
+  if (data.plan === 'test' && transactionAmount !== 1.00) {
+    console.error('⚠️ ERRO: Valor incorreto para plano de teste:', transactionAmount);
+  }
+  
   // URL base da aplicação
   const baseUrl = getBaseUrl();
 

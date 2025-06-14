@@ -1185,11 +1185,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Criar referência externa única
       const externalReference = `payment_${user.id}_${nanoid()}`;
       
+      // Para plano de teste, ajustar durationDays para fins de processamento interno
+      let adjustedDurationDays = paymentData.durationDays;
+      if (paymentData.plan === 'test') {
+        // O plano de teste usa 30 minutos, mas o durationDays pode vir como decimal
+        adjustedDurationDays = 0.021; // 30 minutos = 0.021 dias
+        console.log('🔧 Plano de teste detectado, ajustando durationDays para:', adjustedDurationDays);
+      }
+      
       // Criar preferência no Mercado Pago
       const pixResponse = await createPixPayment({
         userId: user.id,
         plan: paymentData.plan,
-        durationDays: paymentData.durationDays,
+        durationDays: adjustedDurationDays,
         payerEmail: paymentData.payerEmail,
         payerFirstName: paymentData.payerFirstName,
         payerLastName: paymentData.payerLastName,
@@ -1204,7 +1212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionAmount: pixResponse.transactionAmount,
         currency: pixResponse.currency,
         plan: paymentData.plan,
-        durationDays: paymentData.durationDays,
+        durationDays: adjustedDurationDays, // Usar o valor ajustado para plano de teste
         payerEmail: paymentData.payerEmail,
         payerFirstName: paymentData.payerFirstName,
         payerLastName: paymentData.payerLastName,
