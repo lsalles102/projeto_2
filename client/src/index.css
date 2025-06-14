@@ -104,12 +104,27 @@
   
   .hero-bg {
     background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                url('https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080') center/cover;
+                url('https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80') center/cover;
+    background-attachment: fixed;
+    will-change: transform;
   }
   
   .pricing-bg {
     background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
-                url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=400') center/cover;
+                url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=400&q=80') center/cover;
+    background-attachment: fixed;
+    will-change: transform;
+  }
+  
+  /* Performance optimizations */
+  .transform-gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  .optimize-rendering {
+    backface-visibility: hidden;
+    perspective: 1000px;
   }
 }
 

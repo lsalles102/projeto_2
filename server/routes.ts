@@ -15,6 +15,19 @@ import { sendLicenseKeyEmail } from "./email";
 // Rate limiting map
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
+// Security logging system
+const securityLog = {
+  logSuspiciousActivity: (ip: string, event: string, details: any) => {
+    console.warn(`[SECURITY] ${new Date().toISOString()} - IP: ${ip} - Event: ${event}`, details);
+  },
+  logFailedLogin: (ip: string, email: string) => {
+    console.warn(`[AUTH] ${new Date().toISOString()} - Failed login attempt - IP: ${ip} - Email: ${email}`);
+  },
+  logRateLimit: (ip: string, endpoint: string) => {
+    console.warn(`[RATE_LIMIT] ${new Date().toISOString()} - Rate limit exceeded - IP: ${ip} - Endpoint: ${endpoint}`);
+  }
+};
+
 // Rate limiting middleware
 const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
   return (req, res, next) => {
@@ -30,6 +43,7 @@ const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
     }
     
     if (record.count >= maxRequests) {
+      securityLog.logRateLimit(key, req.path);
       return res.status(429).json({ 
         message: "Muitas tentativas. Tente novamente em alguns minutos.",
         retryAfter: Math.ceil((record.resetTime - now) / 1000)
@@ -144,10 +158,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     passport.authenticate("local", (err: any, user: any, info: any) => {
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      
       if (err) {
+        securityLog.logSuspiciousActivity(clientIp, "AUTH_ERROR", { error: err.message });
         return res.status(500).json({ message: "Erro de autenticação" });
       }
       if (!user) {
+        securityLog.logFailedLogin(clientIp, req.body.email);
         return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
       }
 

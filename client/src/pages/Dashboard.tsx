@@ -39,9 +39,16 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [showActivateForm, setShowActivateForm] = useState(false);
 
-  // Fetch dashboard data
-  const { data, isLoading } = useQuery({
+  // Fetch dashboard data with optimized caching
+  const { data, isLoading, error } = useQuery({
     queryKey: ["/api/dashboard"],
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      if (error?.status === 401) return false;
+      return failureCount < 2;
+    }
   });
 
   const user = (data as any)?.user;
