@@ -230,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!payment) {
             const pendingPayments = await storage.getPendingPayments();
             if (pendingPayments.length > 0) {
-              payment = pendingPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+              payment = pendingPayments.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0];
               console.log(`Usando pagamento pendente mais recente: ${payment.id}`);
             }
           }
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const existingLicense = await storage.getLicenseByUserId(payment.userId);
               
               if (existingLicense) {
-                console.log(`Renovando licença existente: ${existingLicense.key}`);
+                console.log(`Renovando licença existente: ${existingLicense.key} -> Nova chave: ${activationKey}`);
                 
                 // Calculate new expiration date
                 const currentExpiry = new Date(existingLicense.expiresAt);
@@ -282,17 +282,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   totalMinutes = payment.durationDays * 24 * 60;
                 }
                 
+                // Update existing license with new key and expiration
                 await storage.updateLicense(existingLicense.id, {
+                  key: activationKey, // NOVO: Atualizar a chave da licença
+                  plan: payment.plan, // NOVO: Atualizar o plano
                   status: "active",
                   expiresAt: newExpiryDate,
-                  totalMinutesRemaining: (existingLicense.totalMinutesRemaining || 0) + totalMinutes,
+                  totalMinutesRemaining: totalMinutes, // CORRIGIDO: Usar novo total ao invés de somar
                   daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
                   hoursRemaining: Math.ceil(totalMinutes / 60),
                   minutesRemaining: totalMinutes,
                   activatedAt: new Date(),
                 });
                 
-                console.log(`✅ Licença renovada até: ${newExpiryDate.toISOString()}`);
+                console.log(`✅ Licença renovada com nova chave até: ${newExpiryDate.toISOString()}`);
                 
               } else {
                 console.log("Criando nova licença para o usuário");
@@ -330,17 +333,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error("Erro ao criar/atualizar licença:", licenseError);
             }
 
-            // Send license key via email
+            // Send license key via email - SEMPRE enviar nova chave
             if (payment.payerEmail) {
               try {
                 const planName = payment.plan === "test" ? "Teste (30 minutos)" : 
                                  payment.plan === "7days" ? "7 Dias" : "15 Dias";
-                                 
+                
+                console.log(`Enviando email para: ${payment.payerEmail} com chave: ${activationKey}`);
                 await sendLicenseKeyEmail(payment.payerEmail, activationKey, planName);
-                console.log(`Email enviado para: ${payment.payerEmail}`);
+                console.log(`✅ Email enviado com sucesso para: ${payment.payerEmail}`);
               } catch (emailError) {
-                console.error("Erro ao enviar email:", emailError);
+                console.error("❌ Erro ao enviar email:", emailError);
               }
+            } else {
+              console.log("❌ Email do pagador não encontrado - não será possível enviar chave");
             }
 
             console.log(`✅ PAGAMENTO PROCESSADO COM SUCESSO - Chave: ${activationKey}`);
