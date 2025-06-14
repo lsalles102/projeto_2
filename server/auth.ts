@@ -1,10 +1,12 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
+import ConnectPgSimple from "connect-pg-simple";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
+import { db } from "./db";
 import type { User } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
@@ -24,7 +26,10 @@ export function getSession() {
     return "dev-session-secret-never-use-in-production";
   })();
 
-  return session({
+  // Configurar store PostgreSQL para sessões
+  const PgSession = ConnectPgSimple(session);
+  
+  const sessionConfig: session.SessionOptions = {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -34,7 +39,20 @@ export function getSession() {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
     },
-  });
+  };
+
+  // Usar PostgreSQL store apenas se DATABASE_URL estiver disponível
+  if (process.env.DATABASE_URL) {
+    sessionConfig.store = new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'sessions',
+      createTableIfMissing: true,
+    });
+  } else {
+    console.warn('⚠️ Using MemoryStore for sessions - not recommended for production');
+  }
+
+  return session(sessionConfig);
 }
 
 export async function setupAuth(app: Express) {
