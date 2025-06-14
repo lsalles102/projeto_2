@@ -224,13 +224,13 @@ export default function Payment() {
 
   // Polling para verificar pagamento
   useEffect(() => {
-    if (!pixData?.preferenceId) return;
+    if (!pixData?.paymentId) return;
 
     const interval = setInterval(async () => {
       try {
-        // Check payment status via external reference
+        // Check payment status using payment ID
         const response = await fetch(
-          `/api/payments/check-status?ref=${pixData.externalReference}`,
+          `/api/payments/${pixData.paymentId}/status`,
           {
             credentials: "include",
           },

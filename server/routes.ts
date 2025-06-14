@@ -143,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pixPayment = await createPixPayment(paymentData);
       
       // Store payment in database
-      await storage.createPayment({
+      const payment = await storage.createPayment({
         userId: user.id,
         preferenceId: pixPayment.preferenceId,
         externalReference: pixPayment.externalReference,
@@ -159,7 +159,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pixQrCodeBase64: pixPayment.pixQrCodeBase64,
       });
 
-      res.json(pixPayment);
+      res.json({
+        ...pixPayment,
+        paymentId: payment.id
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados de pagamento inválidos", errors: error.errors });
@@ -194,8 +197,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         webhookData = { type: "payment" };
         paymentId = req.body.id.toString();
       } else {
-        console.log("Formato de webhook não reconhecido");
-        return res.status(200).json({ received: true });
+        console.log("Formato de webhook não reconhecido, tentando processar mesmo assim");
+        // Try to process as a general webhook notification
+        webhookData = { type: "payment" };
+        paymentId = null;
       }
       
       if (webhookData.type === "payment" && paymentId) {
@@ -387,6 +392,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment status check endpoint
+  app.get("/api/payments/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const paymentId = parseInt(req.params.id);
+      
+      if (isNaN(paymentId)) {
+        return res.status(400).json({ message: "ID de pagamento inválido" });
+      }
+      
+      const payment = await storage.getPayment(paymentId);
+      
+      if (!payment || payment.userId !== user.id) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        amount: payment.transactionAmount / 100,
+        currency: payment.currency,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      });
+    } catch (error) {
+      console.error("Payment status check error:", error);
+      res.status(500).json({ message: "Erro ao verificar status do pagamento" });
+    }
+  });
+
+  // Check payment status by external reference
+  app.get("/api/payments/status/:externalReference", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const externalReference = req.params.externalReference;
+      
+      const payment = await storage.getPaymentByExternalReference(externalReference);
+      
+      if (!payment || payment.userId !== user.id) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        amount: payment.transactionAmount / 100,
+        currency: payment.currency,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      });
+    } catch (error) {
+      console.error("Payment status check error:", error);
+      res.status(500).json({ message: "Erro ao verificar status do pagamento" });
+    }
+  });
+
+  // Get user payments
+  app.get("/api/payments", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const payments = await storage.getUserPayments(user.id);
+      
+      const paymentsFormatted = payments.map(payment => ({
+        id: payment.id,
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        amount: payment.transactionAmount / 100,
+        currency: payment.currency,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+        externalReference: payment.externalReference,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      }));
+
+      res.json({ payments: paymentsFormatted });
+    } catch (error) {
+      console.error("User payments fetch error:", error);
+      res.status(500).json({ message: "Erro ao buscar pagamentos" });
+    }
+  });
+
   // License activation endpoint
   app.post("/api/licenses/activate", isAuthenticated, async (req, res) => {
     try {
@@ -463,6 +556,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("License activation error:", error);
       res.status(500).json({ message: "Erro ao ativar licença" });
+    }
+  });
+
+  // Test webhook endpoint for manual testing
+  app.post("/api/test-webhook-activation", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Create a test payment
+      const testPayment = await storage.createPayment({
+        userId: user.id,
+        preferenceId: `test_pref_${Date.now()}`,
+        externalReference: `test_${Date.now()}`,
+        status: "pending",
+        transactionAmount: 100, // R$ 1,00
+        currency: "BRL",
+        plan: "test",
+        durationDays: 0.021, // 30 minutes
+        payerEmail: user.email,
+        payerFirstName: user.firstName || "Test",
+        payerLastName: user.lastName || "User",
+        pixQrCode: "test_qr",
+        pixQrCodeBase64: "test_qr_base64",
+      });
+
+      // Simulate webhook processing
+      await storage.updatePayment(testPayment.id, {
+        status: "approved",
+        mercadoPagoId: `test_mp_${Date.now()}`,
+        statusDetail: "accredited",
+      });
+
+      // Create activation key
+      const activationKey = `FOVD-TEST-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      
+      await storage.createActivationKey({
+        key: activationKey,
+        plan: "test",
+        durationDays: 0.021,
+      });
+
+      // Create/update license automatically
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      
+      if (existingLicense) {
+        // Renew existing license
+        const currentExpiry = new Date(existingLicense.expiresAt);
+        const now = new Date();
+        const startDate = currentExpiry > now ? currentExpiry : now;
+        const newExpiryDate = new Date(startDate.getTime() + (30 * 60 * 1000)); // 30 minutes
+        
+        await storage.updateLicense(existingLicense.id, {
+          status: "active",
+          expiresAt: newExpiryDate,
+          totalMinutesRemaining: (existingLicense.totalMinutesRemaining || 0) + 30,
+          daysRemaining: 1,
+          hoursRemaining: 1,
+          minutesRemaining: 30,
+          activatedAt: new Date(),
+        });
+        
+        res.json({
+          success: true,
+          message: "Licença renovada com sucesso via teste manual",
+          license: {
+            key: existingLicense.key,
+            expiresAt: newExpiryDate,
+            status: "active"
+          },
+          activationKey,
+          testPaymentId: testPayment.id
+        });
+      } else {
+        // Create new license
+        const expiryDate = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutes
+        
+        const newLicense = await storage.createLicense({
+          userId: user.id,
+          key: activationKey,
+          plan: "test",
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: 30,
+          daysRemaining: 1,
+          hoursRemaining: 1,
+          minutesRemaining: 30,
+          activatedAt: new Date(),
+        });
+        
+        res.json({
+          success: true,
+          message: "Nova licença criada com sucesso via teste manual",
+          license: {
+            key: newLicense.key,
+            expiresAt: expiryDate,
+            status: "active"
+          },
+          activationKey,
+          testPaymentId: testPayment.id
+        });
+      }
+      
+    } catch (error) {
+      console.error("Erro no teste de webhook:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao processar teste de ativação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
     }
   });
 
