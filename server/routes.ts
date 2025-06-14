@@ -1117,7 +1117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payments/pix/create", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
+      console.log('Dados recebidos para pagamento PIX:', JSON.stringify(req.body, null, 2));
+      console.log('Usuário autenticado:', user?.id, user?.email);
+      
       const paymentData = createPixPaymentSchema.parse(req.body);
+      console.log('Dados validados:', JSON.stringify(paymentData, null, 2));
 
       // Verificar se o usuário já tem uma licença ativa
       const existingLicense = await storage.getLicenseByUserId(user.id);
@@ -1129,8 +1133,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Criar referência externa única
       const externalReference = `payment_${user.id}_${nanoid()}`;
+      console.log('Referência externa criada:', externalReference);
       
       // Criar preferência no Mercado Pago
+      console.log('Criando preferência no Mercado Pago...');
       const pixResponse = await createPixPayment({
         userId: user.id,
         plan: paymentData.plan,
@@ -1139,9 +1145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payerFirstName: paymentData.payerFirstName,
         payerLastName: paymentData.payerLastName,
       });
+      console.log('Resposta do Mercado Pago:', JSON.stringify(pixResponse, null, 2));
 
       // Salvar pagamento no banco de dados
-      const payment = await storage.createPayment({
+      console.log('Salvando pagamento no banco de dados...');
+      const paymentInsertData = {
         userId: user.id,
         externalReference: externalReference,
         preferenceId: pixResponse.preferenceId,
@@ -1157,7 +1165,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pixQrCode: pixResponse.pixQrCode,
         pixQrCodeBase64: pixResponse.pixQrCodeBase64,
         notificationUrl: `${process.env.REPLIT_URL || 'http://localhost:5000'}/api/payments/webhook`,
-      });
+      };
+      console.log('Dados para inserção:', JSON.stringify(paymentInsertData, null, 2));
+      
+      const payment = await storage.createPayment(paymentInsertData);
+      console.log('Pagamento salvo com sucesso:', payment.id);
 
       res.json({
         paymentId: payment.id,
