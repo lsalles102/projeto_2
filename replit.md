@@ -160,6 +160,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Updated production URL configuration to use https://fovdark.shop/
 - June 14, 2025. Fixed Mercado Pago webhook validation schema to handle flexible webhook data formats
 - June 14, 2025. Enhanced webhook error handling with better logging and fallback validation
+- June 14, 2025. Fixed R$ 1.00 test product (30 minutes) - corrected duration calculation and expiration logic
+- June 14, 2025. Updated test plan to use proper 30-minute duration instead of fractional days
+- June 14, 2025. Completed migration from Replit Agent to standard Replit environment - all systems operational
 
 ## User Preferences
 
