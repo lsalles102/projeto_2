@@ -484,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   // Determinar plano baseado no valor
                   let plan = "test";
-                  let durationDays = 0.021;
+                  let durationDays = 1; // Para teste, usar 1 dia no banco mas 30 min na lógica
                   const transactionAmount = paymentInfo.transaction_amount ?? 100;
                   
                   if (transactionAmount >= 500) { // R$ 5,00 ou mais
@@ -863,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionAmount: 100, // R$ 1,00
         currency: "BRL",
         plan: "test",
-        durationDays: 0.021, // 30 minutes
+        durationDays: 1, // Para teste, usar 1 dia no banco mas 30 min na lógica
         payerEmail: user.email,
         payerFirstName: user.firstName || "Test",
         payerLastName: user.lastName || "User",
@@ -1335,10 +1335,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Chave gerada: ${activationKey}`);
       
       // Criar chave no banco
+      const durationDays = plan === "test" ? 1 : (plan === "7days" ? 7 : 15); // Para teste, usar 1 dia no banco mas 30 min na lógica
       await storage.createActivationKey({
         key: activationKey,
         plan,
-        durationDays: plan === "test" ? 0.021 : (plan === "7days" ? 7 : 15),
+        durationDays,
       });
       
       // Enviar email
