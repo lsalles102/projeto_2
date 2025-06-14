@@ -124,6 +124,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Login endpoint
+  app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000), (req, res, next) => {
+    try {
+      loginSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      return res.status(400).json({ message: "Dados inválidos" });
+    }
+
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      
+      if (err) {
+        securityLog.logSuspiciousActivity(clientIp, "AUTH_ERROR", { error: err.message });
+        return res.status(500).json({ message: "Erro de autenticação" });
+      }
+      if (!user) {
+        securityLog.logFailedLogin(clientIp, req.body.email);
+        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+      }
+
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Falha no login" });
+        }
+        
+        const token = generateToken(user.id);
+        res.json({ user: { ...user, password: undefined }, token });
+      });
+    })(req, res, next);
+  });
+
   // Logout endpoint
   app.post("/api/auth/logout", (req, res) => {
     req.logout((err) => {
