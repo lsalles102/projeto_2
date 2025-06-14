@@ -58,6 +58,16 @@ export default function Payment() {
     },
   });
 
+  // Preencher formulário automaticamente quando usuário carregar
+  useEffect(() => {
+    if (user && typeof user === 'object' && 'email' in user) {
+      const userData = user as any;
+      form.setValue("payerEmail", userData.email || "");
+      form.setValue("payerFirstName", userData.firstName || "");
+      form.setValue("payerLastName", userData.lastName || "");
+    }
+  }, [user, form]);
+
   // Carregar SDK do Mercado Pago
   useEffect(() => {
     const script = document.createElement('script');
@@ -163,6 +173,26 @@ export default function Payment() {
 
   const onSubmit = (data: PaymentFormData) => {
     console.log("Iniciando criação de pagamento:", data);
+    
+    // Validar dados antes de enviar
+    if (!data.payerEmail || !data.payerFirstName || !data.payerLastName) {
+      toast({
+        title: "Erro",
+        description: "Todos os campos são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data.payerEmail.includes("@")) {
+      toast({
+        title: "Erro",
+        description: "Email inválido",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setPaymentStatus("processing");
     createPaymentMutation.mutate(data);
   };
