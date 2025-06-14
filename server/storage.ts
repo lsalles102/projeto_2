@@ -9,7 +9,9 @@ import {
   type PasswordResetToken,
   type InsertPasswordResetToken,
   type Payment,
-  type InsertPayment
+  type InsertPayment,
+  type HwidResetLog,
+  type InsertHwidResetLog
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 
@@ -71,6 +73,13 @@ export interface IStorage {
   getUserPayments(userId: number): Promise<Payment[]>;
   getPaymentByMercadoPagoId(mercadoPagoId: string): Promise<Payment | undefined>;
   getPendingPayments(): Promise<Payment[]>;
+  
+  // HWID protection operations
+  canResetHwid(userId: number, licenseId: number): Promise<boolean>;
+  getLastHwidReset(userId: number, licenseId: number): Promise<HwidResetLog | undefined>;
+  createHwidResetLog(log: InsertHwidResetLog): Promise<HwidResetLog>;
+  getHwidResetHistory(licenseId: number): Promise<HwidResetLog[]>;
+  updateLicenseHwid(licenseId: number, hwid: string | null): Promise<License>;
 }
 
 // In-memory storage implementation
@@ -81,12 +90,14 @@ export class MemStorage implements IStorage {
   private downloadLogs: DownloadLog[] = [];
   private passwordResetTokens: PasswordResetToken[] = [];
   private payments: Payment[] = [];
+  private hwidResetLogs: HwidResetLog[] = [];
   private nextUserId = 1;
   private nextLicenseId = 1;
   private nextDownloadId = 1;
   private nextActivationKeyId = 1;
   private nextPasswordResetTokenId = 1;
   private nextPaymentId = 1;
+  private nextHwidResetLogId = 1;
 
   constructor() {
     this.initializeTestDataSync();
@@ -447,6 +458,47 @@ export class MemStorage implements IStorage {
       downloadLogs: this.downloadLogs.length,
       passwordResetTokens: this.passwordResetTokens.length,
     };
+  }
+
+  // HWID protection methods
+  async canResetHwid(userId: number, licenseId: number): Promise<boolean> {
+    const lastReset = await this.getLastHwidReset(userId, licenseId);
+    if (!lastReset) return true;
+    
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return lastReset.createdAt < sevenDaysAgo;
+  }
+
+  async getLastHwidReset(userId: number, licenseId: number): Promise<HwidResetLog | undefined> {
+    return this.hwidResetLogs
+      .filter(log => log.userId === userId && log.licenseId === licenseId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  }
+
+  async createHwidResetLog(logData: InsertHwidResetLog): Promise<HwidResetLog> {
+    const log: HwidResetLog = {
+      id: this.nextHwidResetLogId++,
+      ...logData,
+      createdAt: new Date(),
+    };
+    this.hwidResetLogs.push(log);
+    return log;
+  }
+
+  async getHwidResetHistory(licenseId: number): Promise<HwidResetLog[]> {
+    return this.hwidResetLogs
+      .filter(log => log.licenseId === licenseId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateLicenseHwid(licenseId: number, hwid: string | null): Promise<License> {
+    const license = this.licenses.find(l => l.id === licenseId);
+    if (!license) throw new Error("License not found");
+    
+    license.hwid = hwid;
+    return license;
   }
 }
 

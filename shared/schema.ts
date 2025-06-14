@@ -78,6 +78,19 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// HWID reset logs for tracking and rate limiting
+export const hwidResetLogs = pgTable("hwid_reset_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  licenseId: integer("license_id").references(() => licenses.id).notNull(),
+  oldHwid: varchar("old_hwid"),
+  newHwid: varchar("new_hwid"),
+  resetType: varchar("reset_type").notNull(), // 'manual', 'support', 'auto'
+  resetReason: text("reset_reason"),
+  adminId: integer("admin_id").references(() => users.id), // Admin que autorizou o reset
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Mercado Pago payments table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
@@ -231,6 +244,22 @@ export const updateLicenseSchema = z.object({
   minutesRemaining: z.number().min(0).max(59).optional(),
 });
 
+// HWID protection schemas
+export const updateHwidSchema = z.object({
+  hwid: z.string().min(1, "HWID é obrigatório").max(255, "HWID muito longo"),
+});
+
+export const resetHwidSchema = z.object({
+  licenseKey: z.string().min(1, "Chave de licença é obrigatória"),
+  reason: z.string().min(10, "Motivo deve ter pelo menos 10 caracteres").max(500, "Motivo muito longo"),
+});
+
+export const adminResetHwidSchema = z.object({
+  licenseId: z.number().min(1, "ID da licença é obrigatório"),
+  reason: z.string().min(10, "Motivo deve ter pelo menos 10 caracteres").max(500, "Motivo muito longo"),
+  newHwid: z.string().optional(), // Se fornecido, força um HWID específico
+});
+
 // PIX payment schemas
 export const createPixPaymentSchema = z.object({
   plan: z.enum(["test", "7days", "15days"]),
@@ -267,3 +296,5 @@ export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type HwidResetLog = typeof hwidResetLogs.$inferSelect;
+export type InsertHwidResetLog = typeof hwidResetLogs.$inferInsert;
