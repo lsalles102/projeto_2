@@ -99,7 +99,6 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
       expires: true,
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
-      auto_return: 'approved',
       back_urls: {
         success: `${baseUrl}/payment/success`,
         failure: `${baseUrl}/payment`,
