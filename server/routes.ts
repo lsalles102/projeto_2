@@ -266,40 +266,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const existingLicense = await storage.getLicenseByUserId(payment.userId);
               
               if (existingLicense) {
-                console.log(`Renovando licença existente: ${existingLicense.key} -> Nova chave: ${activationKey}`);
+                console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
+                console.log(`Licença atual - ID: ${existingLicense.id}, Chave: ${existingLicense.key}, Status: ${existingLicense.status}`);
+                console.log(`Expira em: ${existingLicense.expiresAt}, Plano: ${existingLicense.plan}`);
+                console.log(`Nova chave: ${activationKey}, Novo plano: ${payment.plan}`);
                 
-                // Calculate new expiration date
-                const currentExpiry = new Date(existingLicense.expiresAt);
+                // SEMPRE usar data atual como base para renovação (não somar tempo)
                 const now = new Date();
-                const startDate = currentExpiry > now ? currentExpiry : now;
-                
                 let newExpiryDate: Date;
                 let totalMinutes: number;
                 
                 if (payment.plan === "test") {
                   // 30 minutes for test
-                  newExpiryDate = new Date(startDate.getTime() + (30 * 60 * 1000));
+                  newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
                   totalMinutes = 30;
                 } else {
                   // Add days for other plans
-                  newExpiryDate = new Date(startDate.getTime() + (payment.durationDays * 24 * 60 * 60 * 1000));
+                  newExpiryDate = new Date(now.getTime() + (payment.durationDays * 24 * 60 * 60 * 1000));
                   totalMinutes = payment.durationDays * 24 * 60;
                 }
                 
+                console.log(`Data de expiração calculada: ${newExpiryDate.toISOString()}`);
+                
                 // Update existing license with new key and expiration
-                await storage.updateLicense(existingLicense.id, {
-                  key: activationKey, // NOVO: Atualizar a chave da licença
-                  plan: payment.plan, // NOVO: Atualizar o plano
-                  status: "active",
+                const updateData = {
+                  key: activationKey,
+                  plan: payment.plan,
+                  status: "active" as const,
                   expiresAt: newExpiryDate,
-                  totalMinutesRemaining: totalMinutes, // CORRIGIDO: Usar novo total ao invés de somar
+                  totalMinutesRemaining: totalMinutes,
                   daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
                   hoursRemaining: Math.ceil(totalMinutes / 60),
                   minutesRemaining: totalMinutes,
                   activatedAt: new Date(),
-                });
+                  hwid: null // Reset HWID para permitir nova ativação
+                };
                 
-                console.log(`✅ Licença renovada com nova chave até: ${newExpiryDate.toISOString()}`);
+                console.log(`Atualizando licença com dados:`, updateData);
+                
+                const updatedLicense = await storage.updateLicense(existingLicense.id, updateData);
+                
+                console.log(`✅ LICENÇA RENOVADA COM SUCESSO!`);
+                console.log(`ID: ${updatedLicense.id}, Nova chave: ${updatedLicense.key}`);
+                console.log(`Status: ${updatedLicense.status}, Expira: ${updatedLicense.expiresAt}`);
                 
               } else {
                 console.log("Criando nova licença para o usuário");
@@ -384,8 +393,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
+      console.log(`=== CARREGANDO DASHBOARD PARA USUÁRIO ${user.id} ===`);
+      
       const license = await storage.getLicenseByUserId(user.id);
       const downloads = await storage.getUserDownloads(user.id);
+
+      if (license) {
+        console.log(`Licença encontrada - ID: ${license.id}, Chave: ${license.key}`);
+        console.log(`Status: ${license.status}, Plano: ${license.plan}`);
+        console.log(`Expira em: ${license.expiresAt}`);
+        console.log(`Tempo atual: ${new Date().toISOString()}`);
+        console.log(`Expirada? ${new Date(license.expiresAt) < new Date()}`);
+        
+        // Verificar se a licença está realmente expirada e atualizar status se necessário
+        const isExpired = new Date(license.expiresAt) < new Date();
+        if (isExpired && license.status === "active") {
+          console.log(`Licença expirada detectada, atualizando status...`);
+          await storage.updateLicense(license.id, { status: "expired" });
+          license.status = "expired";
+        }
+      } else {
+        console.log(`Nenhuma licença encontrada para o usuário ${user.id}`);
+      }
 
       res.json({
         user: { ...user, password: undefined },
@@ -673,6 +702,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Erro ao processar teste de ativação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Endpoint para simular webhook do Mercado Pago (para teste)
+  app.post("/api/test/webhook", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { paymentId, userId } = req.body;
+      
+      if (!paymentId || !userId) {
+        return res.status(400).json({ message: "paymentId e userId são obrigatórios" });
+      }
+      
+      console.log(`=== SIMULANDO WEBHOOK PARA PAGAMENTO ${paymentId} ===`);
+      
+      // Buscar pagamento no banco
+      const payment = await storage.getPaymentByMercadoPagoId(paymentId);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+      
+      if (payment.status !== "pending") {
+        return res.status(400).json({ message: `Pagamento já processado com status: ${payment.status}` });
+      }
+      
+      console.log(`Pagamento encontrado: ID ${payment.id}, Usuário: ${payment.userId}, Plano: ${payment.plan}`);
+      
+      // Atualizar status do pagamento
+      await storage.updatePayment(payment.id, {
+        status: "approved",
+        statusDetail: "accredited",
+      });
+      
+      // Criar chave de ativação
+      const activationKey = `FOVD-${payment.plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      
+      await storage.createActivationKey({
+        key: activationKey,
+        plan: payment.plan,
+        durationDays: payment.durationDays,
+      });
+      
+      // Verificar licença existente
+      const existingLicense = await storage.getLicenseByUserId(payment.userId);
+      
+      if (existingLicense) {
+        console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
+        console.log(`Licença atual - ID: ${existingLicense.id}, Status: ${existingLicense.status}`);
+        
+        const now = new Date();
+        let newExpiryDate: Date;
+        let totalMinutes: number;
+        
+        if (payment.plan === "test") {
+          newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          newExpiryDate = new Date(now.getTime() + (payment.durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = payment.durationDays * 24 * 60;
+        }
+        
+        const updatedLicense = await storage.updateLicense(existingLicense.id, {
+          key: activationKey,
+          plan: payment.plan,
+          status: "active",
+          expiresAt: newExpiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null
+        });
+        
+        console.log(`✅ LICENÇA RENOVADA: ${updatedLicense.key}, Expira: ${updatedLicense.expiresAt}`);
+        
+        res.json({
+          success: true,
+          message: "Licença renovada com sucesso",
+          payment: {
+            id: payment.id,
+            status: "approved",
+            plan: payment.plan
+          },
+          license: {
+            id: updatedLicense.id,
+            key: updatedLicense.key,
+            status: updatedLicense.status,
+            expiresAt: updatedLicense.expiresAt,
+            plan: updatedLicense.plan
+          },
+          activationKey
+        });
+        
+      } else {
+        // Criar nova licença
+        const now = new Date();
+        let expiryDate: Date;
+        let totalMinutes: number;
+        
+        if (payment.plan === "test") {
+          expiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          expiryDate = new Date(now.getTime() + (payment.durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = payment.durationDays * 24 * 60;
+        }
+        
+        const newLicense = await storage.createLicense({
+          userId: payment.userId,
+          key: activationKey,
+          plan: payment.plan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`✅ NOVA LICENÇA CRIADA: ${newLicense.key}, Expira: ${newLicense.expiresAt}`);
+        
+        res.json({
+          success: true,
+          message: "Nova licença criada com sucesso",
+          payment: {
+            id: payment.id,
+            status: "approved",
+            plan: payment.plan
+          },
+          license: {
+            id: newLicense.id,
+            key: newLicense.key,
+            status: newLicense.status,
+            expiresAt: newLicense.expiresAt,
+            plan: newLicense.plan
+          },
+          activationKey
+        });
+      }
+      
+    } catch (error) {
+      console.error("Erro no teste de webhook:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao processar webhook de teste",
         error: error instanceof Error ? error.message : "Erro desconhecido"
       });
     }
