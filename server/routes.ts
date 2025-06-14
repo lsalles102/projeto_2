@@ -212,23 +212,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Informações do pagamento:", JSON.stringify(paymentInfo, null, 2));
         
         if (paymentInfo && paymentInfo.status === "approved") {
-          console.log(`✅ Pagamento aprovado! External Reference: ${paymentInfo.external_reference}`);
+          console.log(`✅ PAGAMENTO APROVADO! External Reference: ${paymentInfo.external_reference}`);
+          console.log(`Valor: ${paymentInfo.transaction_amount}, Moeda: ${paymentInfo.currency_id}`);
+          console.log(`Comprador: ${paymentInfo.payer?.email || 'N/A'}`);
           
           // Find payment in database by external_reference
           let payment = null;
           
           if (paymentInfo.external_reference) {
+            console.log(`Buscando pagamento por external_reference: ${paymentInfo.external_reference}`);
             payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
+            console.log(`Pagamento encontrado por external_reference: ${payment ? 'SIM' : 'NÃO'}`);
           }
           
           // If not found by external_reference, try by mercadoPagoId
           if (!payment) {
+            console.log(`Buscando pagamento por mercadoPagoId: ${paymentId}`);
             payment = await storage.getPaymentByMercadoPagoId(paymentId);
+            console.log(`Pagamento encontrado por mercadoPagoId: ${payment ? 'SIM' : 'NÃO'}`);
           }
           
           // If still not found, try to find the most recent pending payment
           if (!payment) {
+            console.log(`Buscando pagamentos pendentes...`);
             const pendingPayments = await storage.getPendingPayments();
+            console.log(`Pagamentos pendentes encontrados: ${pendingPayments.length}`);
+            
             if (pendingPayments.length > 0) {
               payment = pendingPayments.sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -380,7 +389,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             console.log(`✅ PAGAMENTO PROCESSADO COM SUCESSO - Chave: ${activationKey}`);
           } else {
-            console.error(`❌ Pagamento não encontrado no banco ou já processado`);
+            console.error(`❌ PAGAMENTO NÃO ENCONTRADO OU JÁ PROCESSADO`);
+            console.error(`Status do pagamento encontrado: ${payment?.status || 'N/A'}`);
+            console.error(`PaymentId buscado: ${paymentId}`);
+            console.error(`External reference: ${paymentInfo.external_reference}`);
+            
+            // Tentar criar um pagamento retroativo se não encontrado
+            if (!payment && paymentInfo.payer?.email) {
+              console.log(`Tentando criar pagamento retroativo para: ${paymentInfo.payer.email}`);
+              
+              try {
+                // Encontrar usuário pelo email
+                const user = await storage.getUserByEmail(paymentInfo.payer.email);
+                
+                if (user) {
+                  console.log(`Usuário encontrado: ${user.id} - ${user.email}`);
+                  
+                  // Determinar plano baseado no valor
+                  let plan = "test";
+                  let durationDays = 0.021;
+                  
+                  if (paymentInfo.transaction_amount >= 500) { // R$ 5,00 ou mais
+                    plan = "7days";
+                    durationDays = 7;
+                  } else if (paymentInfo.transaction_amount >= 1000) { // R$ 10,00 ou mais
+                    plan = "15days";
+                    durationDays = 15;
+                  }
+                  
+                  // Criar pagamento retroativo
+                  const retroPayment = await storage.createPayment({
+                    userId: user.id,
+                    plan,
+                    durationDays,
+                    transactionAmount: paymentInfo.transaction_amount,
+                    currency: paymentInfo.currency_id || "BRL",
+                    status: "approved",
+                    mercadoPagoId: paymentId,
+                    externalReference: paymentInfo.external_reference || `RETRO-${paymentId}`,
+                    statusDetail: paymentInfo.status_detail || "accredited",
+                    payerEmail: paymentInfo.payer.email,
+                    payerFirstName: paymentInfo.payer.first_name || "Usuario",
+                    payerLastName: paymentInfo.payer.last_name || "FovDark",
+                  });
+                  
+                  console.log(`Pagamento retroativo criado: ${retroPayment.id}`);
+                  
+                  // Processar este pagamento agora
+                  payment = retroPayment;
+                  
+                  // Continuar com o fluxo normal de processamento
+                  const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+                  
+                  await storage.createActivationKey({
+                    key: activationKey,
+                    plan,
+                    durationDays,
+                  });
+                  
+                  // Verificar licença existente
+                  const existingLicense = await storage.getLicenseByUserId(user.id);
+                  
+                  if (existingLicense) {
+                    console.log(`=== RENOVANDO LICENÇA RETROATIVA ===`);
+                    
+                    const now = new Date();
+                    let newExpiryDate: Date;
+                    let totalMinutes: number;
+                    
+                    if (plan === "test") {
+                      newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+                      totalMinutes = 30;
+                    } else {
+                      newExpiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+                      totalMinutes = durationDays * 24 * 60;
+                    }
+                    
+                    await storage.updateLicense(existingLicense.id, {
+                      key: activationKey,
+                      plan,
+                      status: "active",
+                      expiresAt: newExpiryDate,
+                      totalMinutesRemaining: totalMinutes,
+                      daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+                      hoursRemaining: Math.ceil(totalMinutes / 60),
+                      minutesRemaining: totalMinutes,
+                      activatedAt: new Date(),
+                      hwid: null
+                    });
+                    
+                    console.log(`✅ LICENÇA RENOVADA RETROATIVAMENTE`);
+                  } else {
+                    // Criar nova licença
+                    const now = new Date();
+                    let expiryDate: Date;
+                    let totalMinutes: number;
+                    
+                    if (plan === "test") {
+                      expiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+                      totalMinutes = 30;
+                    } else {
+                      expiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+                      totalMinutes = durationDays * 24 * 60;
+                    }
+                    
+                    await storage.createLicense({
+                      userId: user.id,
+                      key: activationKey,
+                      plan,
+                      status: "active",
+                      expiresAt: expiryDate,
+                      totalMinutesRemaining: totalMinutes,
+                      daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+                      hoursRemaining: Math.ceil(totalMinutes / 60),
+                      minutesRemaining: totalMinutes,
+                      activatedAt: new Date(),
+                    });
+                    
+                    console.log(`✅ NOVA LICENÇA CRIADA RETROATIVAMENTE`);
+                  }
+                  
+                  // Enviar email com a nova chave
+                  const planName = plan === "test" ? "Teste (30 minutos)" : 
+                                   plan === "7days" ? "7 Dias" : "15 Dias";
+                  
+                  try {
+                    console.log(`=== ENVIANDO EMAIL RETROATIVO ===`);
+                    await sendLicenseKeyEmail(paymentInfo.payer.email, activationKey, planName);
+                    console.log(`✅ EMAIL RETROATIVO ENVIADO COM SUCESSO`);
+                  } catch (emailError) {
+                    console.error("❌ ERRO AO ENVIAR EMAIL RETROATIVO:", emailError);
+                  }
+                  
+                } else {
+                  console.error(`Usuário não encontrado para email: ${paymentInfo.payer.email}`);
+                }
+              } catch (retroError) {
+                console.error("Erro ao criar pagamento retroativo:", retroError);
+              }
+            }
           }
         } else {
           console.log(`Pagamento não aprovado. Status: ${paymentInfo?.status || 'unknown'}`);
