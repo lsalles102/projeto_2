@@ -10,6 +10,23 @@ export default function Pricing() {
   const [, navigate] = useLocation();
   const plans = [
     {
+      name: "TESTE",
+      price: "R$ 0,50",
+      duration: "30 minutos",
+      icon: <Gem className="text-green-500 text-4xl" />,
+      features: [
+        { name: "Aimbot Color", included: true },
+        { name: "Smooth aim configuravel", included: true },
+        { name: "FOV customizável", included: true },
+        { name: "Configurações personalizadas", included: true },
+        { name: "Anti-detecção", included: true },
+        { name: "Teste completo", included: true },
+      ],
+      buttonText: "Testar Agora",
+      buttonVariant: "outline" as const,
+      planId: "test"
+    },
+    {
       name: "7 DIAS",
       price: "R$ 19,90",
       duration: "7 dias",
@@ -24,6 +41,7 @@ export default function Pricing() {
       ],
       buttonText: "Escolher 7 Dias",
       buttonVariant: "ghost" as const,
+      planId: "7days"
     },
     {
       name: "15 DIAS",
@@ -41,6 +59,7 @@ export default function Pricing() {
       ],
       buttonText: "Escolher 15 Dias",
       buttonVariant: "default" as const,
+      planId: "15days"
     },
   ];
 
@@ -102,17 +121,22 @@ export default function Pricing() {
                 </ul>
 
                 {isAuthenticated ? (
-                  <Link href="/payment">
+                  <Link href={`/payment?plan=${plan.planId}`}>
                     <Button
                       className={`w-full py-3 font-bold transition-all duration-300 ${
                         plan.buttonVariant === "default"
                           ? "bg-primary text-black neon-glow hover:scale-105"
+                          : plan.name === "TESTE"
+                          ? "bg-green-600 text-white hover:bg-green-700 hover:scale-105"
                           : "bg-gradient-to-r from-purple-600 to-neon-purple text-white hover:scale-105 shadow-lg"
                       }`}
                       variant={plan.buttonVariant}
                     >
                       {plan.name === "15 DIAS" && (
                         <Crown className="w-4 h-4 mr-2" />
+                      )}
+                      {plan.name === "TESTE" && (
+                        <Gem className="w-4 h-4 mr-2" />
                       )}
                       {plan.buttonText}
                     </Button>

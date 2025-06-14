@@ -14,13 +14,14 @@ const payment = new Payment(client);
 
 // Preços dos planos em centavos (BRL)
 export const PLAN_PRICES = {
+  'test': 50, // R$ 0,50 em centavos
   '7days': 1990, // R$ 19,90 em centavos
   '15days': 3490, // R$ 34,90 em centavos
 } as const;
 
 export interface CreatePixPaymentData {
   userId: number;
-  plan: '7days' | '15days';
+  plan: 'test' | '7days' | '15days';
   durationDays: number;
   payerEmail: string;
   payerFirstName: string;
@@ -59,8 +60,8 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
       items: [
         {
           id: `license_${data.plan}`,
-          title: `FovDark Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
-          description: `Acesso completo ao sistema por ${data.durationDays} dias`,
+          title: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'}`,
+          description: `Acesso completo ao sistema por ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}`,
           category_id: 'software',
           quantity: 1,
           unit_price: transactionAmount,
@@ -119,7 +120,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
     try {
       const paymentData = {
         transaction_amount: transactionAmount,
-        description: `FovDark Cheat ${data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.durationDays} dias`,
+        description: `FovDark Cheat ${data.plan === 'test' ? 'TESTE (30 MIN)' : data.plan === '7days' ? '7 DIAS' : '15 DIAS'} - ${data.plan === 'test' ? '30 minutos' : data.durationDays + ' dias'}`,
         payment_method_id: 'pix',
         payer: {
           email: data.payerEmail,
