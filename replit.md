@@ -188,6 +188,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Fixed PIX payment system for Render production environment
 - June 14, 2025. Corrected Mercado Pago webhook URLs to work with https://fovdark.shop/
 - June 14, 2025. Updated base URL configuration to handle Render, Replit, and local environments automatically
+- June 14, 2025. Fixed Payment component API endpoint from /api/payments/pix/create to /api/payments/create-pix
+- June 14, 2025. Enhanced error handling in Payment.tsx to handle invalid JSON responses properly
+- June 14, 2025. Fixed deprecated meta tag warning by adding mobile-web-app-capable meta tag
+- June 14, 2025. PIX payment system fully operational - generates QR codes and processes payments correctly
 
 ## User Preferences
 

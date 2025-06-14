@@ -118,7 +118,7 @@ export default function Payment() {
       
       console.log("Corpo da requisição:", requestBody);
       
-      const response = await fetch("/api/payments/pix/create", {
+      const response = await fetch("/api/payments/create-pix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -128,12 +128,32 @@ export default function Payment() {
       console.log("Status da resposta:", response.status);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Erro desconhecido" }));
-        console.error("Erro da API:", error);
-        throw new Error(error.message || "Erro ao criar pagamento");
+        let errorMessage = "Erro ao criar pagamento";
+        try {
+          const error = await response.json();
+          errorMessage = error.message || errorMessage;
+        } catch {
+          // Se não conseguir fazer parse do JSON, usar mensagem baseada no status
+          if (response.status === 401) {
+            errorMessage = "Você precisa fazer login primeiro";
+          } else if (response.status === 403) {
+            errorMessage = "Acesso negado";
+          } else {
+            errorMessage = `Erro do servidor (${response.status})`;
+          }
+        }
+        console.error("Erro da API:", errorMessage);
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error("Erro ao fazer parse da resposta:", parseError);
+        throw new Error("Resposta inválida do servidor");
+      }
+      
       console.log("Resposta da API:", result);
       return result;
     },
