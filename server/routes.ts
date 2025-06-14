@@ -23,14 +23,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ 
         status: "ok", 
         timestamp: new Date().toISOString(),
-        database: "connected"
+        database: "connected",
+        environment: process.env.NODE_ENV || "development"
       });
     } catch (error) {
       res.status(503).json({ 
         status: "error", 
         timestamp: new Date().toISOString(),
-        database: "disconnected",
-        error: error instanceof Error ? error.message : "Unknown error"
+        database: "disconnected"
       });
     }
   });
@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
-      console.error("Registration error:", error);
+      console.error("Registration error:", error instanceof Error ? error.message : "Unknown error");
       res.status(500).json({ message: "Falha no registro" });
     }
   });
