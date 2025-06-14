@@ -88,6 +88,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Endpoint de teste para verificar geração automática de licenças
+  app.post("/api/test/license-generation", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userEmail, plan = "test" } = req.body;
+      
+      if (!userEmail) {
+        return res.status(400).json({ message: "Email do usuário é obrigatório" });
+      }
+
+      console.log(`=== TESTE DE GERAÇÃO AUTOMÁTICA DE LICENÇA ===`);
+      console.log(`Email: ${userEmail}, Plano: ${plan}`);
+
+      // Encontrar usuário pelo email
+      const user = await storage.getUserByEmail(userEmail);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Simular dados de pagamento
+      const paymentId = `TEST-${Date.now()}`;
+      const durationDays = plan === "test" ? 1 : (plan === "7days" ? 7 : 15);
+      const transactionAmount = plan === "test" ? 100 : (plan === "7days" ? 500 : 1000);
+
+      // Criar pagamento de teste
+      const testPayment = await storage.createPayment({
+        userId: user.id,
+        plan,
+        durationDays,
+        transactionAmount,
+        currency: "BRL",
+        status: "approved",
+        mercadoPagoId: paymentId,
+        externalReference: `TEST-${paymentId}`,
+        statusDetail: "accredited",
+        payerEmail: userEmail,
+        payerFirstName: user.firstName || "Teste",
+        payerLastName: user.lastName || "Usuario",
+      });
+
+      console.log(`Pagamento de teste criado: ${testPayment.id}`);
+
+      // Gerar chave de ativação
+      const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      
+      await storage.createActivationKey({
+        key: activationKey,
+        plan,
+        durationDays,
+      });
+
+      console.log(`Chave de ativação criada: ${activationKey}`);
+
+      // Verificar licença existente
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      
+      if (existingLicense) {
+        // Renovar licença existente
+        const now = new Date();
+        let newExpiryDate: Date;
+        let totalMinutes: number;
+        
+        if (plan === "test") {
+          newExpiryDate = new Date(now.getTime() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          newExpiryDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = durationDays * 24 * 60;
+        }
+        
+        await storage.updateLicense(existingLicense.id, {
+          key: activationKey,
+          plan,
+          status: "active",
+          expiresAt: newExpiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null
+        });
+        
+        console.log(`Licença renovada para usuário ${user.id}`);
+      } else {
+        // Criar nova licença
+        let expiryDate: Date;
+        let totalMinutes: number;
+        
+        if (plan === "test") {
+          expiryDate = new Date(Date.now() + (30 * 60 * 1000));
+          totalMinutes = 30;
+        } else {
+          expiryDate = new Date(Date.now() + (durationDays * 24 * 60 * 60 * 1000));
+          totalMinutes = durationDays * 24 * 60;
+        }
+        
+        await storage.createLicense({
+          userId: user.id,
+          key: activationKey,
+          plan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`Nova licença criada para usuário ${user.id}`);
+      }
+
+      // Enviar email com a chave
+      try {
+        const planName = plan === "test" ? "Teste (30 minutos)" : 
+                         plan === "7days" ? "7 Dias" : "15 Dias";
+        
+        await sendLicenseKeyEmail(userEmail, activationKey, planName);
+        console.log(`Email enviado com sucesso para: ${userEmail}`);
+        
+        res.json({
+          success: true,
+          message: "Licença gerada e email enviado com sucesso",
+          data: {
+            userId: user.id,
+            userEmail,
+            activationKey,
+            plan,
+            planName,
+            paymentId: testPayment.id,
+            emailSent: true
+          }
+        });
+      } catch (emailError) {
+        console.error("Erro ao enviar email:", emailError);
+        res.json({
+          success: true,
+          message: "Licença gerada mas houve erro no envio do email",
+          data: {
+            userId: user.id,
+            userEmail,
+            activationKey,
+            plan,
+            paymentId: testPayment.id,
+            emailSent: false,
+            emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error("Erro no teste de geração de licença:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno no teste",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Setup authentication
+  await setupAuth(app);
+
+  // Admin middleware
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Acesso negado" });
+    }
+    next();
+  };
+
   // Registration route
   app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
     try {
