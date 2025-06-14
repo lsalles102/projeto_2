@@ -1,0 +1,128 @@
+Corrigir Webhook Mercado Pago no meu site Node.js (Supabase + Render)
+🔎 Contexto do Projeto:
+
+Backend: Node.js com Express
+
+Banco de Dados: Supabase
+
+Deploy: Render
+
+Frontend: Next.js + React
+
+URL pública: https://fovdark.shop/
+
+Pagamento: PIX via Mercado Pago (usando o SDK oficial do Mercado Pago)
+
+O meu site vende licenças de software. Quando o cliente paga, o sistema precisa gerar uma chave de ativação e enviar ao email do comprador.
+
+❌ Problema Atual:
+
+O endpoint /api/payments/webhook que processa os Webhooks do Mercado Pago não está gerando licença nem enviando chave de ativação ao email do comprador quando o email do comprador não existe ainda no Supabase.
+
+Hoje, o código do webhook tenta buscar o usuário pelo email (getUserByEmail) e se não encontrar, apenas faz log de erro e não faz mais nada.
+
+✅ O que eu quero que a IA corrija:
+
+Quero que você faça as seguintes correções no meu código backend, no arquivo que define o webhook /api/payments/webhook:
+
+✅ Correções Obrigatórias:
+1. Criar o usuário automaticamente se não existir:
+Se o email do comprador (vindo do campo paymentInfo.payer.email do Mercado Pago) não existir no Supabase, o webhook deve:
+
+✔️ Criar o usuário na tabela de usuários com:
+
+email: igual ao recebido no webhook
+
+username: prefixo do email (exemplo: de joao123@gmail.com, o username vira joao123)
+
+firstName: usar o first_name que vier do Mercado Pago. Se não vier, usar "Novo"
+
+lastName: usar o last_name do Mercado Pago. Se não vier, usar "Usuário"
+
+password: gerar uma senha aleatória (pode usar crypto.randomBytes(8).toString('hex') e criptografar com bcrypt)
+
+2. Criar ou atualizar o pagamento no banco:
+✔️ Se não houver um registro de pagamento para esse paymentId ou externalReference, criar um novo pagamento no Supabase.
+
+✔️ Se já existir e estiver como pending, atualizar o status para approved.
+
+3. Gerar a chave de licença (activationKey):
+✔️ Sempre que um pagamento for aprovado, criar uma nova activation key, seguindo o padrão:
+
+css
+Copiar
+Editar
+FOVD-[NOME DO PLANO]-[TIMESTAMP]-[STRING RANDÔMICA]
+Exemplo:
+
+Copiar
+Editar
+FOVD-15DAYS-1718398237-3F2A1C7B
+4. Criar ou atualizar a licença do usuário:
+✔️ Se o usuário já tiver uma licença ativa, renovar/estender a licença, sobrescrevendo com a nova chave, novo plano e nova data de expiração.
+
+✔️ Se ainda não tiver, criar uma nova licença com status active, chave nova, e a expiração de acordo com o plano.
+
+Regras de expiração:
+
+Plano	Duração
+test	30 minutos
+7days	7 dias
+15days	15 dias
+
+5. Enviar o email de chave de licença:
+✔️ Após gerar a chave, o webhook deve enviar email para o comprador com a nova chave, usando a função já existente:
+
+ts
+Copiar
+Editar
+sendLicenseKeyEmail(user.email, activationKey, planName);
+Onde:
+
+planName: Nome amigável do plano (exemplo: "Teste (30 minutos)", "7 Dias", "15 Dias")
+
+✔️ Se der erro no envio de email, não quebrar o webhook, apenas logar o erro.
+
+6. Resposta do Webhook:
+✔️ Sempre finalizar o webhook com:
+
+ts
+Copiar
+Editar
+res.status(200).json({ received: true });
+Mesmo se houver falha ao enviar email ou outro problema não crítico, para evitar retries do Mercado Pago.
+
+7. Logs detalhados:
+✔️ Adicionar logs de cada etapa:
+
+Usuário encontrado ou criado
+
+Pagamento salvo ou atualizado
+
+Chave de ativação gerada
+
+Licença criada ou renovada
+
+Email enviado (ou falha no envio de email)
+
+✅ Extra (Se quiser fazer):
+Se puder, incluir um pequeno console.warn quando o email do pagador vier vazio ou nulo no webhook.
+
+✅ Resumo final:
+Corrija meu webhook /api/payments/webhook para que ele:
+
+Crie o usuário se ainda não existir
+
+Gere a chave de ativação
+
+Crie ou atualize a licença
+
+Atualize o pagamento
+
+Envie o email com a chave
+
+Sempre finalize com status 200, mesmo em caso de erro de email
+
+Adicione logs detalhados em cada etapa
+
+O backend é Node.js + Express com Supabase.
