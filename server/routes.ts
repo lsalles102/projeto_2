@@ -79,6 +79,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
 
+  // Registration route
+  app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { email, username, password, firstName, lastName } = registerSchema.parse(req.body);
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email já está em uso" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = await storage.createUser({
+        email,
+        username,
+        password: hashedPassword,
+        firstName,
+        lastName,
+      });
+
+      // Generate token
+      const token = generateToken(user.id);
+
+      res.status(201).json({
+        message: "Usuário criado com sucesso",
+        user: { ...user, password: undefined },
+        token,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Login route
+  app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000), (req, res, next) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      return res.status(400).json({ message: "Dados inválidos" });
+    }
+
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      
+      if (err) {
+        securityLog.logSuspiciousActivity(clientIp, "AUTH_ERROR", { error: err.message });
+        return res.status(500).json({ message: "Erro de autenticação" });
+      }
+      if (!user) {
+        securityLog.logFailedLogin(clientIp, req.body.email);
+        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+      }
+
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Falha no login" });
+        }
+        
+        const token = generateToken(user.id);
+        res.json({ user: { ...user, password: undefined }, token });
+      });
+    })(req, res, next);
+  });
+
+  // Logout route
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Falha no logout" });
+      }
+      res.json({ message: "Logout realizado com sucesso" });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const fullUser = await storage.getUser(user.id);
+      if (!fullUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      res.json({ ...fullUser, password: undefined });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Admin middleware
   const isAdmin: RequestHandler = (req, res, next) => {
     const user = req.user as any;
@@ -573,6 +672,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Heartbeat error:", error);
       res.status(500).json({ message: "Falha no heartbeat" });
+    }
+  });
+
+  // Admin dashboard data
+  app.get("/api/admin/dashboard", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      const users = await storage.getAllUsers();
+      const licenses = await storage.getAllLicenses();
+      const activationKeys = await storage.getAllActivationKeys();
+      const payments = await storage.getAllPayments();
+
+      res.json({
+        stats,
+        users: users.map(u => ({ ...u, password: undefined })),
+        licenses,
+        activationKeys,
+        payments,
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ message: "Erro ao carregar dashboard administrativo" });
+    }
+  });
+
+  // Admin - Create activation keys
+  app.post("/api/admin/keys", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { plan, durationDays, quantity } = createActivationKeySchema.parse(req.body);
+      
+      const keys = [];
+      for (let i = 0; i < quantity; i++) {
+        const key = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+        const activationKey = await storage.createActivationKey({
+          key,
+          plan,
+          durationDays,
+        });
+        keys.push(activationKey);
+      }
+
+      res.json({
+        message: `${quantity} chave(s) de ativação criada(s) com sucesso`,
+        keys,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Create keys error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Admin - Delete user
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteUser(id);
+      res.json({ message: "Usuário excluído com sucesso" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Erro ao excluir usuário" });
+    }
+  });
+
+  // Admin - Delete license
+  app.delete("/api/admin/licenses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteLicense(id);
+      res.json({ message: "Licença excluída com sucesso" });
+    } catch (error) {
+      console.error("Delete license error:", error);
+      res.status(500).json({ message: "Erro ao excluir licença" });
+    }
+  });
+
+  // Admin - Update license
+  app.patch("/api/admin/licenses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = updateLicenseSchema.parse(req.body);
+      
+      const license = await storage.updateLicense(id, updates);
+      res.json({ message: "Licença atualizada com sucesso", license });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update license error:", error);
+      res.status(500).json({ message: "Erro ao atualizar licença" });
+    }
+  });
+
+  // PIX Payment creation
+  app.post("/api/payments/create-pix", rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      const paymentData = createPixPaymentSchema.parse(req.body);
+      
+      // Create PIX payment with MercadoPago
+      const pixPayment = await createPixPayment(paymentData);
+      
+      // Store payment in database
+      await storage.createPayment({
+        userId: paymentData.userId,
+        preferenceId: pixPayment.preferenceId,
+        externalReference: pixPayment.externalReference,
+        status: "pending",
+        transactionAmount: pixPayment.transactionAmount,
+        currency: pixPayment.currency,
+        plan: paymentData.plan,
+        durationDays: paymentData.durationDays,
+        payerEmail: paymentData.payerEmail,
+        payerFirstName: paymentData.payerFirstName,
+        payerLastName: paymentData.payerLastName,
+        pixQrCode: pixPayment.pixQrCode,
+        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
+      });
+
+      res.json(pixPayment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados de pagamento inválidos", errors: error.errors });
+      }
+      console.error("PIX payment creation error:", error);
+      res.status(500).json({ message: "Erro ao criar pagamento PIX" });
+    }
+  });
+
+  // MercadoPago webhook
+  app.post("/api/payments/webhook", async (req, res) => {
+    try {
+      console.log("Webhook recebido:", req.body);
+      
+      // Validate webhook data with flexible schema
+      const webhookData = mercadoPagoWebhookSchema.parse(req.body);
+      
+      if (webhookData.type === "payment") {
+        const paymentId = webhookData.data?.id;
+        
+        if (paymentId) {
+          // Get payment info from MercadoPago
+          const { getPaymentInfo } = await import("./mercado-pago");
+          const paymentInfo = await getPaymentInfo(paymentId);
+          
+          if (paymentInfo && paymentInfo.status === "approved") {
+            // Find payment in database
+            const payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference || "");
+            
+            if (payment) {
+              // Update payment status
+              await storage.updatePayment(payment.id, {
+                status: "approved",
+                mercadoPagoId: paymentId,
+                statusDetail: paymentInfo.status_detail,
+              });
+
+              // Create activation key and send email
+              const activationKey = `FOVD-${payment.plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+              
+              await storage.createActivationKey({
+                key: activationKey,
+                plan: payment.plan,
+                durationDays: payment.durationDays,
+              });
+
+              // Send license key via email
+              if (payment.payerEmail) {
+                const planName = payment.plan === "test" ? "Teste (30 minutos)" : 
+                               payment.plan === "7days" ? "7 Dias" : "15 Dias";
+                               
+                await sendLicenseKeyEmail(payment.payerEmail, activationKey, planName);
+              }
+
+              console.log(`Pagamento aprovado e chave criada: ${activationKey}`);
+            }
+          }
+        }
+      }
+      
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      // Always return 200 to prevent webhook retries
+      res.status(200).json({ received: true, error: "Webhook processing failed" });
+    }
+  });
+
+  // User settings routes
+  app.patch("/api/users/profile", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const updates = updateUserSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUser(user.id, updates);
+      res.json({ 
+        message: "Perfil atualizado com sucesso", 
+        user: { ...updatedUser, password: undefined } 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+  });
+
+  app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+      
+      // Verify current password
+      const dbUser = await storage.getUser(user.id);
+      if (!dbUser || !dbUser.password) {
+        return res.status(400).json({ message: "Senha não encontrada" });
+      }
+      
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, dbUser.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+      
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      // Update password
+      await storage.updateUser(user.id, { password: hashedPassword });
+      
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
     }
   });
 

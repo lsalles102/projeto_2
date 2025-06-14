@@ -146,6 +146,10 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email("Email inválido").max(254, "Email muito longo"),
+  username: z.string()
+    .min(3, "Nome de usuário deve ter pelo menos 3 caracteres")
+    .max(30, "Nome de usuário muito longo")
+    .regex(/^[a-zA-Z0-9_]+$/, "Nome de usuário deve conter apenas letras, números e underscore"),
   password: z.string()
     .min(8, "Senha deve ter pelo menos 8 caracteres")
     .max(128, "Senha muito longa")
