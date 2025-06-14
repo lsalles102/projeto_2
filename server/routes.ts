@@ -78,6 +78,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Mercado Pago credentials
+  app.get("/api/test-mercadopago", async (req, res) => {
+    try {
+      const testPaymentData = createPixPaymentSchema.parse({
+        plan: "7days",
+        durationDays: 7,
+        payerEmail: "test@fovdark.com",
+        payerFirstName: "Test",
+        payerLastName: "User"
+      });
+
+      const pixResponse = await createPixPayment({
+        userId: 999,
+        ...testPaymentData
+      });
+
+      res.json({
+        status: "success",
+        message: "Mercado Pago está funcionando corretamente",
+        data: {
+          preferenceId: pixResponse.preferenceId,
+          hasPixQr: !!pixResponse.pixQrCode,
+          amount: pixResponse.transactionAmount / 100,
+          currency: pixResponse.currency
+        }
+      });
+    } catch (error) {
+      console.error("Erro ao testar Mercado Pago:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Erro na integração com Mercado Pago",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
   // Test email connection endpoint
   app.get("/api/test-email", async (req, res) => {
     try {
