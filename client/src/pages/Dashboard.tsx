@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   // Activate license mutation
   const activateMutation = useMutation({
-    mutationFn: (data: ActivateKeyFormData) => apiRequest("POST", "/api/licenses/activate", data),
+    mutationFn: (data: ActivateKeyFormData) => apiRequest("/api/licenses/activate", { method: "POST", body: data }),
     onSuccess: () => {
       toast({
         title: "Licença ativada",
@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   // Download cheat mutation
   const downloadMutation = useMutation({
-    mutationFn: () => apiRequest("GET", "/api/download/cheat"),
+    mutationFn: () => apiRequest("/api/download/cheat"),
     onSuccess: (data: any) => {
       // Trigger actual file download
       const downloadUrl = (data as any).downloadUrl;
