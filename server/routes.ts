@@ -768,16 +768,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PIX Payment creation
-  app.post("/api/payments/create-pix", rateLimit(5, 60 * 1000), async (req, res) => {
+  app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
     try {
-      const paymentData = createPixPaymentSchema.parse(req.body);
+      const user = req.user as any;
+      const requestData = createPixPaymentSchema.parse(req.body);
+      
+      const paymentData = {
+        userId: user.id,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays,
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+      };
       
       // Create PIX payment with MercadoPago
       const pixPayment = await createPixPayment(paymentData);
       
       // Store payment in database
       await storage.createPayment({
-        userId: paymentData.userId,
+        userId: user.id,
         preferenceId: pixPayment.preferenceId,
         externalReference: pixPayment.externalReference,
         status: "pending",
