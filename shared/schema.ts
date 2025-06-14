@@ -246,6 +246,7 @@ export const updateLicenseSchema = z.object({
 
 // HWID protection schemas
 export const updateHwidSchema = z.object({
+  licenseKey: z.string().min(1, "Chave de licença é obrigatória"),
   hwid: z.string().min(1, "HWID é obrigatório").max(255, "HWID muito longo"),
 });
 
