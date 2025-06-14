@@ -552,8 +552,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PIX Payment creation
   app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
     try {
+      console.log("=== INÍCIO DA CRIAÇÃO DE PAGAMENTO PIX ===");
       const user = req.user as any;
+      console.log(`Usuário autenticado: ${user.id} - ${user.email}`);
+      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
+      
       const requestData = createPixPaymentSchema.parse(req.body);
+      console.log("Dados validados:", JSON.stringify(requestData, null, 2));
       
       const paymentData = {
         userId: user.id,
@@ -564,10 +569,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payerLastName: requestData.payerLastName,
       };
       
+      console.log("Dados do pagamento preparados:", JSON.stringify(paymentData, null, 2));
+      
       // Create PIX payment with MercadoPago
+      console.log("Criando pagamento no Mercado Pago...");
       const pixPayment = await createPixPayment(paymentData);
+      console.log("Resposta do Mercado Pago:", JSON.stringify(pixPayment, null, 2));
       
       // Store payment in database
+      console.log("Salvando pagamento no banco de dados...");
       const payment = await storage.createPayment({
         userId: user.id,
         preferenceId: pixPayment.preferenceId,
@@ -583,16 +593,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pixQrCode: pixPayment.pixQrCode,
         pixQrCodeBase64: pixPayment.pixQrCodeBase64,
       });
+      
+      console.log(`✅ Pagamento salvo no banco: ID ${payment.id}`);
+      console.log("=== PAGAMENTO PIX CRIADO COM SUCESSO ===");
 
-      res.json({
+      const response = {
         ...pixPayment,
         paymentId: payment.id
-      });
+      };
+      
+      console.log("Resposta final:", JSON.stringify(response, null, 2));
+      res.json(response);
     } catch (error) {
+      console.error("❌ ERRO NA CRIAÇÃO DO PAGAMENTO PIX:");
+      console.error("Detalhes do erro:", error);
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+      }
+      
       if (error instanceof z.ZodError) {
+        console.error("Erro de validação Zod:", error.errors);
         return res.status(400).json({ message: "Dados de pagamento inválidos", errors: error.errors });
       }
-      console.error("PIX payment creation error:", error);
+      
       res.status(500).json({ message: "Erro ao criar pagamento PIX" });
     }
   });
