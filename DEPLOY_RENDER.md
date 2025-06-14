@@ -48,9 +48,32 @@ Caso prefira usar Docker no Render:
 2. Configure o Render para usar Docker
 
 ## Variáveis de Ambiente Necessárias
-No Render, configure estas variáveis:
+No Render, configure estas variáveis OBRIGATÓRIAS:
+
+### Variáveis de Segurança (OBRIGATÓRIAS)
 - `NODE_ENV=production`
-- Outras variáveis específicas da aplicação (API keys, etc.)
+- `JWT_SECRET=` (gere uma string aleatória de 64 caracteres)
+- `SESSION_SECRET=` (gere uma string aleatória de 64 caracteres)
+
+### Variáveis do Banco de Dados
+- `DATABASE_URL=` (URL do PostgreSQL no Supabase)
+
+### Variáveis de Email (se usar funcionalidade de email)
+- `SENDGRID_API_KEY=` (opcional)
+- `FROM_EMAIL=` (opcional)
+
+### Variáveis do Mercado Pago (se usar pagamentos)
+- `MERCADO_PAGO_ACCESS_TOKEN=` (opcional)
+- `MERCADO_PAGO_PUBLIC_KEY=` (opcional)
+
+## Como Gerar Secrets Seguros
+Execute no terminal:
+```bash
+# Para JWT_SECRET
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# Para SESSION_SECRET  
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
 
 ## Verificação
 Após o deploy, verifique:
