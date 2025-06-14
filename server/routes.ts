@@ -352,14 +352,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const planName = payment.plan === "test" ? "Teste (30 minutos)" : 
                                  payment.plan === "7days" ? "7 Dias" : "15 Dias";
                 
-                console.log(`Enviando email para: ${payment.payerEmail} com chave: ${activationKey}`);
+                console.log(`=== ENVIANDO EMAIL COM NOVA CHAVE ===`);
+                console.log(`Email destino: ${payment.payerEmail}`);
+                console.log(`Chave: ${activationKey}`);
+                console.log(`Plano: ${planName}`);
+                
                 await sendLicenseKeyEmail(payment.payerEmail, activationKey, planName);
-                console.log(`✅ Email enviado com sucesso para: ${payment.payerEmail}`);
+                console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${payment.payerEmail}`);
               } catch (emailError) {
-                console.error("❌ Erro ao enviar email:", emailError);
+                console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
+                console.error("Detalhes do erro:", emailError);
+                console.error("Chave que deveria ser enviada:", activationKey);
+                console.error("Email que deveria receber:", payment.payerEmail);
+                
+                // Log para debug em produção
+                console.error("=== FALHA NO ENVIO DE EMAIL - CHAVE NÃO ENTREGUE ===");
               }
             } else {
               console.log("❌ Email do pagador não encontrado - não será possível enviar chave");
+              console.log("Dados do pagamento:", {
+                userId: payment.userId,
+                payerEmail: payment.payerEmail,
+                payerFirstName: payment.payerFirstName,
+                payerLastName: payment.payerLastName
+              });
             }
 
             console.log(`✅ PAGAMENTO PROCESSADO COM SUCESSO - Chave: ${activationKey}`);
@@ -943,6 +959,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Erro ao processar teste de renovação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Endpoint para testar envio de email (admin only)
+  app.post("/api/test/email", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { email, licenseKey, planName } = req.body;
+      
+      if (!email || !licenseKey || !planName) {
+        return res.status(400).json({ 
+          message: "email, licenseKey e planName são obrigatórios",
+          example: {
+            email: "teste@exemplo.com",
+            licenseKey: "FOVD-TEST-123456",
+            planName: "Teste (30 minutos)"
+          }
+        });
+      }
+      
+      console.log(`=== TESTE DE EMAIL INICIADO ===`);
+      console.log(`Email: ${email}`);
+      console.log(`Chave: ${licenseKey}`);
+      console.log(`Plano: ${planName}`);
+      
+      await sendLicenseKeyEmail(email, licenseKey, planName);
+      
+      res.json({
+        success: true,
+        message: `Email de teste enviado com sucesso para ${email}`,
+        details: {
+          email,
+          licenseKey,
+          planName,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error("Erro no teste de email:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao enviar email de teste",
         error: error instanceof Error ? error.message : "Erro desconhecido"
       });
     }

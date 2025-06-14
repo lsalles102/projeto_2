@@ -2,19 +2,26 @@ import nodemailer from 'nodemailer';
 
 // Create email transporter
 const createTransporter = () => {
+  const host = process.env.SMTP_HOST || 'smtp.hostinger.com';
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  
+  console.log(`[EMAIL] Configurando transporter - Host: ${host}, Port: ${port}, User: ${user ? 'configurado' : 'não configurado'}`);
+  
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
+    host,
+    port,
+    secure: false,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user,
+      pass,
     },
     tls: {
       rejectUnauthorized: false
     },
-    debug: false,
-    logger: false
+    debug: true,
+    logger: true
   });
 };
 
@@ -51,10 +58,14 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
 }
 
 export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
+  console.log(`[EMAIL] Iniciando envio de email para: ${email}`);
+  console.log(`[EMAIL] Chave de licença: ${licenseKey}`);
+  console.log(`[EMAIL] Plano: ${planName}`);
+  
   const transporter = createTransporter();
   
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: process.env.SMTP_USER || 'noreply@fovdark.shop',
     to: email,
     subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
     html: `
@@ -106,11 +117,21 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log('Email com chave de licença enviado para:', email);
+    console.log(`[EMAIL] Tentando enviar email...`);
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${email}`);
+    console.log(`[EMAIL] Message ID: ${result.messageId}`);
+    return result;
   } catch (error) {
-    console.error('Erro ao enviar email com chave de licença:', error);
-    throw new Error('Falha ao enviar email com chave de licença');
+    console.error(`[EMAIL] ❌ Erro ao enviar email para ${email}:`, error);
+    
+    // Log detalhado do erro
+    if (error instanceof Error) {
+      console.error(`[EMAIL] Erro detalhado: ${error.message}`);
+      console.error(`[EMAIL] Stack: ${error.stack}`);
+    }
+    
+    throw new Error(`Falha ao enviar email com chave de licença: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 }
 
