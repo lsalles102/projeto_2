@@ -42,7 +42,7 @@ type ChangePasswordData = z.infer<typeof changePasswordSchema>;
 
 export default function Settings() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("security");
 
   // Fetch user data
   const { data: userData, isLoading } = useQuery({
@@ -71,28 +71,11 @@ export default function Settings() {
     },
   });
 
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: (data: UpdateProfileData) => apiRequest("PATCH", "/api/auth/profile", data),
-    onSuccess: () => {
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso!",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Falha ao atualizar perfil",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   // Change password mutation
   const changePasswordMutation = useMutation({
-    mutationFn: (data: ChangePasswordData) => apiRequest("PATCH", "/api/auth/password", data),
+    mutationFn: (data: ChangePasswordData) => apiRequest("/api/users/change-password", data),
     onSuccess: () => {
       toast({
         title: "Senha alterada",
@@ -151,28 +134,12 @@ export default function Settings() {
             <CardContent className="p-4">
               <nav className="space-y-2">
                 <button
-                  onClick={() => setActiveTab("profile")}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                    activeTab === "profile" 
-                      ? "bg-primary/20 text-primary" 
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  <User className="w-4 h-4 inline mr-2" />
-                  Perfil
-                </button>
-                <button
                   onClick={() => setActiveTab("security")}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                    activeTab === "security" 
-                      ? "bg-primary/20 text-primary" 
-                      : "hover:bg-muted"
-                  }`}
+                  className="w-full text-left px-4 py-2 rounded-lg bg-primary/20 text-primary"
                 >
                   <Shield className="w-4 h-4 inline mr-2" />
                   Segurança
                 </button>
-
               </nav>
             </CardContent>
           </Card>
@@ -180,76 +147,6 @@ export default function Settings() {
 
         {/* Main Content */}
         <div className="lg:col-span-3">
-          {/* Profile Tab */}
-          {activeTab === "profile" && (
-            <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2 text-primary" />
-                  Informações do Perfil
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={profileForm.handleSubmit(onUpdateProfile)} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">Nome</Label>
-                      <Input
-                        id="firstName"
-                        {...profileForm.register("firstName")}
-                        className="bg-background/50 border-primary/20 focus:border-primary"
-                      />
-                      {profileForm.formState.errors.firstName && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {profileForm.formState.errors.firstName.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Sobrenome</Label>
-                      <Input
-                        id="lastName"
-                        {...profileForm.register("lastName")}
-                        className="bg-background/50 border-primary/20 focus:border-primary"
-                      />
-                      {profileForm.formState.errors.lastName && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {profileForm.formState.errors.lastName.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...profileForm.register("email")}
-                      className="bg-background/50 border-primary/20 focus:border-primary"
-                    />
-                    {profileForm.formState.errors.email && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {profileForm.formState.errors.email.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  <Button
-                    type="submit"
-                    disabled={updateProfileMutation.isPending}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updateProfileMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Security Tab */}
           {activeTab === "security" && (
             <div className="space-y-6">
