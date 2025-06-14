@@ -88,6 +88,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // User dashboard data
+  app.get("/api/dashboard", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userWithLicense = await storage.getUser(user.id);
+      const license = await storage.getLicenseByUserId(user.id);
+      const downloads = await storage.getUserDownloads(user.id);
+      
+      // Calculate stats
+      const stats = {
+        totalDownloads: downloads.length,
+        licenseStatus: license ? license.status : "inactive",
+        remainingTime: license ? {
+          days: license.daysRemaining || 0,
+          hours: license.hoursRemaining || 0,
+          minutes: license.minutesRemaining || 0,
+        } : null,
+      };
+      
+      res.json({
+        user: { ...userWithLicense, password: undefined },
+        license,
+        downloads,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      res.status(500).json({ message: "Falha ao carregar dados do dashboard" });
+    }
+  });
+
+  // License activation
+  app.post("/api/licenses/activate", isAuthenticated, async (req, res) => {
+    try {
+      const { key } = activateKeySchema.parse(req.body);
+      const user = req.user as any;
+
+      // Check if user already has an active license
+      const existingLicense = await storage.getLicenseByUserId(user.id);
+      if (existingLicense && existingLicense.status === "active") {
+        return res.status(400).json({ message: "Usuário já possui uma licença ativa" });
+      }
+
+      // Get activation key
+      const activationKey = await storage.getActivationKey(key);
+      if (!activationKey) {
+        return res.status(404).json({ message: "Chave de ativação inválida" });
+      }
+
+      if (activationKey.isUsed) {
+        return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
+      }
+
+      // Create license
+      const licenseKey = `LIC-${Date.now()}-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
+      const expiresAt = new Date();
+      
+      // Calculate expiration based on duration
+      if (activationKey.plan === "test") {
+        expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes for test
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + activationKey.durationDays);
+      }
+
+      const totalMinutes = activationKey.plan === "test" ? 30 : activationKey.durationDays * 24 * 60;
+      
+      const license = await storage.createLicense({
+        userId: user.id,
+        key: licenseKey,
+        plan: activationKey.plan,
+        status: "pending", // Pending until HWID is set
+        daysRemaining: activationKey.plan === "test" ? 0 : activationKey.durationDays,
+        hoursRemaining: activationKey.plan === "test" ? 0 : 0,
+        minutesRemaining: activationKey.plan === "test" ? 30 : 0,
+        totalMinutesRemaining: totalMinutes,
+        expiresAt,
+      });
+
+      // Mark activation key as used
+      await storage.markActivationKeyAsUsed(key, user.id);
+
+      res.json({ 
+        message: "Licença ativada com sucesso! Use o loader para definir seu HWID.", 
+        license: { ...license, key: licenseKey } 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Activate license error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Download cheat
+  app.get("/api/download/cheat", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const license = await storage.getLicenseByUserId(user.id);
+
+      if (!license) {
+        return res.status(403).json({ message: "Nenhuma licença encontrada" });
+      }
+
+      if (license.status !== "active") {
+        return res.status(403).json({ message: "Licença não está ativa" });
+      }
+
+      // Check if license is expired
+      if (new Date() > license.expiresAt) {
+        await storage.updateLicense(license.id, { status: "expired" });
+        return res.status(403).json({ message: "Licença expirou" });
+      }
+
+      // Log download
+      await storage.logDownload(user.id, license.id, "BloodStrike_Cheat.exe");
+
+      // Get download URL from environment or use default
+      const downloadUrl = process.env.DOWNLOAD_URL || "https://wgzpkqkpxobrpwmegrnm.supabase.co/storage/v1/object/public/downloads/BloodStrike_Cheat.exe";
+      
+      res.json({ 
+        downloadUrl,
+        fileName: "BloodStrike_Cheat.exe",
+        message: "Download autorizado" 
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).json({ message: "Erro no download" });
+    }
+  });
+
   // 🔐 SECURE HWID UPDATE - Only allows HWID update if empty or null
   app.post("/api/licenses/update-hwid", rateLimit(10, 5 * 60 * 1000), async (req, res) => {
     try {
