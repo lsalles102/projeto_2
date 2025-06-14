@@ -15,7 +15,7 @@ import { CreditCard, Shield, Clock, CheckCircle } from "lucide-react";
 // SDK do Mercado Pago será carregado via script tag
 
 const paymentSchema = z.object({
-  plan: z.enum(["7days", "15days"]),
+  plan: z.enum(["test", "7days", "15days"]),
   payerEmail: z.string().email("Email inválido"),
   payerFirstName: z.string().min(1, "Nome é obrigatório"),
   payerLastName: z.string().min(1, "Sobrenome é obrigatório"),
@@ -24,6 +24,13 @@ const paymentSchema = z.object({
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
 const PLAN_INFO = {
+  "test": {
+    name: "Plano Teste",
+    price: 0.50,
+    duration: 0.021, // 30 minutes in days
+    description: "Teste completo por 30 minutos",
+    features: ["Acesso completo", "Teste de todas as funcionalidades", "Aimbot Color", "Smooth aim configurável"]
+  },
   "7days": {
     name: "Plano 7 Dias",
     price: 19.90,
@@ -44,14 +51,14 @@ export default function Payment() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedPlan, setSelectedPlan] = useState<"7days" | "15days">("7days");
+  const [selectedPlan, setSelectedPlan] = useState<"test" | "7days" | "15days">("test");
   const [pixData, setPixData] = useState<any>(null);
   const [paymentStatus, setPaymentStatus] = useState<"form" | "processing" | "qrcode" | "success">("form");
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      plan: "7days",
+      plan: "test",
       payerEmail: "",
       payerFirstName: "",
       payerLastName: "",
