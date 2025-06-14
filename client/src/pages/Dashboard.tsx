@@ -87,9 +87,21 @@ export default function Dashboard() {
 
   // Download cheat mutation
   const downloadMutation = useMutation({
-    mutationFn: () => apiRequest("/api/download/cheat"),
+    mutationFn: async () => {
+      const response = await fetch("/api/download/cheat", {
+        method: "GET",
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Falha no download");
+      }
+      
+      return response.json();
+    },
     onSuccess: (data: any) => {
-      // Trigger actual file download
+      // Trigger actual file download using the secure URL
       const downloadUrl = (data as any).downloadUrl;
       const fileName = (data as any).fileName;
       
@@ -97,6 +109,7 @@ export default function Dashboard() {
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = fileName;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -108,6 +121,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (error: Error) => {
+      console.error("Download error:", error);
       toast({
         title: "Download negado",
         description: error.message || "Licença inválida ou expirada",

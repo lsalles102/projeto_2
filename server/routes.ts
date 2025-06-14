@@ -537,20 +537,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download routes
-  app.get("/api/download/cheat", isAuthenticated, async (req, res) => {
+  app.get("/api/download/cheat", async (req, res) => {
     try {
+      // Check authentication manually to debug
+      if (!req.user) {
+        console.log("No user in request for download");
+        return res.status(401).json({ message: "Usuário não autenticado. Faça login primeiro." });
+      }
+
       const user = req.user as any;
+      console.log("Download request from user:", user.id, user.email);
+      
       const license = await storage.getLicenseByUserId(user.id);
+      console.log("User license:", license ? { id: license.id, status: license.status, expiresAt: license.expiresAt } : "No license found");
 
       if (!license || license.status !== "active") {
-        return res.status(403).json({ message: "Valid license required for download" });
+        return res.status(403).json({ message: "Licença ativa necessária para download" });
       }
 
       // Check if license is expired
       const isExpired = new Date() > license.expiresAt;
       if (isExpired) {
         await storage.updateLicense(license.id, { status: "expired" });
-        return res.status(403).json({ message: "License has expired" });
+        return res.status(403).json({ message: "Licença expirada" });
       }
 
       // Log the download
@@ -565,11 +574,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName,
         downloadUrl: `/api/download/file/${downloadToken}/${fileName}`,
         version: "2.4.1",
-        size: "15.2 MB",
+        size: "26.5 MB",
       });
     } catch (error) {
       console.error("Download error:", error);
-      res.status(500).json({ message: "Download failed" });
+      res.status(500).json({ message: "Falha no download" });
     }
   });
 
@@ -592,19 +601,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const path = require('path');
       const fs = require('fs');
-      const filePath = path.join(__dirname, 'downloads', filename);
+      
+      // Determinar caminho correto do arquivo baseado no ambiente
+      let filePath;
+      if (process.env.NODE_ENV === 'production') {
+        filePath = path.join(process.cwd(), 'server', 'downloads', filename);
+      } else {
+        filePath = path.join(__dirname, 'downloads', filename);
+      }
+      
+      console.log('Download file path:', filePath);
+      console.log('File exists:', fs.existsSync(filePath));
       
       // Check if file exists
       if (!fs.existsSync(filePath)) {
+        console.error('File not found at path:', filePath);
         return res.status(404).json({ message: "File not found" });
       }
 
       // Set headers for download
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Content-Length', fs.statSync(filePath).size);
       
-      // Send file
-      res.sendFile(filePath);
+      // Send file with absolute path
+      const absolutePath = path.resolve(filePath);
+      console.log('Sending file from absolute path:', absolutePath);
+      res.sendFile(absolutePath);
     } catch (error) {
       console.error("Secure download error:", error);
       res.status(500).json({ message: "Download failed" });
