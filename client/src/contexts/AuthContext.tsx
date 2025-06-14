@@ -53,9 +53,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+        } else {
+          // Clear any stored user data on failed auth
+          setUser(null);
         }
       } catch (error) {
-        console.log('No existing session');
+        setUser(null);
       } finally {
         setLoading(false);
       }

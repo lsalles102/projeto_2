@@ -18,14 +18,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Acesso negado",
-        description: "Você precisa estar logado para acessar esta página.",
-        variant: "destructive",
-      });
       navigate("/login");
     }
-  }, [isAuthenticated, isLoading, navigate, toast]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   if (isLoading) {
     return (
