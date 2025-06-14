@@ -451,11 +451,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Determinar plano baseado no valor
                   let plan = "test";
                   let durationDays = 0.021;
+                  const transactionAmount = paymentInfo.transaction_amount ?? 100;
                   
-                  if (paymentInfo.transaction_amount >= 500) { // R$ 5,00 ou mais
+                  if (transactionAmount >= 500) { // R$ 5,00 ou mais
                     plan = "7days";
                     durationDays = 7;
-                  } else if (paymentInfo.transaction_amount >= 1000) { // R$ 10,00 ou mais
+                  } else if (transactionAmount >= 1000) { // R$ 10,00 ou mais
                     plan = "15days";
                     durationDays = 15;
                   }
@@ -465,7 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     userId: user.id,
                     plan,
                     durationDays,
-                    transactionAmount: paymentInfo.transaction_amount,
+                    transactionAmount,
                     currency: paymentInfo.currency_id || "BRL",
                     status: "approved",
                     mercadoPagoId: paymentId,
@@ -1235,6 +1236,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Debug endpoint error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Change password endpoint
+  app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Senha atual e nova senha são obrigatórias" });
+      }
+
+      // Get user from database to check current password
+      const dbUser = await storage.getUser(user.id);
+      if (!dbUser || !dbUser.password) {
+        return res.status(404).json({ message: "Usuário não encontrado ou sem senha configurada" });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, dbUser.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.updateUser(user.id, { password: hashedNewPassword });
+
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
     }
   });
 
