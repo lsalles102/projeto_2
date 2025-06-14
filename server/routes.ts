@@ -124,6 +124,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logout endpoint
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ message: "Falha no logout" });
+      }
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+          return res.status(500).json({ message: "Falha ao destruir sessão" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logout realizado com sucesso" });
+      });
+    });
+  });
+
   // PIX Payment creation
   app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
     try {
@@ -232,9 +250,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Pagamento encontrado por mercadoPagoId: ${payment ? 'SIM' : 'NÃO'}`);
           }
           
+          // If still not found, try to find by email for renewal cases
+          if (!payment && paymentInfo.payer?.email) {
+            console.log(`Buscando usuário por email: ${paymentInfo.payer.email}`);
+            const user = await storage.getUserByEmail(paymentInfo.payer.email);
+            
+            if (user) {
+              console.log(`Usuário encontrado: ${user.id} - ${user.email}`);
+              
+              // Check for recent pending payments from this user
+              const pendingPayments = await storage.getPendingPayments();
+              const userPendingPayments = pendingPayments.filter(p => p.userId === user.id);
+              
+              console.log(`Pagamentos pendentes do usuário: ${userPendingPayments.length}`);
+              
+              if (userPendingPayments.length > 0) {
+                payment = userPendingPayments.sort((a, b) => {
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return dateB - dateA;
+                })[0];
+                console.log(`Usando pagamento pendente do usuário: ${payment.id}`);
+              }
+            }
+          }
+          
           // If still not found, try to find the most recent pending payment
           if (!payment) {
-            console.log(`Buscando pagamentos pendentes...`);
+            console.log(`Buscando pagamentos pendentes gerais...`);
             const pendingPayments = await storage.getPendingPayments();
             console.log(`Pagamentos pendentes encontrados: ${pendingPayments.length}`);
             
