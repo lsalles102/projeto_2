@@ -4,7 +4,7 @@ import passport from "passport";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
-import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema } from "@shared/schema";
+import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema, updateHwidSchema, resetHwidSchema, adminResetHwidSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
@@ -139,6 +139,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup authentication
   await setupAuth(app);
+
+  // Admin middleware
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
+    }
+    next();
+  };
 
   // Auth routes with rate limiting
   app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => { // 5 attempts per 15 minutes
@@ -459,20 +468,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Route for loader to update HWID for existing active license
-  app.post("/api/licenses/update-hwid", isAuthenticated, async (req, res) => {
+  // 🔐 SECURE HWID UPDATE - Only allows HWID update if empty or null
+  app.post("/api/licenses/update-hwid", rateLimit(10, 5 * 60 * 1000), async (req, res) => {
     try {
-      const user = req.user as any;
-      const { hwid } = z.object({
-        hwid: z.string().min(1)
-      }).parse(req.body);
+      const { licenseKey, hwid } = updateHwidSchema.parse(req.body);
 
-      // Find user's active license
-      const license = await storage.getLicenseByUserId(user.id);
+      // Find license by key
+      const license = await storage.getLicenseByKey(licenseKey);
       if (!license) {
-        return res.status(404).json({ message: "Nenhuma licença encontrada" });
+        securityLog.logSuspiciousActivity(req.ip!, "invalid_license_key", { licenseKey });
+        return res.status(404).json({ message: "Licença não encontrada" });
       }
 
+      // Check if license is active
       if (license.status !== "active") {
         return res.status(400).json({ message: "Licença não está ativa" });
       }
@@ -484,32 +492,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Licença expirada" });
       }
 
-      // If license already has a different HWID, check if we should allow update
-      if (license.hwid && license.hwid !== hwid) {
-        // For security, we can be strict about HWID changes
-        // But for now, allow updates for better user experience
-        console.log(`HWID change detected for user ${user.id}: ${license.hwid} -> ${hwid}`);
+      // 🚫 CRITICAL SECURITY: Block HWID update if already set
+      if (license.hwid && license.hwid.trim() !== "") {
+        securityLog.logSuspiciousActivity(req.ip!, "blocked_hwid_change_attempt", {
+          licenseId: license.id,
+          currentHwid: license.hwid,
+          attemptedHwid: hwid
+        });
+        return res.status(403).json({ 
+          message: "HWID já vinculado. Use o endpoint de reset para alterar."
+        });
       }
 
-      // Update license with new HWID and heartbeat
+      // Update license with HWID (first time only)
       const updatedLicense = await storage.updateLicense(license.id, {
         hwid,
         lastHeartbeat: new Date()
       });
 
-      // Also update user HWID
-      await storage.updateUser(user.id, { hwid });
+      // Log successful HWID binding
+      await storage.createHwidResetLog({
+        userId: license.userId,
+        licenseId: license.id,
+        oldHwid: null,
+        newHwid: hwid,
+        resetType: "auto",
+        resetReason: "Initial HWID binding"
+      });
 
       res.json({ 
         license: updatedLicense,
-        message: "HWID atualizado com sucesso"
+        message: "HWID vinculado com sucesso"
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("Update HWID error:", error);
-      res.status(500).json({ message: "Falha ao atualizar HWID" });
+      res.status(500).json({ message: "Falha ao vincular HWID" });
+    }
+  });
+
+  // 🕓 USER HWID RESET REQUEST (with 7-day cooldown)
+  app.post("/api/licenses/request-hwid-reset", isAuthenticated, rateLimit(3, 24 * 60 * 60 * 1000), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { licenseKey, reason } = resetHwidSchema.parse(req.body);
+
+      // Find license
+      const license = await storage.getLicenseByKey(licenseKey);
+      if (!license || license.userId !== user.id) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+
+      // Check if reset is allowed (7-day cooldown)
+      const canReset = await storage.canResetHwid(user.id, license.id);
+      if (!canReset) {
+        const lastReset = await storage.getLastHwidReset(user.id, license.id);
+        const nextResetDate = new Date(lastReset!.createdAt);
+        nextResetDate.setDate(nextResetDate.getDate() + 7);
+        
+        return res.status(429).json({ 
+          message: "Reset de HWID permitido apenas 1x a cada 7 dias",
+          nextResetDate: nextResetDate.toISOString()
+        });
+      }
+
+      // Perform reset (clear HWID)
+      const oldHwid = license.hwid;
+      const updatedLicense = await storage.updateLicenseHwid(license.id, null);
+
+      // Log the reset
+      await storage.createHwidResetLog({
+        userId: user.id,
+        licenseId: license.id,
+        oldHwid,
+        newHwid: null,
+        resetType: "manual",
+        resetReason: reason
+      });
+
+      res.json({ 
+        message: "HWID resetado com sucesso. Você pode vincular um novo HWID agora.",
+        license: updatedLicense
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("HWID reset request error:", error);
+      res.status(500).json({ message: "Falha ao resetar HWID" });
+    }
+  });
+
+  // 🔐 ADMIN HWID RESET (support only)
+  app.post("/api/admin/licenses/reset-hwid", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as any;
+      const { licenseId, reason, newHwid } = adminResetHwidSchema.parse(req.body);
+
+      // Find license
+      const license = await storage.getLicense(licenseId);
+      if (!license) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+
+      // Perform reset
+      const oldHwid = license.hwid;
+      const updatedLicense = await storage.updateLicenseHwid(licenseId, newHwid || null);
+
+      // Log the admin reset
+      await storage.createHwidResetLog({
+        userId: license.userId,
+        licenseId,
+        oldHwid,
+        newHwid: newHwid || null,
+        resetType: "support",
+        resetReason: reason,
+        adminId: admin.id
+      });
+
+      res.json({ 
+        message: "HWID resetado pelo suporte",
+        license: updatedLicense
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Admin HWID reset error:", error);
+      res.status(500).json({ message: "Falha ao resetar HWID" });
+    }
+  });
+
+  // 📊 GET HWID RESET HISTORY (admin only)
+  app.get("/api/admin/licenses/:licenseId/hwid-history", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const licenseId = parseInt(req.params.licenseId);
+      if (isNaN(licenseId)) {
+        return res.status(400).json({ message: "ID de licença inválido" });
+      }
+
+      const history = await storage.getHwidResetHistory(licenseId);
+      res.json(history);
+    } catch (error) {
+      console.error("Get HWID history error:", error);
+      res.status(500).json({ message: "Falha ao buscar histórico" });
     }
   });
 

@@ -480,7 +480,13 @@ export class MemStorage implements IStorage {
   async createHwidResetLog(logData: InsertHwidResetLog): Promise<HwidResetLog> {
     const log: HwidResetLog = {
       id: this.nextHwidResetLogId++,
-      ...logData,
+      userId: logData.userId,
+      licenseId: logData.licenseId,
+      oldHwid: logData.oldHwid || null,
+      newHwid: logData.newHwid || null,
+      resetType: logData.resetType,
+      resetReason: logData.resetReason || null,
+      adminId: logData.adminId || null,
       createdAt: new Date(),
     };
     this.hwidResetLogs.push(log);
@@ -980,6 +986,73 @@ export class PostgresStorage implements IStorage {
       orderBy: (payments, { desc }) => desc(payments.createdAt),
     });
     return result;
+  }
+
+  // HWID protection methods
+  async canResetHwid(userId: number, licenseId: number): Promise<boolean> {
+    const lastReset = await this.getLastHwidReset(userId, licenseId);
+    if (!lastReset) return true;
+    
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return lastReset.createdAt < sevenDaysAgo;
+  }
+
+  async getLastHwidReset(userId: number, licenseId: number): Promise<HwidResetLog | undefined> {
+    const { db } = await import("./db");
+    const { hwidResetLogs } = await import("@shared/schema");
+    const { eq, and, desc } = await import("drizzle-orm");
+    
+    const result = await db.query.hwidResetLogs.findFirst({
+      where: and(
+        eq(hwidResetLogs.userId, userId),
+        eq(hwidResetLogs.licenseId, licenseId)
+      ),
+      orderBy: desc(hwidResetLogs.createdAt),
+    });
+    return result;
+  }
+
+  async createHwidResetLog(logData: InsertHwidResetLog): Promise<HwidResetLog> {
+    const { db } = await import("./db");
+    const { hwidResetLogs } = await import("@shared/schema");
+    
+    const result = await db.insert(hwidResetLogs).values({
+      ...logData,
+      createdAt: new Date(),
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getHwidResetHistory(licenseId: number): Promise<HwidResetLog[]> {
+    const { db } = await import("./db");
+    const { hwidResetLogs } = await import("@shared/schema");
+    const { eq, desc } = await import("drizzle-orm");
+    
+    const result = await db.query.hwidResetLogs.findMany({
+      where: eq(hwidResetLogs.licenseId, licenseId),
+      orderBy: desc(hwidResetLogs.createdAt),
+    });
+    return result;
+  }
+
+  async updateLicenseHwid(licenseId: number, hwid: string | null): Promise<License> {
+    const { db } = await import("./db");
+    const { licenses } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(licenses)
+      .set({ hwid })
+      .where(eq(licenses.id, licenseId))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("License not found");
+    }
+    
+    return result[0];
   }
 }
 
