@@ -16,7 +16,9 @@ export function getBaseUrl(): string {
 }
 
 export function getWebhookUrl(): string {
-  return `${getBaseUrl()}/api/payments/webhook`;
+  const webhookUrl = `${getBaseUrl()}/api/payments/webhook`;
+  console.log(`Webhook URL configurada: ${webhookUrl}`);
+  return webhookUrl;
 }
 
 export function isProduction(): boolean {
