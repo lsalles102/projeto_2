@@ -185,6 +185,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 14, 2025. Optimized Mercado Pago integration with all recommended fields for improved approval rates
 - June 14, 2025. Added items.quantity, items.unit_price, payer names, category_id, detailed descriptions, and unique IDs
 - June 14, 2025. Enhanced payment data structure for both preference creation and direct PIX payments
+- June 14, 2025. Fixed PIX payment system for Render production environment
+- June 14, 2025. Corrected Mercado Pago webhook URLs to work with https://fovdark.shop/
+- June 14, 2025. Updated base URL configuration to handle Render, Replit, and local environments automatically
 
 ## User Preferences
 

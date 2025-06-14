@@ -1,6 +1,6 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { nanoid } from 'nanoid';
-import { getBaseUrl } from './config';
+import { getBaseUrl, getWebhookUrl } from './config';
 
 // Configuração do Mercado Pago
 const client = new MercadoPagoConfig({
@@ -95,7 +95,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
         installments: 1,
       },
       external_reference: externalReference,
-      notification_url: `${baseUrl}/api/payments/webhook`,
+      notification_url: getWebhookUrl(),
       expires: true,
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
@@ -133,7 +133,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
           last_name: data.payerLastName, // Sobrenome do comprador
         },
         external_reference: externalReference,
-        notification_url: process.env.NODE_ENV === 'production' ? `https://fovdark.shop/api/payments/webhook` : undefined,
+        notification_url: getWebhookUrl(),
         // Informações adicionais do item para melhorar aprovação
         additional_info: {
           items: [

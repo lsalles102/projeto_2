@@ -5,7 +5,12 @@ export function getBaseUrl(): string {
     return 'https://fovdark.shop';
   }
   
-  // Desenvolvimento local
+  // Desenvolvimento local - usar URL externa do Replit para webhooks
+  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+  }
+  
+  // Fallback para desenvolvimento local
   const port = process.env.PORT || 5000;
   return `http://localhost:${port}`;
 }
