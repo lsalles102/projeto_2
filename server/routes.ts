@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated, generateToken, verifyToken } from "./auth";
 import { registerSchema, createUserSchema, loginSchema, activateKeySchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, contactSchema, licenseStatusSchema, heartbeatSchema, createActivationKeySchema, updateUserSchema, updateLicenseSchema, createPixPaymentSchema, mercadoPagoWebhookSchema, updateHwidSchema, resetHwidSchema, adminResetHwidSchema } from "@shared/schema";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import { createPixPayment, PLAN_PRICES } from "./mercado-pago";
+import { createPixPayment, getPaymentInfo, PLAN_PRICES } from "./mercado-pago";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { sendLicenseKeyEmail } from "./email";
@@ -868,6 +868,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Webhook error:", error);
       // Always return 200 to prevent webhook retries
       res.status(200).json({ received: true, error: "Webhook processing failed" });
+    }
+  });
+
+  // Test Mercado Pago credentials
+  app.get("/api/test-mercadopago", async (req, res) => {
+    try {
+      const testPaymentData = createPixPaymentSchema.parse({
+        plan: "test",
+        durationDays: 0.021,
+        payerEmail: "test@fovdark.com",
+        payerFirstName: "Test",
+        payerLastName: "User"
+      });
+
+      const pixResponse = await createPixPayment({
+        userId: 999,
+        ...testPaymentData
+      });
+
+      res.json({
+        status: "success",
+        message: "Mercado Pago está funcionando corretamente",
+        data: {
+          preferenceId: pixResponse.preferenceId,
+          hasPixQr: !!pixResponse.pixQrCode,
+          amount: pixResponse.transactionAmount,
+          currency: pixResponse.currency
+        }
+      });
+    } catch (error) {
+      console.error("Erro ao testar Mercado Pago:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Erro na integração com Mercado Pago",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Payment status check
+  app.get("/api/payments/:paymentId/status", isAuthenticated, async (req, res) => {
+    try {
+      const { paymentId } = req.params;
+      const paymentInfo = await getPaymentInfo(paymentId);
+      
+      if (!paymentInfo) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+
+      res.json({
+        status: paymentInfo.status,
+        statusDetail: paymentInfo.status_detail,
+        transactionAmount: paymentInfo.transaction_amount,
+        dateCreated: paymentInfo.date_created,
+        dateApproved: paymentInfo.date_approved
+      });
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      res.status(500).json({ message: "Erro ao verificar status do pagamento" });
     }
   });
 
