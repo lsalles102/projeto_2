@@ -1302,11 +1302,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Create/update license automatically using utilities
+      const { createOrUpdateLicense } = await import('./license-utils');
       const { license, action } = await createOrUpdateLicense(
         user.id,
         "test",
         0.021, // 30 minutes
-        activationKey
+        user.id
       );
 
       res.json({
@@ -1887,6 +1888,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao buscar pagamentos órfãos:", error);
       res.status(500).json({ message: "Erro ao buscar pagamentos órfãos" });
+    }
+  });
+
+  // Password reset routes
+  app.post("/api/auth/forgot-password", rateLimit(3, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      console.log(`[FORGOT PASSWORD] Processing request for: ${email}`);
+      
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      console.log(`[FORGOT PASSWORD] User found: ${!!user}`);
+      
+      if (!user) {
+        console.log(`[FORGOT PASSWORD] User not found, returning standard message`);
+        return res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store reset token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // Create reset URL
+      const resetUrl = `${getBaseUrl()}/reset-password/${resetToken}`;
+      console.log(`[FORGOT PASSWORD] Reset URL generated: ${resetUrl}`);
+
+      // Send password reset email
+      try {
+        const { sendPasswordResetEmail } = await import('./email');
+        await sendPasswordResetEmail(email, resetToken);
+        console.log(`[FORGOT PASSWORD] Password reset email sent to: ${email}`);
+      } catch (emailError) {
+        console.error('[FORGOT PASSWORD] Email sending error:', emailError);
+        // Still return success to not reveal if email exists
+      }
+
+      res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Email inválido", errors: error.errors });
+      }
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { token, password, confirmPassword } = resetPasswordSchema.parse(req.body);
+      
+      // Verify reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken || resetToken.used) {
+        return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
+
+      // Check if token is expired
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ message: "Token expirado" });
+      }
+
+      // Get user
+      const user = await storage.getUser(resetToken.userId);
+      if (!user) {
+        return res.status(400).json({ message: "Usuário não encontrado" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update user password
+      await storage.updateUser(user.id, { password: hashedPassword });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(token);
+
+      console.log(`[RESET PASSWORD] Password reset successful for user: ${user.email}`);
+      res.json({ message: "Senha redefinida com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Change password endpoint (for authenticated users)
+  app.post("/api/auth/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword, confirmPassword } = changePasswordSchema.parse(req.body);
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update user password
+      await storage.updateUser(user.id, { password: hashedNewPassword });
+
+      console.log(`[CHANGE PASSWORD] Password changed successfully for user: ${user.email}`);
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
 

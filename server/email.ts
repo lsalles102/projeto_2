@@ -28,23 +28,70 @@ const createTransporter = () => {
 export async function sendPasswordResetEmail(email: string, resetToken: string) {
   const transporter = createTransporter();
   
-  const resetUrl = `${process.env.BASE_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+  // Use getBaseUrl from config for correct URL construction
+  const { getBaseUrl } = await import('./config');
+  const resetUrl = `${getBaseUrl()}/reset-password/${resetToken}`;
   
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: process.env.SMTP_FROM || 'contato@suportefovdark.shop',
     to: email,
-    subject: 'Redefinição de Senha',
+    subject: 'Redefinição de Senha - FovDark',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Redefinição de Senha</h2>
-        <p>Você solicitou a redefinição de sua senha.</p>
-        <p>Clique no link abaixo para redefinir sua senha:</p>
-        <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-          Redefinir Senha
-        </a>
-        <p>Este link expirará em 1 hora.</p>
-        <p>Se você não solicitou esta redefinição, ignore este email.</p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Redefinição de Senha</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #333; margin: 0; font-size: 28px;">FovDark</h1>
+            <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Sistema de Licenças</p>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+            <h2 style="color: white; margin: 0 0 15px 0; font-size: 24px;">Redefinição de Senha</h2>
+            <p style="color: white; margin: 0; font-size: 16px; opacity: 0.9;">Solicitação de nova senha recebida</p>
+          </div>
+          
+          <div style="padding: 0 20px;">
+            <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Você solicitou a redefinição de sua senha. Clique no botão abaixo para criar uma nova senha:
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                🔑 Redefinir Senha
+              </a>
+            </div>
+            
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="color: #856404; margin: 0; font-size: 14px;">
+                <strong>⚠️ Importante:</strong> Este link expira em 15 minutos por segurança.
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+              Se o botão não funcionar, copie e cole este link no seu navegador:
+            </p>
+            <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; font-size: 12px; color: #495057;">
+              ${resetUrl}
+            </p>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+              <p style="color: #999; font-size: 12px; margin: 0;">
+                Se você não solicitou esta redefinição, pode ignorar este email com segurança. Sua senha atual permanecerá inalterada.
+              </p>
+              <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
+                Este é um email automático, não responda.
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
     `,
   };
 
