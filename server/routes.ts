@@ -962,8 +962,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User profile endpoints
   app.get("/api/auth/user", isAuthenticated, async (req, res) => {
-    const user = req.user as any;
-    res.json({ user: { ...user, password: undefined } });
+    try {
+      const user = req.user as any;
+      
+      // Buscar dados atualizados do usuário
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Buscar licença do usuário
+      const license = await storage.getLicenseByUserId(user.id);
+      
+      res.json({ 
+        user: { ...currentUser, password: undefined },
+        license 
+      });
+    } catch (error) {
+      console.error("Erro ao buscar dados do usuário:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
   });
 
   app.get("/api/dashboard", isAuthenticated, async (req, res) => {
@@ -1689,6 +1707,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
       console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
+  // Endpoint correto para mudança de senha (usado pelo frontend)
+  app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = req.body;
+
+      console.log(`=== MUDANÇA DE SENHA - Usuário: ${user.email} ===`);
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Senha atual e nova senha são obrigatórias" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Nova senha deve ter pelo menos 6 caracteres" });
+      }
+
+      // Get current user with password
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, currentUser.password || "");
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.updateUser(user.id, { password: hashedNewPassword });
+
+      console.log(`✅ Senha alterada com sucesso para usuário ${user.email}`);
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      console.error("Erro ao alterar senha:", error);
       res.status(500).json({ message: "Erro ao alterar senha" });
     }
   });

@@ -104,11 +104,34 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = (req, res, next) => {
-  if (req.isAuthenticated() && req.user) {
-    return next();
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  try {
+    // Primeiro, verificar autenticação via sessão do Passport
+    if (req.isAuthenticated() && req.user) {
+      return next();
+    }
+
+    // Se não autenticado via sessão, verificar token JWT no header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const decoded = verifyToken(token);
+      
+      if (decoded) {
+        // Buscar usuário pelo ID do token
+        const user = await storage.getUser(decoded.userId);
+        if (user) {
+          req.user = user;
+          return next();
+        }
+      }
+    }
+
+    res.status(401).json({ message: "Não autorizado" });
+  } catch (error) {
+    console.error("Erro no middleware de autenticação:", error);
+    res.status(401).json({ message: "Não autorizado" });
   }
-  res.status(401).json({ message: "Não autorizado" });
 };
 
 export function generateToken(userId: number): string {
