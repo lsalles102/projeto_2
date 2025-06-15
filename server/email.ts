@@ -74,9 +74,17 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     throw new Error('Email do destinatário não pode estar vazio');
   }
   
+  // Verificar se é um email mascarado (XXXXXXXXXXX)
+  if (cleanEmail.includes('XXXXX') || /^X+$/.test(cleanEmail)) {
+    console.error(`[EMAIL] ❌ ERRO: Email mascarado ou oculto recebido - "${cleanEmail}"`);
+    console.error(`[EMAIL] Isso pode indicar que o Mercado Pago está ocultando o email real`);
+    throw new Error('Email mascarado - não é possível enviar para email oculto');
+  }
+  
   // Verificar se contém @
   if (!cleanEmail.includes('@')) {
     console.error(`[EMAIL] ❌ ERRO: Email não contém @ - "${cleanEmail}"`);
+    console.error(`[EMAIL] Verifique se o email real está sendo enviado pelo Mercado Pago`);
     throw new Error('Email deve conter @');
   }
   

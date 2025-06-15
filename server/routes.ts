@@ -840,36 +840,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const planName = plan === "test" ? "Teste (30 minutos)" : 
                            plan === "7days" ? "7 Dias" : "15 Dias";
           
-          // VERIFICAÇÃO CRÍTICA: Garantir que o email do usuário não está vazio
-          if (!user.email || user.email.trim() === '') {
-            console.error("[WEBHOOK] ❌ ERRO CRÍTICO: Email do usuário está vazio. Não será possível enviar a chave de licença.");
-            console.error(`[WEBHOOK] Dados do usuário: ID=${user.id}, Email="${user.email}"`);
-            console.error(`[WEBHOOK] Email do Mercado Pago: "${paymentInfo.payer.email}"`);
-            // Não quebrar o webhook, apenas logar o erro crítico
+          // VERIFICAÇÃO CRÍTICA DO EMAIL DO USUÁRIO
+          console.log(`=== VERIFICANDO EMAIL PARA ENVIO ===`);
+          console.log(`[WEBHOOK] Email do usuário no banco: "${user.email}"`);
+          console.log(`[WEBHOOK] Email original do Mercado Pago: "${paymentInfo.payer.email}"`);
+          
+          // Verificar se o email do usuário é válido
+          const userEmailIsValid = user.email && user.email.trim() !== '' && user.email.includes('@') && !user.email.includes('XXXXX');
+          const mpEmailIsValid = paymentInfo.payer.email && paymentInfo.payer.email.trim() !== '' && paymentInfo.payer.email.includes('@') && !paymentInfo.payer.email.includes('XXXXX');
+          
+          console.log(`[WEBHOOK] Email do usuário válido: ${userEmailIsValid}`);
+          console.log(`[WEBHOOK] Email do Mercado Pago válido: ${mpEmailIsValid}`);
+          
+          // Escolher o melhor email para envio
+          let emailToUse = null;
+          if (userEmailIsValid) {
+            emailToUse = user.email;
+            console.log(`[WEBHOOK] Usando email do usuário: ${emailToUse}`);
+          } else if (mpEmailIsValid) {
+            emailToUse = paymentInfo.payer.email;
+            console.log(`[WEBHOOK] Usando email do Mercado Pago: ${emailToUse}`);
+          }
+          
+          if (!emailToUse) {
+            console.error("[WEBHOOK] ❌ ERRO CRÍTICO: Nenhum email válido disponível para envio");
+            console.error(`[WEBHOOK] Email usuário: "${user.email}"`);
+            console.error(`[WEBHOOK] Email Mercado Pago: "${paymentInfo.payer.email}"`);
+            console.error(`[WEBHOOK] Chave de licença gerada mas não enviada: ${activationKey}`);
+            console.error("=== INTERVENÇÃO MANUAL NECESSÁRIA - EMAIL NÃO ENVIADO ===");
           } else {
             try {
               console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
-              console.log(`[EMAIL] Enviando para: ${user.email}`);
+              console.log(`[EMAIL] Enviando para: ${emailToUse}`);
               console.log(`[EMAIL] Plano: ${planName}`);
               console.log(`[EMAIL] Chave: ${activationKey}`);
               
-              // Usar o email do usuário criado/encontrado no banco
-              await sendLicenseKeyEmail(user.email, activationKey, planName);
+              await sendLicenseKeyEmail(emailToUse, activationKey, planName);
               console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
             } catch (emailError) {
               console.error("[WEBHOOK] ❌ ERRO AO ENVIAR EMAIL:");
               console.error("Detalhes:", emailError);
+              console.error(`Email tentado: ${emailToUse}`);
               console.error(`Chave não entregue: ${activationKey}`);
-              console.error(`Email destinatário: ${user.email}`);
               console.error("=== FALHA NO ENVIO DE EMAIL - INTERVENÇÃO MANUAL NECESSÁRIA ===");
               
-              // Log adicional para debug
-              if (emailError instanceof Error && emailError.message.includes('No recipients defined')) {
-                console.error("[WEBHOOK] Erro específico: Campo 'to' do email está vazio");
-                console.error(`[WEBHOOK] user.email: "${user.email}"`);
-                console.error(`[WEBHOOK] paymentInfo.payer.email: "${paymentInfo.payer.email}"`);
+              // Log adicional para debug específico
+              if (emailError instanceof Error) {
+                if (emailError.message.includes('Email mascarado')) {
+                  console.error("[WEBHOOK] Problema: Mercado Pago enviou email mascarado/oculto");
+                  console.error("[WEBHOOK] Solução: Verificar configurações de privacidade do Mercado Pago");
+                } else if (emailError.message.includes('Email deve conter @')) {
+                  console.error("[WEBHOOK] Problema: Email não contém símbolo @");
+                  console.error("[WEBHOOK] Email recebido do MP pode estar corrompido ou mascarado");
+                }
               }
-              // Não quebrar o webhook, apenas logar o erro
             }
           }
           
