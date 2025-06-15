@@ -603,6 +603,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Informações do pagamento:", JSON.stringify(paymentInfo, null, 2));
         
         // VERIFICAR SE O PAGAMENTO FOI APROVADO
+        console.log(`Status do pagamento: ${paymentInfo?.status}`);
+        console.log(`Status detail: ${paymentInfo?.status_detail}`);
+        
         if (paymentInfo?.status === "approved") {
           console.log(`=== PAGAMENTO APROVADO! ===`);
           console.log(`Valor: R$ ${paymentInfo.transaction_amount}`);
