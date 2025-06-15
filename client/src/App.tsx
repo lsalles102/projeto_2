@@ -29,6 +29,7 @@ const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const TestPage = lazy(() => import("@/pages/TestPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Loading component
@@ -78,6 +79,7 @@ function Router() {
             <Route path="/support" component={Support} />
             <Route path="/terms" component={Terms} />
             <Route path="/privacy" component={Privacy} />
+            <Route path="/test" component={TestPage} />
             <Route path="/dashboard">
               <ProtectedRoute>
                 <Dashboard />
