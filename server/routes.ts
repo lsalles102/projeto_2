@@ -806,13 +806,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const activationKey = `FOVD-${plan.toUpperCase()}-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
           console.log(`=== GERANDO CHAVE DE ATIVAÇÃO ===`);
           console.log(`Chave: ${activationKey}`);
+          console.log(`Usuário ID: ${user.id} - Email: ${user.email}`);
           
           await storage.createActivationKey({
             key: activationKey,
             plan,
             durationDays,
+            isUsed: true, // Marcar como usada imediatamente
+            usedBy: user.id, // Vincular ao usuário correto
+            usedAt: new Date(),
           });
-          console.log(`✅ Chave de ativação salva no banco`);
+          console.log(`✅ Chave de ativação salva no banco - Vinculada ao usuário ${user.id}`);
           
           // 6. CRIAR OU ATUALIZAR LICENÇA DO USUÁRIO
           const existingLicense = await storage.getLicenseByUserId(user.id);

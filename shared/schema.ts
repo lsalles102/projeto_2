@@ -135,7 +135,6 @@ export const insertLicenseSchema = createInsertSchema(licenses).omit({
 export const insertActivationKeySchema = createInsertSchema(activationKeys).omit({
   id: true,
   createdAt: true,
-  usedAt: true,
 }).extend({
   durationDays: z.number().min(1).default(30),
 });
