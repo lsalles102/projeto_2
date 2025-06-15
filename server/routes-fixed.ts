@@ -10,6 +10,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
 import { sendPasswordResetEmail, sendLicenseKeyEmail } from "./email";
 import { createPixPayment, getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
+import { licenseCleanupService } from "./license-cleanup";
 import { 
   registerSchema, 
   loginSchema, 
@@ -719,6 +720,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Admin routes for license cleanup system
+  app.get('/api/admin/cleanup-stats', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await licenseCleanupService.getCleanupStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting cleanup stats:", error);
+      res.status(500).json({ message: "Erro ao obter estatísticas de limpeza" });
+    }
+  });
+
+  app.post('/api/admin/manual-cleanup', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await licenseCleanupService.manualCleanup();
+      res.json({ message: "Limpeza manual executada com sucesso" });
+    } catch (error) {
+      console.error("Error during manual cleanup:", error);
+      res.status(500).json({ message: "Erro durante limpeza manual" });
+    }
+  });
+
+  // Initialize license cleanup service
+  console.log("🧹 Sistema de limpeza automática de licenças inicializado");
 
   return {} as Server;
 }
