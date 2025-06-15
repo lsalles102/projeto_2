@@ -69,21 +69,24 @@ export function calculateTotalMinutes(durationDays: number): number {
 
 /**
  * Creates or updates license for user after payment approval
+ * Chave é gerada e vinculada diretamente ao usuário
  */
 export async function createOrUpdateLicense(
   userId: number,
   plan: string,
-  durationDays: number,
-  activationKey: string
+  durationDays: number
 ) {
   const expiryDate = calculateExpirationDate(durationDays);
   const totalMinutes = calculateTotalMinutes(durationDays);
+  
+  // Generate unique license key for this user
+  const licenseKey = await generateUniqueActivationKey();
   
   console.log(`=== PROCESSANDO LICENÇA ===`);
   console.log(`Usuário: ${userId}`);
   console.log(`Plano: ${plan}`);
   console.log(`Duração: ${durationDays} dias`);
-  console.log(`Chave: ${activationKey}`);
+  console.log(`Chave gerada: ${licenseKey}`);
   console.log(`Expira em: ${expiryDate.toISOString()}`);
   console.log(`Total minutos: ${totalMinutes}`);
   
@@ -95,7 +98,7 @@ export async function createOrUpdateLicense(
     console.log(`Licença atual: ${existingLicense.key} (Status: ${existingLicense.status})`);
     
     const updatedLicense = await storage.updateLicense(existingLicense.id, {
-      key: activationKey,
+      key: licenseKey,
       plan,
       status: "active",
       expiresAt: expiryDate,
@@ -107,16 +110,16 @@ export async function createOrUpdateLicense(
       hwid: null // Reset HWID para nova ativação
     });
     
-    console.log(`✅ LICENÇA RENOVADA - Nova chave: ${activationKey}`);
+    console.log(`✅ LICENÇA RENOVADA - Nova chave: ${licenseKey}`);
     console.log(`Nova expiração: ${expiryDate.toISOString()}`);
     
-    return { license: updatedLicense, action: "renovada" };
+    return { license: updatedLicense, action: "renovada", licenseKey };
   } else {
     console.log(`=== CRIANDO NOVA LICENÇA ===`);
     
     const newLicense = await storage.createLicense({
       userId,
-      key: activationKey,
+      key: licenseKey,
       plan,
       status: "active",
       expiresAt: expiryDate,
@@ -127,10 +130,10 @@ export async function createOrUpdateLicense(
       activatedAt: new Date(),
     });
     
-    console.log(`✅ NOVA LICENÇA CRIADA - Chave: ${activationKey}`);
+    console.log(`✅ NOVA LICENÇA CRIADA - Chave: ${licenseKey}`);
     console.log(`Expira em: ${expiryDate.toISOString()}`);
     
-    return { license: newLicense, action: "criada" };
+    return { license: newLicense, action: "criada", licenseKey };
   }
 }
 
@@ -222,15 +225,16 @@ export function validateHwid(hwid: string): boolean {
 
 /**
  * Activates license manually with HWID protection
+ * This looks for an existing license with the key, not activation_keys table
  */
 export async function activateLicenseManually(
-  activationKey: string,
+  licenseKey: string,
   hwid: string,
   userId: number
 ): Promise<{ success: boolean; message: string; license?: any }> {
   try {
     console.log(`=== ATIVAÇÃO MANUAL INICIADA ===`);
-    console.log(`Chave: ${activationKey}`);
+    console.log(`Chave: ${licenseKey}`);
     console.log(`HWID: ${hwid}`);
     console.log(`Usuário: ${userId}`);
     
@@ -242,85 +246,59 @@ export async function activateLicenseManually(
       };
     }
     
-    // 2. Check if activation key exists and is unused
-    const activationKeyData = await storage.getActivationKey(activationKey);
-    if (!activationKeyData) {
+    // 2. Check if license with this key exists and belongs to this user
+    const existingLicense = await storage.getLicenseByKey(licenseKey);
+    if (!existingLicense) {
       return {
         success: false,
-        message: "Chave de ativação não encontrada."
+        message: "Chave de licença não encontrada."
       };
     }
     
-    if (activationKeyData.isUsed) {
+    if (existingLicense.userId !== userId) {
       return {
         success: false,
-        message: "Esta chave de ativação já foi utilizada."
+        message: "Esta chave não pertence ao seu usuário."
       };
     }
     
     // 3. Check if HWID is already in use by another license
     const existingLicenseWithHwid = await storage.getLicenseByHwid(hwid);
-    if (existingLicenseWithHwid && existingLicenseWithHwid.userId !== userId) {
+    if (existingLicenseWithHwid && existingLicenseWithHwid.id !== existingLicense.id) {
       return {
         success: false,
         message: "Este dispositivo já está vinculado a outra licença."
       };
     }
     
-    // 4. Create or update license
-    const expiryDate = calculateExpirationDate(activationKeyData.durationDays);
-    const totalMinutes = calculateTotalMinutes(activationKeyData.durationDays);
-    
-    // Check if user already has a license
-    const existingUserLicense = await storage.getLicenseByUserId(userId);
-    
-    let license;
-    if (existingUserLicense) {
-      // Update existing license
-      license = await storage.updateLicense(existingUserLicense.id, {
-        key: activationKey,
-        plan: activationKeyData.plan,
-        status: "active",
-        hwid: hwid,
-        expiresAt: expiryDate,
-        totalMinutesRemaining: totalMinutes,
-        daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-        hoursRemaining: Math.ceil(totalMinutes / 60),
-        minutesRemaining: totalMinutes,
-        activatedAt: new Date(),
-      });
-    } else {
-      // Create new license
-      license = await storage.createLicense({
-        userId,
-        key: activationKey,
-        plan: activationKeyData.plan,
-        status: "active",
-        hwid: hwid,
-        expiresAt: expiryDate,
-        totalMinutesRemaining: totalMinutes,
-        daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-        hoursRemaining: Math.ceil(totalMinutes / 60),
-        minutesRemaining: totalMinutes,
-        activatedAt: new Date(),
-      });
+    // 4. Check if license is still valid (not expired)
+    const now = new Date();
+    if (new Date(existingLicense.expiresAt) < now) {
+      return {
+        success: false,
+        message: "Esta licença já expirou."
+      };
     }
     
-    // 5. Mark activation key as used
-    await storage.markActivationKeyAsUsed(activationKey, userId);
+    // 5. Update license with HWID
+    const license = await storage.updateLicense(existingLicense.id, {
+      hwid: hwid,
+      status: "active",
+      activatedAt: new Date(),
+    });
     
     console.log(`✅ LICENÇA ATIVADA MANUALMENTE`);
-    console.log(`Chave: ${activationKey}`);
+    console.log(`Chave: ${licenseKey}`);
     console.log(`HWID: ${hwid}`);
-    console.log(`Plano: ${activationKeyData.plan}`);
-    console.log(`Expira em: ${expiryDate.toISOString()}`);
+    console.log(`Plano: ${existingLicense.plan}`);
+    console.log(`Expira em: ${existingLicense.expiresAt}`);
     
-    const planName = activationKeyData.plan === "test" ? "Teste (30 minutos)" : 
-                     activationKeyData.plan === "7days" ? "7 Dias" : "15 Dias";
+    const planName = existingLicense.plan === "test" ? "Teste (30 minutos)" : 
+                     existingLicense.plan === "7days" ? "7 Dias" : "15 Dias";
     
     return {
       success: true,
-      message: `Licença ativada com sucesso! Plano: ${planName}, válida até ${expiryDate.toLocaleDateString('pt-BR')}.`,
+      message: `Licença ativada com sucesso! Plano: ${planName}, válida até ${new Date(existingLicense.expiresAt).toLocaleDateString('pt-BR')}.`,
       license
     };
     
