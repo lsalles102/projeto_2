@@ -146,7 +146,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email("Email inválido").max(254, "Email muito longo"),
-  username: z.string().optional(), // Será gerado automaticamente
+  username: z.string().min(1, "Username é obrigatório").max(50, "Username muito longo"),
   password: z.string()
     .min(6, "Senha deve ter pelo menos 6 caracteres")
     .max(128, "Senha muito longa"),

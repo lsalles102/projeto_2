@@ -30,7 +30,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
   
   // Use getBaseUrl from config for correct URL construction
   const { getBaseUrl } = await import('./config');
-  const resetUrl = `${getBaseUrl()}/reset-password/${resetToken}`;
+  const resetUrl = `${getBaseUrl()}/reset-password?token=${resetToken}`;
   
   const mailOptions = {
     from: process.env.SMTP_FROM || 'contato@suportefovdark.shop',

@@ -292,6 +292,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Password reset routes
+  app.post("/api/auth/forgot-password", rateLimit(3, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      console.log(`[FORGOT PASSWORD] Processing request for: ${email}`);
+      
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      console.log(`[FORGOT PASSWORD] User found: ${!!user}`);
+      
+      if (!user) {
+        console.log(`[FORGOT PASSWORD] User not found, returning standard message`);
+        return res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store reset token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // Create reset URL - Corrigindo para usar a URL base correta
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : 'http://localhost:5000';
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+      // Send reset email
+      try {
+        await sendPasswordResetEmail(email, resetToken);
+        console.log(`[FORGOT PASSWORD] Password reset email sent to: ${email}`);
+        console.log(`[FORGOT PASSWORD] Reset URL: ${resetUrl}`);
+      } catch (emailError) {
+        console.error('[FORGOT PASSWORD] Email sending error:', emailError);
+        // Still return success to not reveal if email exists
+      }
+
+      res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Email inválido", errors: error.errors });
+      }
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { token, password } = resetPasswordSchema.parse(req.body);
+      
+      // Verify reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken || resetToken.used) {
+        return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
+
+      // Check if token has expired
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ message: "Token expirado" });
+      }
+
+      // Get user
+      const user = await storage.getUser(resetToken.userId);
+      if (!user) {
+        return res.status(400).json({ message: "Usuário não encontrado" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update user password
+      await storage.updateUser(user.id, { password: hashedPassword });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(token);
+
+      // Clean up expired tokens
+      await storage.deleteExpiredPasswordResetTokens();
+
+      console.log(`[RESET PASSWORD] Password successfully reset for user: ${user.email}`);
+      res.json({ message: "Senha redefinida com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // PIX Payment creation
   app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
     try {
