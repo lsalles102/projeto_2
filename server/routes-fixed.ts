@@ -1,0 +1,683 @@
+import { Express, Request, Response, RequestHandler } from "express";
+import { Server } from "http";
+import bcrypt from "bcrypt";
+import { z } from "zod";
+import passport from "passport";
+import crypto from "crypto";
+import { nanoid } from "nanoid";
+
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated, generateToken } from "./auth";
+import { sendPasswordResetEmail, sendLicenseKeyEmail } from "./email";
+import { createPixPayment, getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
+import { 
+  registerSchema, 
+  loginSchema, 
+  activateKeySchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+  contactSchema,
+  createActivationKeySchema,
+  updateUserSchema,
+  updateLicenseSchema,
+  createPixPaymentSchema,
+  mercadoPagoWebhookSchema
+} from "@shared/schema";
+
+class SecurityLog {
+  logFailedLogin(ip: string, email: string) {
+    console.log(`[SECURITY] Failed login attempt - IP: ${ip}, Email: ${email}`);
+  }
+
+  logSuspiciousActivity(ip: string, type: string, details: any) {
+    console.log(`[SECURITY] Suspicious activity - IP: ${ip}, Type: ${type}, Details:`, details);
+  }
+}
+
+const securityLog = new SecurityLog();
+
+const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
+  const requests = new Map<string, number[]>();
+  
+  return (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    
+    if (!requests.has(ip)) {
+      requests.set(ip, []);
+    }
+    
+    const userRequests = requests.get(ip)!;
+    const windowStart = now - windowMs;
+    
+    const validRequests = userRequests.filter(time => time > windowStart);
+    
+    if (validRequests.length >= maxRequests) {
+      return res.status(429).json({ message: "Muitas tentativas. Tente novamente mais tarde." });
+    }
+    
+    validRequests.push(now);
+    requests.set(ip, validRequests);
+    next();
+  };
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for monitoring
+  app.get("/api/health", async (req, res) => {
+    try {
+      await storage.getSystemStats();
+      res.status(200).json({ 
+        status: "ok", 
+        timestamp: new Date().toISOString(),
+        database: "connected",
+        environment: process.env.NODE_ENV || "development"
+      });
+    } catch (error) {
+      res.status(503).json({ 
+        status: "error", 
+        message: "Database connection failed",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
+    }
+    next();
+  };
+
+  // Test payment simulation endpoint
+  app.post("/api/test/simulate-payment", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { plan = "test", userEmail } = req.body;
+
+      console.log(`=== SIMULAÇÃO DE PAGAMENTO INICIADA ===`);
+      console.log(`Usuário: ${user.id} - ${user.email}`);
+      console.log(`Plano solicitado: ${plan}`);
+      console.log(`Email fornecido: ${userEmail || 'N/A'}`);
+
+      // Determine duration and email
+      const durationDays = plan === "test" ? 0.021 : plan === "7days" ? 7 : 15;
+      const emailToUse = userEmail || user.email;
+
+      console.log(`Duração calculada: ${durationDays} dias`);
+      console.log(`Email que será usado: ${emailToUse}`);
+
+      // Create test payment record
+      const testPayment = await storage.createPayment({
+        userId: user.id,
+        preferenceId: `test_pref_${Date.now()}`,
+        externalReference: `test_${Date.now()}`,
+        status: "approved",
+        transactionAmount: plan === "test" ? 100 : plan === "7days" ? 1500 : 2500,
+        currency: "BRL",
+        plan,
+        durationDays,
+        payerEmail: emailToUse,
+        payerFirstName: user.firstName || "Test",
+        payerLastName: user.lastName || "User",
+        pixQrCode: "test_qr",
+        pixQrCodeBase64: "test_qr_base64",
+      });
+
+      console.log(`Pagamento teste criado: ID ${testPayment.id}`);
+
+      // Use license utilities for robust key generation and license creation
+      const { generateUniqueActivationKey, createOrUpdateLicense } = await import('./license-utils');
+      
+      const activationKey = await generateUniqueActivationKey();
+      console.log(`Chave de ativação gerada: ${activationKey}`);
+
+      // Create/update license automatically using utilities
+      const { license, action } = await createOrUpdateLicense(
+        user.id,
+        plan,
+        durationDays,
+        activationKey
+      );
+
+      console.log(`Nova licença criada para usuário ${user.id}`);
+
+      // Test email sending
+      try {
+        const planName = plan === "test" ? "Teste (30 minutos)" : 
+                         plan === "7days" ? "7 Dias" : "15 Dias";
+        
+        console.log(`=== ENVIANDO EMAIL COM CHAVE DE LICENÇA ===`);
+        console.log(`Email destino: ${emailToUse}`);
+        console.log(`Chave: ${activationKey}`);
+        console.log(`Plano: ${planName}`);
+        
+        await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+        console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${emailToUse}`);
+        
+        res.json({
+          success: true,
+          message: "Pagamento simulado, licença gerada e email enviado com sucesso",
+          data: {
+            userId: user.id,
+            userEmail: emailToUse,
+            activationKey,
+            plan,
+            planName,
+            paymentId: testPayment.id,
+            licenseAction: action,
+            emailSent: true
+          }
+        });
+      } catch (emailError) {
+        console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
+        console.error("Detalhes do erro:", emailError);
+        console.error("Chave que deveria ser enviada:", activationKey);
+        console.error("Email que deveria receber:", emailToUse);
+        
+        res.json({
+          success: true,
+          message: "Licença gerada mas houve erro no envio do email",
+          data: {
+            userId: user.id,
+            userEmail: emailToUse,
+            activationKey,
+            plan,
+            paymentId: testPayment.id,
+            licenseAction: action,
+            emailSent: false,
+            emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error("Erro na simulação de pagamento:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno na simulação",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Registration route
+  app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { email, username, password, firstName, lastName } = registerSchema.parse(req.body);
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email já está em uso" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = await storage.createUser({
+        email,
+        username,
+        password: hashedPassword,
+        firstName,
+        lastName,
+      });
+
+      res.status(201).json({ 
+        user: { ...user, password: undefined },
+        message: "Usuário criado com sucesso" 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Login endpoint
+  app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000), (req, res, next) => {
+    try {
+      loginSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      return res.status(400).json({ message: "Dados inválidos" });
+    }
+
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      
+      if (err) {
+        securityLog.logSuspiciousActivity(clientIp, "AUTH_ERROR", { error: err.message });
+        return res.status(500).json({ message: "Erro de autenticação" });
+      }
+      if (!user) {
+        securityLog.logFailedLogin(clientIp, req.body.email);
+        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+      }
+
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Falha no login" });
+        }
+        
+        const token = generateToken(user.id);
+        res.json({ user: { ...user, password: undefined }, token });
+      });
+    })(req, res, next);
+  });
+
+  // Logout endpoint
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ message: "Falha no logout" });
+      }
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+          return res.status(500).json({ message: "Falha ao destruir sessão" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logout realizado com sucesso" });
+      });
+    });
+  });
+
+  // PIX Payment creation
+  app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      console.log("=== INÍCIO DA CRIAÇÃO DE PAGAMENTO PIX ===");
+      const user = req.user as any;
+      console.log(`Usuário autenticado: ${user.id} - ${user.email}`);
+      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
+      
+      const requestData = createPixPaymentSchema.parse(req.body);
+      console.log("Dados validados:", JSON.stringify(requestData, null, 2));
+      
+      const paymentData = {
+        userId: user.id,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays,
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+      };
+      
+      console.log("Dados do pagamento preparados:", JSON.stringify(paymentData, null, 2));
+      
+      // Create PIX payment with MercadoPago
+      console.log("Criando pagamento no Mercado Pago...");
+      const pixPayment = await createPixPayment(paymentData);
+      console.log("Resposta do Mercado Pago:", JSON.stringify(pixPayment, null, 2));
+      
+      // Store payment in database
+      console.log("Salvando pagamento no banco de dados...");
+      const payment = await storage.createPayment({
+        userId: user.id,
+        preferenceId: pixPayment.preferenceId,
+        externalReference: pixPayment.externalReference,
+        status: "pending",
+        transactionAmount: pixPayment.transactionAmount,
+        currency: pixPayment.currency,
+        plan: paymentData.plan,
+        durationDays: paymentData.durationDays,
+        payerEmail: paymentData.payerEmail,
+        payerFirstName: paymentData.payerFirstName,
+        payerLastName: paymentData.payerLastName,
+        pixQrCode: pixPayment.pixQrCode,
+        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
+      });
+      
+      console.log(`✅ Pagamento salvo no banco: ID ${payment.id}`);
+      console.log("=== PAGAMENTO PIX CRIADO COM SUCESSO ===");
+
+      const response = {
+        success: true,
+        payment: {
+          id: payment.id,
+          externalReference: payment.externalReference,
+          transactionAmount: payment.transactionAmount,
+          currency: payment.currency,
+          plan: payment.plan,
+          durationDays: payment.durationDays,
+          status: payment.status,
+          pixQrCode: payment.pixQrCode,
+          pixQrCodeBase64: payment.pixQrCodeBase64,
+          preferenceId: payment.preferenceId,
+          createdAt: payment.createdAt
+        },
+        initPoint: pixPayment.initPoint
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error("❌ ERRO NA CRIAÇÃO DO PAGAMENTO PIX:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno ao criar pagamento",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Webhook do Mercado Pago para processar pagamentos aprovados
+  app.post("/api/payments/webhook", async (req, res) => {
+    try {
+      console.log("=== WEBHOOK MERCADO PAGO RECEBIDO ===");
+      console.log("Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("Body:", JSON.stringify(req.body, null, 2));
+      
+      const signature = req.headers['x-signature'];
+      const requestId = req.headers['x-request-id'];
+      
+      console.log("Signature:", signature);
+      console.log("Request ID:", requestId);
+      
+      // 2. PROCESSAR APENAS WEBHOOKS DE PAGAMENTO
+      const webhookData = req.body;
+      if (webhookData.type === "payment" && webhookData.data?.id) {
+        const paymentId = webhookData.data.id;
+        console.log(`=== PROCESSANDO PAGAMENTO ${paymentId} ===`);
+        
+        // 3. BUSCAR INFORMAÇÕES DO PAGAMENTO NO MERCADO PAGO
+        console.log("Buscando informações do pagamento no Mercado Pago...");
+        const paymentInfo = await getPaymentInfo(paymentId);
+        console.log("Informações do pagamento:", JSON.stringify(paymentInfo, null, 2));
+        
+        // 4. VERIFICAR SE O PAGAMENTO FOI APROVADO
+        if (paymentInfo?.status === "approved") {
+          console.log(`=== PAGAMENTO APROVADO! ===`);
+          console.log(`Valor: R$ ${paymentInfo.transaction_amount}`);
+          console.log(`External Reference: ${paymentInfo.external_reference}`);
+          
+          // 5. BUSCAR O PAGAMENTO NO BANCO PELA EXTERNAL REFERENCE
+          const paymentRecord = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
+          if (!paymentRecord) {
+            console.log(`❌ Pagamento não encontrado no banco: ${paymentInfo.external_reference}`);
+            return res.status(404).json({ error: "Payment not found in database" });
+          }
+          
+          console.log(`✅ Pagamento encontrado no banco: ID ${paymentRecord.id}`);
+          console.log(`Usuário: ${paymentRecord.userId}`);
+          console.log(`Plano: ${paymentRecord.plan} (${paymentRecord.durationDays} dias)`);
+          
+          // 6. BUSCAR O USUÁRIO
+          const user = await storage.getUser(paymentRecord.userId);
+          if (!user) {
+            console.log(`❌ Usuário não encontrado: ${paymentRecord.userId}`);
+            return res.status(404).json({ error: "User not found" });
+          }
+          
+          console.log(`✅ Usuário encontrado: ${user.email}`);
+          
+          // 6. GERAR CHAVE DE ATIVAÇÃO ÚNICA E CRIAR/ATUALIZAR LICENÇA
+          const { generateUniqueActivationKey, createOrUpdateLicense, findBestEmailForUser } = await import('./license-utils');
+          
+          const activationKey = await generateUniqueActivationKey();
+          const { license, action } = await createOrUpdateLicense(
+            user.id,
+            paymentRecord.plan,
+            paymentRecord.durationDays,
+            activationKey
+          );
+          
+          // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
+          const planName = paymentRecord.plan === "test" ? "Teste (30 minutos)" : 
+                           paymentRecord.plan === "7days" ? "7 Dias" : "15 Dias";
+          
+          // Buscar melhor email disponível
+          const emailToUse = await findBestEmailForUser(user, paymentInfo);
+          
+          // Tentar envio se email válido encontrado
+          if (!emailToUse) {
+            console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
+            console.log(`[EMAIL] - Email usuário: "${user.email}"`);
+            console.log(`[EMAIL] - Email Mercado Pago: "${paymentInfo.payer?.email || 'N/A'}"`);
+            console.log(`[EMAIL] - External reference: "${paymentInfo.external_reference || 'N/A'}"`);
+            console.log(`[EMAIL] ✅ Licença ativada no sistema - usuário pode fazer login para verificar`);
+            
+            // Log estruturado para monitoramento
+            console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
+            console.log(`Usuário ID: ${user.id}`);
+            console.log(`Email cadastrado: ${user.email}`);
+            console.log(`Chave gerada: ${activationKey}`);
+            console.log(`Plano: ${planName}`);
+            console.log(`Válida até: ${license.expiresAt}`);
+            console.log(`Status: ATIVA - Disponível no dashboard`);
+          } else {
+            console.log(`[EMAIL] ✅ Email selecionado para envio: "${emailToUse}"`);
+            
+            try {
+              // Importar função de envio e tentar enviar
+              const { sendLicenseKeyEmail } = await import('./email');
+              await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+              console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
+            } catch (emailError) {
+              console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
+              console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
+            }
+          }
+          
+          console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
+          console.log(`Pagamento: ${paymentId} (R$ ${paymentInfo.transaction_amount/100})`);
+          console.log(`Usuário: ${user.email}`);
+          console.log(`Chave gerada: ${activationKey}`);
+          console.log(`Válida até: ${license.expiresAt}`);
+          console.log(`Ação: Licença ${action}`);
+          
+        } else {
+          console.log(`=== PAGAMENTO NÃO APROVADO ===`);
+          console.log(`Status: ${paymentInfo?.status || 'unknown'}`);
+        }
+      } else {
+        console.log(`=== WEBHOOK IGNORADO ===`);
+        console.log(`Tipo não é payment ou ID não encontrado`);
+      }
+      
+      // 8. SEMPRE RETORNAR 200 PARA EVITAR RETRIES DO MERCADO PAGO
+      res.status(200).json({ received: true });
+      
+    } catch (error) {
+      console.error("❌ ERRO CRÍTICO NO WEBHOOK:", error);
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+      }
+      // Sempre retornar 200 para evitar retries do webhook
+      res.status(200).json({ received: true, error: "Webhook processing failed" });
+    }
+  });
+
+  // User profile endpoints
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+    const user = req.user as any;
+    res.json({ user: { ...user, password: undefined } });
+  });
+
+  app.get("/api/dashboard", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      console.log(`=== CARREGANDO DASHBOARD PARA USUÁRIO ${user.id} ===`);
+      
+      const license = await storage.getLicenseByUserId(user.id);
+      const downloads = await storage.getUserDownloads(user.id);
+
+      if (license) {
+        console.log(`Licença encontrada - ID: ${license.id}, Chave: ${license.key}`);
+        console.log(`Status: ${license.status}, Plano: ${license.plan}`);
+        console.log(`Expira em: ${license.expiresAt}`);
+        console.log(`Tempo atual: ${new Date().toISOString()}`);
+        console.log(`Expirada? ${new Date(license.expiresAt) < new Date()}`);
+        
+        // Verificar se a licença está realmente expirada e atualizar status se necessário
+        const isExpired = new Date(license.expiresAt) < new Date();
+        if (isExpired && license.status === "active") {
+          console.log(`Licença expirada detectada, atualizando status...`);
+          await storage.updateLicense(license.id, { status: "expired" });
+          license.status = "expired";
+        }
+      } else {
+        console.log(`Nenhuma licença encontrada para o usuário ${user.id}`);
+      }
+
+      res.json({
+        user: { ...user, password: undefined },
+        license,
+        downloads,
+        stats: {
+          totalDownloads: downloads.length,
+          lastDownload: downloads[downloads.length - 1]?.downloadedAt,
+        }
+      });
+    } catch (error) {
+      console.error("Dashboard error:", error);
+      res.status(500).json({ message: "Erro ao carregar dashboard" });
+    }
+  });
+
+  // Activate license with key (without HWID for dashboard use)
+  app.post("/api/license/activate", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { key } = activateKeySchema.parse(req.body);
+
+      console.log(`=== INICIANDO ATIVAÇÃO DE LICENÇA ===`);
+      console.log(`Usuário: ${user.id} (${user.email})`);
+      console.log(`Chave solicitada: ${key}`);
+
+      // Check if activation key exists and is not used
+      const activationKey = await storage.getActivationKey(key);
+      if (!activationKey) {
+        console.log(`❌ Chave de ativação não encontrada: ${key}`);
+        return res.status(404).json({ message: "Chave de ativação não encontrada" });
+      }
+
+      if (activationKey.isUsed) {
+        console.log(`❌ Chave já foi utilizada: ${key}`);
+        return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
+      }
+
+      console.log(`✅ Chave válida encontrada - Plano: ${activationKey.plan}, Duração: ${activationKey.durationDays} dias`);
+
+      // Use license utilities for activation
+      const { calculateExpirationDate, calculateTotalMinutes } = await import('./license-utils');
+      
+      const expiryDate = calculateExpirationDate(activationKey.durationDays);
+      const totalMinutes = calculateTotalMinutes(activationKey.durationDays);
+
+      // Buscar licença existente do usuário atual
+      const userExistingLicense = await storage.getLicenseByUserId(user.id);
+
+      // Se o usuário já tem licença, sobrescrever. Se não, criar nova.
+      if (userExistingLicense) {
+        console.log(`=== ATUALIZANDO LICENÇA EXISTENTE DO USUÁRIO ===`);
+        console.log(`Licença atual: ${userExistingLicense.key} → Nova: ${key}`);
+        
+        await storage.updateLicense(userExistingLicense.id, {
+          key: key,
+          status: "active",
+          plan: activationKey.plan,
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null, // Reset HWID para nova ativação
+        });
+        
+        console.log(`✅ LICENÇA ATUALIZADA COM SUCESSO`);
+      } else {
+        console.log(`=== CRIANDO NOVA LICENÇA ===`);
+        
+        await storage.createLicense({
+          userId: user.id,
+          key,
+          plan: activationKey.plan,
+          status: "active",
+          expiresAt: expiryDate,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+        });
+        
+        console.log(`✅ NOVA LICENÇA CRIADA COM SUCESSO`);
+      }
+
+      // Mark activation key as used
+      await storage.markActivationKeyAsUsed(key, user.id);
+      console.log(`✅ Chave marcada como utilizada`);
+
+      res.json({ message: "Licença ativada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Chave inválida", errors: error.errors });
+      }
+      console.error("License activation error:", error);
+      res.status(500).json({ message: "Erro ao ativar licença" });
+    }
+  });
+
+  // Manual activation with HWID protection
+  app.post("/api/license/activate-manual", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { key, hwid } = req.body;
+
+      // Validate input
+      if (!key || typeof key !== 'string') {
+        return res.status(400).json({ message: "Chave de ativação é obrigatória" });
+      }
+      
+      if (!hwid || typeof hwid !== 'string') {
+        return res.status(400).json({ message: "HWID é obrigatório" });
+      }
+
+      console.log(`=== ATIVAÇÃO MANUAL COM HWID ===`);
+      console.log(`Usuário: ${user.id} (${user.email})`);
+      console.log(`Chave: ${key}`);
+      console.log(`HWID: ${hwid}`);
+
+      // Use license utilities for activation
+      const { activateLicenseManually } = await import('./license-utils');
+      const result = await activateLicenseManually(key, hwid, user.id);
+
+      if (result.success) {
+        res.json({ 
+          success: true,
+          message: result.message,
+          license: result.license
+        });
+      } else {
+        res.status(400).json({ 
+          success: false,
+          message: result.message 
+        });
+      }
+    } catch (error) {
+      console.error("Manual license activation error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno durante a ativação" 
+      });
+    }
+  });
+
+  return {} as Server;
+}
