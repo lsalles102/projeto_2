@@ -64,6 +64,9 @@ const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication first
+  await setupAuth(app);
+
   // Health check endpoint for monitoring
   app.get("/api/health", async (req, res) => {
     try {
