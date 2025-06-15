@@ -12,6 +12,7 @@ import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { sendLicenseKeyEmail } from "./email";
 import { getBaseUrl } from "./config";
+import { generateUniqueActivationKey, createOrUpdateLicense } from "./license-utils";
 
 // Rate limiting map
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -1290,7 +1291,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Use license utilities for robust key generation and license creation
-      const { generateUniqueActivationKey, createOrUpdateLicense } = await import('./license-utils');
       
       const activationKey = await generateUniqueActivationKey();
       
@@ -1302,12 +1302,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Create/update license automatically using utilities
-      const { createOrUpdateLicense } = await import('./license-utils');
       const { license, action } = await createOrUpdateLicense(
         user.id,
         "test",
-        0.021, // 30 minutes
-        user.id
+        0.021 // 30 minutes
       );
 
       res.json({
