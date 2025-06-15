@@ -8,10 +8,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+const finalUrl = process.env.DATABASE_URL;
+
 // Configure postgres connection for production deployment
 const isProduction = process.env.NODE_ENV === 'production';
 
-const client = postgres(process.env.DATABASE_URL, {
+const client = postgres(finalUrl!, {
   max: isProduction ? 20 : 10,
   idle_timeout: isProduction ? 30 : 20,
   connect_timeout: isProduction ? 30 : 10,
