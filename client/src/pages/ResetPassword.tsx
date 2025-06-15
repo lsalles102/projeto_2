@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, CheckCircle, AlertCircle } from "lucide-react";
 import { resetPasswordSchema } from "@shared/schema";
+import { PasswordValidator, getPasswordStrength, isPasswordValid } from "@/components/PasswordValidator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { z } from "zod";
@@ -20,6 +21,7 @@ export default function ResetPassword() {
   const [location] = useLocation();
   const [token, setToken] = useState<string>("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [password, setPassword] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -146,26 +148,32 @@ export default function ResetPassword() {
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nova Senha</Label>
+              <Label htmlFor="password">
+                Nova Senha
+                {password && (
+                  <span className={`ml-2 text-xs ${getPasswordStrength(password).color}`}>
+                    {getPasswordStrength(password).label}
+                  </span>
+                )}
+              </Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="Digite sua nova senha"
-                {...form.register("password")}
+                {...form.register("password", {
+                  onChange: (e) => setPassword(e.target.value)
+                })}
                 className={form.formState.errors.password ? "border-red-500" : ""}
               />
-              <div className="text-xs text-gray-500 mt-1">
-                A senha deve conter pelo menos:
-                <ul className="list-disc list-inside mt-1 space-y-0.5">
-                  <li>8 caracteres</li>
-                  <li>1 letra minúscula (a-z)</li>
-                  <li>1 letra maiúscula (A-Z)</li>
-                  <li>1 número (0-9)</li>
-                  <li>1 caractere especial (@$!%*?&)</li>
-                </ul>
-              </div>
+              
+              {password && (
+                <div className="mt-3">
+                  <PasswordValidator password={password} showTitle={false} />
+                </div>
+              )}
+              
               {form.formState.errors.password && (
-                <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
+                <p className="text-sm text-red-500 mt-2">{form.formState.errors.password.message}</p>
               )}
             </div>
 

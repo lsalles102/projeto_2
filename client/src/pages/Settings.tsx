@@ -158,25 +158,31 @@ export default function Settings() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="newPassword">Nova Senha</Label>
+                      <Label htmlFor="newPassword">
+                        Nova Senha
+                        {newPassword && (
+                          <span className={`ml-2 text-xs ${getPasswordStrength(newPassword).color}`}>
+                            {getPasswordStrength(newPassword).label}
+                          </span>
+                        )}
+                      </Label>
                       <Input
                         id="newPassword"
                         type="password"
-                        {...passwordForm.register("newPassword")}
+                        {...passwordForm.register("newPassword", {
+                          onChange: (e) => setNewPassword(e.target.value)
+                        })}
                         className="bg-background/50 border-primary/20 focus:border-primary"
                       />
-                      <div className="text-xs text-gray-400 mt-1">
-                        A senha deve conter pelo menos:
-                        <ul className="list-disc list-inside mt-1 space-y-0.5">
-                          <li>8 caracteres</li>
-                          <li>1 letra minúscula (a-z)</li>
-                          <li>1 letra maiúscula (A-Z)</li>
-                          <li>1 número (0-9)</li>
-                          <li>1 caractere especial (@$!%*?&)</li>
-                        </ul>
-                      </div>
+                      
+                      {newPassword && (
+                        <div className="mt-3">
+                          <PasswordValidator password={newPassword} showTitle={false} />
+                        </div>
+                      )}
+                      
                       {passwordForm.formState.errors.newPassword && (
-                        <p className="text-sm text-red-500 mt-1">
+                        <p className="text-sm text-red-500 mt-2">
                           {passwordForm.formState.errors.newPassword.message}
                         </p>
                       )}
