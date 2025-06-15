@@ -129,17 +129,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Pagamento teste criado: ID ${testPayment.id}`);
 
       // Use license utilities for robust key generation and license creation
-      const { generateUniqueActivationKey, createOrUpdateLicense } = await import('./license-utils');
-      
-      const activationKey = await generateUniqueActivationKey();
-      console.log(`Chave de ativação gerada: ${activationKey}`);
+      const { createOrUpdateLicense } = await import('./license-utils');
 
       // Create/update license automatically using utilities
-      const { license, action } = await createOrUpdateLicense(
+      const { license, action, licenseKey } = await createOrUpdateLicense(
         user.id,
         plan,
-        durationDays,
-        activationKey
+        durationDays
       );
 
       console.log(`Nova licença criada para usuário ${user.id}`);
@@ -151,10 +147,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`=== ENVIANDO EMAIL COM CHAVE DE LICENÇA ===`);
         console.log(`Email destino: ${emailToUse}`);
-        console.log(`Chave: ${activationKey}`);
+        console.log(`Chave: ${licenseKey}`);
         console.log(`Plano: ${planName}`);
         
-        await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+        await sendLicenseKeyEmail(emailToUse, licenseKey, planName);
         console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${emailToUse}`);
         
         res.json({
@@ -163,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             userId: user.id,
             userEmail: emailToUse,
-            activationKey,
+            licenseKey,
             plan,
             planName,
             paymentId: testPayment.id,
@@ -174,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (emailError) {
         console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
         console.error("Detalhes do erro:", emailError);
-        console.error("Chave que deveria ser enviada:", activationKey);
+        console.error("Chave que deveria ser enviada:", licenseKey);
         console.error("Email que deveria receber:", emailToUse);
         
         res.json({
@@ -183,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             userId: user.id,
             userEmail: emailToUse,
-            activationKey,
+            licenseKey,
             plan,
             paymentId: testPayment.id,
             licenseAction: action,
@@ -397,6 +393,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 3. BUSCAR INFORMAÇÕES DO PAGAMENTO NO MERCADO PAGO
         console.log("Buscando informações do pagamento no Mercado Pago...");
         const paymentInfo = await getPaymentInfo(paymentId);
+        if (!paymentInfo) {
+          console.log(`❌ Não foi possível obter informações do pagamento ${paymentId}`);
+          return res.status(200).json({ received: true, error: "Payment info not found" });
+        }
         console.log("Informações do pagamento:", JSON.stringify(paymentInfo, null, 2));
         
         // 4. VERIFICAR SE O PAGAMENTO FOI APROVADO
@@ -406,6 +406,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`External Reference: ${paymentInfo.external_reference}`);
           
           // 5. BUSCAR O PAGAMENTO NO BANCO PELA EXTERNAL REFERENCE
+          if (!paymentInfo.external_reference) {
+            console.log(`❌ External reference não encontrada no pagamento`);
+            return res.status(400).json({ error: "External reference missing" });
+          }
+          
           const paymentRecord = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
           if (!paymentRecord) {
             console.log(`❌ Pagamento não encontrado no banco: ${paymentInfo.external_reference}`);
@@ -426,14 +431,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Usuário encontrado: ${user.email}`);
           
           // 6. GERAR CHAVE DE ATIVAÇÃO ÚNICA E CRIAR/ATUALIZAR LICENÇA
-          const { generateUniqueActivationKey, createOrUpdateLicense, findBestEmailForUser } = await import('./license-utils');
+          const { createOrUpdateLicense, findBestEmailForUser } = await import('./license-utils');
           
-          const activationKey = await generateUniqueActivationKey();
-          const { license, action } = await createOrUpdateLicense(
+          const { license, action, licenseKey } = await createOrUpdateLicense(
             user.id,
             paymentRecord.plan,
-            paymentRecord.durationDays,
-            activationKey
+            paymentRecord.durationDays
           );
           
           // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
@@ -455,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
             console.log(`Usuário ID: ${user.id}`);
             console.log(`Email cadastrado: ${user.email}`);
-            console.log(`Chave gerada: ${activationKey}`);
+            console.log(`Chave gerada: ${licenseKey}`);
             console.log(`Plano: ${planName}`);
             console.log(`Válida até: ${license.expiresAt}`);
             console.log(`Status: ATIVA - Disponível no dashboard`);
@@ -465,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               // Importar função de envio e tentar enviar
               const { sendLicenseKeyEmail } = await import('./email');
-              await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+              await sendLicenseKeyEmail(emailToUse, licenseKey, planName);
               console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
             } catch (emailError) {
               console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
@@ -474,9 +477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
-          console.log(`Pagamento: ${paymentId} (R$ ${paymentInfo.transaction_amount/100})`);
+          console.log(`Pagamento: ${paymentId} (R$ ${(paymentInfo.transaction_amount || 0)/100})`);
           console.log(`Usuário: ${user.email}`);
-          console.log(`Chave gerada: ${activationKey}`);
+          console.log(`Chave gerada: ${licenseKey}`);
           console.log(`Válida até: ${license.expiresAt}`);
           console.log(`Ação: Licença ${action}`);
           
