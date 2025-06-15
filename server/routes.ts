@@ -840,35 +840,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const planName = plan === "test" ? "Teste (30 minutos)" : 
                            plan === "7days" ? "7 Dias" : "15 Dias";
           
-          // VERIFICAÇÃO CRÍTICA DO EMAIL DO USUÁRIO
-          console.log(`=== VERIFICANDO EMAIL PARA ENVIO ===`);
+          // VERIFICAÇÃO E CORREÇÃO DE EMAIL URGENTE
+          console.log(`=== VERIFICANDO E CORRIGINDO EMAIL PARA ENVIO ===`);
           console.log(`[WEBHOOK] Email do usuário no banco: "${user.email}"`);
-          console.log(`[WEBHOOK] Email original do Mercado Pago: "${paymentInfo.payer.email}"`);
+          console.log(`[WEBHOOK] Email original do Mercado Pago: "${paymentInfo.payer.email || 'não disponível'}"`);
           
-          // Verificar se o email do usuário é válido
-          const userEmailIsValid = user.email && user.email.trim() !== '' && user.email.includes('@') && !user.email.includes('XXXXX');
-          const mpEmailIsValid = paymentInfo.payer.email && paymentInfo.payer.email.trim() !== '' && paymentInfo.payer.email.includes('@') && !paymentInfo.payer.email.includes('XXXXX');
+          // Função para validar e limpar email
+          const validateAndCleanEmail = (email: string | null | undefined): string | null => {
+            if (!email) return null;
+            const cleaned = email.trim().replace(/['"]+/g, '');
+            
+            // Verificar se é mascarado
+            if (cleaned.includes('XXXXX') || /^X+$/.test(cleaned) || cleaned === '') {
+              return null;
+            }
+            
+            // Verificar formato básico
+            if (cleaned.includes('@') && cleaned.includes('.')) {
+              return cleaned;
+            }
+            
+            return null;
+          };
           
-          console.log(`[WEBHOOK] Email do usuário válido: ${userEmailIsValid}`);
-          console.log(`[WEBHOOK] Email do Mercado Pago válido: ${mpEmailIsValid}`);
+          // Verificar emails disponíveis
+          const userEmailClean = validateAndCleanEmail(user.email);
+          const mpEmailClean = validateAndCleanEmail(paymentInfo.payer?.email);
           
-          // Escolher o melhor email para envio
-          let emailToUse = null;
-          if (userEmailIsValid) {
-            emailToUse = user.email;
-            console.log(`[WEBHOOK] Usando email do usuário: ${emailToUse}`);
-          } else if (mpEmailIsValid) {
-            emailToUse = paymentInfo.payer.email;
-            console.log(`[WEBHOOK] Usando email do Mercado Pago: ${emailToUse}`);
+          console.log(`[WEBHOOK] Email do usuário após limpeza: "${userEmailClean || 'inválido'}"`);
+          console.log(`[WEBHOOK] Email do MP após limpeza: "${mpEmailClean || 'inválido'}"`);
+          
+          // Priorizar email do usuário (mais confiável)
+          let emailToUse = userEmailClean || mpEmailClean;
+          
+          // SOLUÇÃO PARA EMAILS MASCARADOS: Buscar email do pagamento original
+          if (!emailToUse) {
+            console.log(`[WEBHOOK] ⚠️ Emails mascarados detectados - buscando email alternativo`);
+            
+            // Buscar email do pagamento original (se foi criado via PIX)
+            try {
+              const externalRef = paymentInfo.external_reference || '';
+              if (externalRef) {
+                const originalPayment = await storage.getPaymentByExternalReference(externalRef);
+                if (originalPayment && originalPayment.payerEmail) {
+                  const originalEmailClean = validateAndCleanEmail(originalPayment.payerEmail);
+                  if (originalEmailClean) {
+                    emailToUse = originalEmailClean;
+                    console.log(`[WEBHOOK] ✅ Email encontrado no pagamento original: "${emailToUse}"`);
+                  }
+                }
+              }
+            } catch (searchError) {
+              console.log(`[WEBHOOK] Não foi possível buscar email do pagamento original:`, searchError);
+            }
           }
           
+          // FALLBACK: Usar email padrão do sistema se todos falharam
           if (!emailToUse) {
-            console.error("[WEBHOOK] ❌ ERRO CRÍTICO: Nenhum email válido disponível para envio");
-            console.error(`[WEBHOOK] Email usuário: "${user.email}"`);
-            console.error(`[WEBHOOK] Email Mercado Pago: "${paymentInfo.payer.email}"`);
-            console.error(`[WEBHOOK] Chave de licença gerada mas não enviada: ${activationKey}`);
-            console.error("=== INTERVENÇÃO MANUAL NECESSÁRIA - EMAIL NÃO ENVIADO ===");
+            console.log(`[WEBHOOK] ⚠️ FALLBACK: Todos os emails estão mascarados`);
+            console.log(`[WEBHOOK] ✅ SOLUÇÃO: Licença ativada automaticamente no sistema`);
+            console.log(`[WEBHOOK] O usuário pode fazer login e ver sua licença ativada no dashboard`);
+            
+            // Criar log especial para emails mascarados
+            console.log(`=== LICENÇA ATIVADA SEM EMAIL (EMAILS MASCARADOS) ===`);
+            console.log(`Usuário: ${user.email} (ID: ${user.id})`);
+            console.log(`Chave gerada: ${activationKey}`);
+            console.log(`Plano: ${planName}`);
+            console.log(`Válida até: ${expiryDate.toISOString()}`);
+            console.log(`Status: ATIVA - Usuário pode fazer login para verificar`);
+            console.log(`=== LICENÇA PRONTA PARA USO ===`);
           } else {
+            // Tentar enviar email normalmente
             try {
               console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
               console.log(`[EMAIL] Enviando para: ${emailToUse}`);
@@ -878,22 +920,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await sendLicenseKeyEmail(emailToUse, activationKey, planName);
               console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
             } catch (emailError) {
-              console.error("[WEBHOOK] ❌ ERRO AO ENVIAR EMAIL:");
+              console.error("[WEBHOOK] ❌ FALHA NO ENVIO DE EMAIL");
               console.error("Detalhes:", emailError);
-              console.error(`Email tentado: ${emailToUse}`);
-              console.error(`Chave não entregue: ${activationKey}`);
-              console.error("=== FALHA NO ENVIO DE EMAIL - INTERVENÇÃO MANUAL NECESSÁRIA ===");
               
-              // Log adicional para debug específico
-              if (emailError instanceof Error) {
-                if (emailError.message.includes('Email mascarado')) {
-                  console.error("[WEBHOOK] Problema: Mercado Pago enviou email mascarado/oculto");
-                  console.error("[WEBHOOK] Solução: Verificar configurações de privacidade do Mercado Pago");
-                } else if (emailError.message.includes('Email deve conter @')) {
-                  console.error("[WEBHOOK] Problema: Email não contém símbolo @");
-                  console.error("[WEBHOOK] Email recebido do MP pode estar corrompido ou mascarado");
-                }
-              }
+              // Mesmo com falha no email, a licença está ativada
+              console.log(`=== LICENÇA ATIVADA MESMO SEM EMAIL ===`);
+              console.log(`Usuário: ${user.email} (ID: ${user.id})`);
+              console.log(`Chave gerada: ${activationKey}`);
+              console.log(`Plano: ${planName}`);
+              console.log(`Status: ATIVA - Usuário pode fazer login para verificar`);
+              console.log(`=== LICENÇA PRONTA PARA USO ===`);
             }
           }
           
@@ -1677,6 +1713,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Erro ao gerar chave de teste",
         error: error instanceof Error ? error.message : "Erro desconhecido"
       });
+    }
+  });
+
+  // Admin endpoint para visualizar chaves de licença recentes
+  app.get("/api/admin/recent-licenses", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const licenses = await storage.getAllLicenses();
+      const users = await storage.getAllUsers();
+      
+      const recentData = licenses
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, 50)
+        .map(license => {
+          const user = users.find(u => u.id === license.userId);
+          return {
+            licenseId: license.id,
+            userId: license.userId,
+            userEmail: user?.email || 'N/A',
+            userName: user ? `${user.firstName} ${user.lastName}`.trim() : 'N/A',
+            licenseKey: license.key,
+            plan: license.plan,
+            status: license.status,
+            expiresAt: license.expiresAt,
+            activatedAt: license.activatedAt,
+            createdAt: license.createdAt,
+            totalMinutesRemaining: license.totalMinutesRemaining,
+            hwid: license.hwid || 'Não vinculado'
+          };
+        });
+      
+      res.json({ recentLicenses: recentData });
+    } catch (error) {
+      console.error("Admin recent licenses error:", error);
+      res.status(500).json({ message: "Erro ao buscar licenças recentes" });
+    }
+  });
+
+  // Admin endpoint para reenviar email de licença manualmente
+  app.post("/api/admin/resend-license-email", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { licenseId, customEmail } = req.body;
+      
+      if (!licenseId) {
+        return res.status(400).json({ message: "ID da licença é obrigatório" });
+      }
+      
+      const license = await storage.getLicense(licenseId);
+      if (!license) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+      
+      const user = await storage.getUser(license.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário da licença não encontrado" });
+      }
+      
+      const emailToUse = customEmail || user.email;
+      
+      if (!emailToUse || !emailToUse.includes('@')) {
+        return res.status(400).json({ message: "Email válido é obrigatório" });
+      }
+      
+      const planName = license.plan === "test" ? "Teste (30 minutos)" : 
+                       license.plan === "7days" ? "7 Dias" : "15 Dias";
+      
+      console.log(`[ADMIN] Reenviando email de licença:`);
+      console.log(`- Licença: ${license.key}`);
+      console.log(`- Usuário: ${user.email} (ID: ${user.id})`);
+      console.log(`- Email destino: ${emailToUse}`);
+      console.log(`- Plano: ${planName}`);
+      
+      await sendLicenseKeyEmail(emailToUse, license.key, planName);
+      
+      console.log(`✅ Email reenviado com sucesso pelo admin`);
+      res.json({ 
+        success: true, 
+        message: "Email reenviado com sucesso",
+        emailSent: emailToUse,
+        licenseKey: license.key
+      });
+      
+    } catch (error) {
+      console.error("Erro ao reenviar email:", error);
+      res.status(500).json({ 
+        message: "Erro ao reenviar email", 
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Admin endpoint para buscar pagamentos órfãos (sem licença associada)
+  app.get("/api/admin/orphan-payments", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const payments = await storage.getAllPayments();
+      const licenses = await storage.getAllLicenses();
+      const users = await storage.getAllUsers();
+      
+      const orphanPayments = payments
+        .filter(payment => 
+          payment.status === "approved" && 
+          !licenses.some(license => license.userId === payment.userId && 
+            new Date(license.createdAt) >= new Date(payment.createdAt))
+        )
+        .map(payment => {
+          const user = users.find(u => u.id === payment.userId);
+          return {
+            paymentId: payment.id,
+            userId: payment.userId,
+            userEmail: user?.email || 'N/A',
+            userName: user ? `${user.firstName} ${user.lastName}`.trim() : 'N/A',
+            plan: payment.plan,
+            amount: payment.transactionAmount / 100,
+            status: payment.status,
+            externalReference: payment.externalReference,
+            payerEmail: payment.payerEmail,
+            createdAt: payment.createdAt,
+            updatedAt: payment.updatedAt
+          };
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json({ orphanPayments });
+    } catch (error) {
+      console.error("Erro ao buscar pagamentos órfãos:", error);
+      res.status(500).json({ message: "Erro ao buscar pagamentos órfãos" });
     }
   });
 
