@@ -9,18 +9,18 @@ import { storage } from "./storage";
 import { db } from "./db";
 import type { User } from "@shared/schema";
 
-const JWT_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || (() => {
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required in production');
+    throw new Error('JWT_SECRET environment variable is required in production');
   }
   console.warn('⚠️ Using default JWT secret in development - CHANGE IN PRODUCTION');
   return "dev-jwt-secret-never-use-in-production";
 })();
 
 export function getSession() {
-  const sessionSecret = process.env.SUPABASE_ANON_KEY || (() => {
+  const sessionSecret = process.env.SESSION_SECRET || (() => {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('SUPABASE_ANON_KEY environment variable is required in production');
+      throw new Error('SESSION_SECRET environment variable is required in production');
     }
     console.warn('⚠️ Using default session secret in development - CHANGE IN PRODUCTION');
     return "dev-session-secret-never-use-in-production";
