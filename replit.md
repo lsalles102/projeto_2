@@ -222,6 +222,10 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 15, 2025. Completed migration from Replit Agent to standard Replit environment
 - June 15, 2025. Fixed authentication system - added missing database columns (profile_image_url, google_id)
 - June 15, 2025. Enhanced user schema with licenses array column for storing user license keys
+- June 15, 2025. Migrated to centralized license system - licenses now stored in users.licenses JSONB column
+- June 15, 2025. Replaced activation_keys table logic with user-centric license management
+- June 15, 2025. Created user-license.ts module for centralized license operations
+- June 15, 2025. Updated all license APIs to use new centralized system
 - June 15, 2025. All systems operational: authentication, payments, licensing, database integration
 
 ## User Preferences

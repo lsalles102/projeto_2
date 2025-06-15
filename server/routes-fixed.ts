@@ -529,23 +529,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       console.log(`=== CARREGANDO DASHBOARD PARA USUÁRIO ${user.id} ===`);
       
-      const license = await storage.getLicenseByUserId(user.id);
+      // Use new centralized license system
+      const { getUserLicense } = await import('./user-license');
+      const license = await getUserLicense(user.id);
       const downloads = await storage.getUserDownloads(user.id);
 
       if (license) {
-        console.log(`Licença encontrada - ID: ${license.id}, Chave: ${license.key}`);
+        console.log(`Licença encontrada - Chave: ${license.key}`);
         console.log(`Status: ${license.status}, Plano: ${license.plan}`);
         console.log(`Expira em: ${license.expiresAt}`);
         console.log(`Tempo atual: ${new Date().toISOString()}`);
         console.log(`Expirada? ${new Date(license.expiresAt) < new Date()}`);
-        
-        // Verificar se a licença está realmente expirada e atualizar status se necessário
-        const isExpired = new Date(license.expiresAt) < new Date();
-        if (isExpired && license.status === "active") {
-          console.log(`Licença expirada detectada, atualizando status...`);
-          await storage.updateLicense(license.id, { status: "expired" });
-          license.status = "expired";
-        }
       } else {
         console.log(`Nenhuma licença encontrada para o usuário ${user.id}`);
       }
@@ -575,72 +569,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Usuário: ${user.id} (${user.email})`);
       console.log(`Chave solicitada: ${key}`);
 
-      // Check if activation key exists and is not used
-      const activationKey = await storage.getActivationKey(key);
-      if (!activationKey) {
-        console.log(`❌ Chave de ativação não encontrada: ${key}`);
-        return res.status(404).json({ message: "Chave de ativação não encontrada" });
-      }
+      // Use new centralized license system
+      const { activateLicenseKeyForUser } = await import('./user-license');
+      const result = await activateLicenseKeyForUser(user.id, key);
 
-      if (activationKey.isUsed) {
-        console.log(`❌ Chave já foi utilizada: ${key}`);
-        return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
-      }
-
-      console.log(`✅ Chave válida encontrada - Plano: ${activationKey.plan}, Duração: ${activationKey.durationDays} dias`);
-
-      // Use license utilities for activation
-      const { calculateExpirationDate, calculateTotalMinutes } = await import('./license-utils');
-      
-      const expiryDate = calculateExpirationDate(activationKey.durationDays);
-      const totalMinutes = calculateTotalMinutes(activationKey.durationDays);
-
-      // Buscar licença existente do usuário atual
-      const userExistingLicense = await storage.getLicenseByUserId(user.id);
-
-      // Se o usuário já tem licença, sobrescrever. Se não, criar nova.
-      if (userExistingLicense) {
-        console.log(`=== ATUALIZANDO LICENÇA EXISTENTE DO USUÁRIO ===`);
-        console.log(`Licença atual: ${userExistingLicense.key} → Nova: ${key}`);
-        
-        await storage.updateLicense(userExistingLicense.id, {
-          key: key,
-          status: "active",
-          plan: activationKey.plan,
-          expiresAt: expiryDate,
-          totalMinutesRemaining: totalMinutes,
-          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-          hoursRemaining: Math.ceil(totalMinutes / 60),
-          minutesRemaining: totalMinutes,
-          activatedAt: new Date(),
-          hwid: null, // Reset HWID para nova ativação
+      if (result.success) {
+        console.log(`✅ Licença ativada com sucesso: ${key}`);
+        res.json({ 
+          message: "Licença ativada com sucesso",
+          license: result.license 
         });
-        
-        console.log(`✅ LICENÇA ATUALIZADA COM SUCESSO`);
       } else {
-        console.log(`=== CRIANDO NOVA LICENÇA ===`);
-        
-        await storage.createLicense({
-          userId: user.id,
-          key,
-          plan: activationKey.plan,
-          status: "active",
-          expiresAt: expiryDate,
-          totalMinutesRemaining: totalMinutes,
-          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-          hoursRemaining: Math.ceil(totalMinutes / 60),
-          minutesRemaining: totalMinutes,
-          activatedAt: new Date(),
-        });
-        
-        console.log(`✅ NOVA LICENÇA CRIADA COM SUCESSO`);
+        console.log(`❌ Falha na ativação: ${result.message}`);
+        res.status(400).json({ message: result.message });
       }
-
-      // Mark activation key as used
-      await storage.markActivationKeyAsUsed(key, user.id);
-      console.log(`✅ Chave marcada como utilizada`);
-
-      res.json({ message: "Licença ativada com sucesso" });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Chave inválida", errors: error.errors });
@@ -691,6 +633,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Erro interno durante a ativação" 
+      });
+    }
+  });
+
+  // License heartbeat endpoint for loader
+  app.post("/api/licenses/heartbeat", rateLimit(60, 60 * 1000), async (req, res) => {
+    try {
+      const { licenseKey, hwid } = req.body;
+
+      if (!licenseKey || !hwid) {
+        return res.status(400).json({ message: "License key e HWID são obrigatórios" });
+      }
+
+      const { updateLicenseHeartbeat } = await import('./user-license');
+      const result = await updateLicenseHeartbeat(licenseKey, hwid);
+
+      if (result.success) {
+        res.json({
+          valid: true,
+          license: result.license,
+          message: result.message
+        });
+      } else {
+        res.status(400).json({
+          valid: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.error("Heartbeat error:", error);
+      res.status(500).json({
+        valid: false,
+        message: "Erro interno no servidor"
+      });
+    }
+  });
+
+  // Set HWID endpoint for loader
+  app.post("/api/licenses/set-hwid", rateLimit(10, 60 * 1000), async (req, res) => {
+    try {
+      const { licenseKey, hwid } = req.body;
+
+      if (!licenseKey || !hwid) {
+        return res.status(400).json({ message: "License key e HWID são obrigatórios" });
+      }
+
+      const { getUserByLicenseKey, activateUserLicense } = await import('./user-license');
+      const result = await getUserByLicenseKey(licenseKey);
+
+      if (!result) {
+        return res.status(404).json({ message: "Licença não encontrada" });
+      }
+
+      const { user, license } = result;
+
+      if (license.status === "expired") {
+        return res.status(400).json({ message: "Licença expirada" });
+      }
+
+      if (license.hwid && license.hwid !== hwid) {
+        return res.status(400).json({ message: "HWID já vinculado a outro dispositivo" });
+      }
+
+      // Activate license with HWID
+      const activationResult = await activateUserLicense(user.id, licenseKey, hwid);
+
+      if (activationResult.success) {
+        res.json({
+          success: true,
+          message: "HWID definido com sucesso",
+          license: activationResult.license
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: activationResult.message
+        });
+      }
+    } catch (error) {
+      console.error("Set HWID error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro interno no servidor"
       });
     }
   });
