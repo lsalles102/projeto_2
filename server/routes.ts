@@ -677,68 +677,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`=== PROCESSANDO PAGAMENTO APROVADO ===`);
           console.log(`Email do comprador: ${paymentInfo.payer.email}`);
           
-          // 1. ENCONTRAR USUÁRIO CORRETO BASEADO NO EXTERNAL_REFERENCE
-          console.log(`=== IDENTIFICANDO USUÁRIO CORRETO ===`);
-          console.log(`External Reference: ${paymentInfo.external_reference}`);
+          // 1. ENCONTRAR OU CRIAR USUÁRIO AUTOMATICAMENTE
+          let user = await storage.getUserByEmail(paymentInfo.payer.email);
           
-          let user = null;
-          
-          // Primeiro, tentar extrair user ID do external_reference
-          if (paymentInfo.external_reference && paymentInfo.external_reference.includes('payment_user_')) {
-            const userIdMatch = paymentInfo.external_reference.match(/payment_user_(\d+)_/);
-            if (userIdMatch) {
-              const userId = parseInt(userIdMatch[1]);
-              console.log(`✅ User ID extraído do external_reference: ${userId}`);
-              
-              user = await storage.getUser(userId);
-              if (user) {
-                console.log(`✅ Usuário encontrado via external_reference: ${user.id} - ${user.email}`);
-                
-                // Verificar se o email bate (validação de segurança)
-                if (user.email !== paymentInfo.payer.email) {
-                  console.error(`❌ ERRO CRÍTICO: User ID ${userId} tem email ${user.email}, mas pagamento é de ${paymentInfo.payer.email}`);
-                  console.error(`Possível tentativa de fraude ou erro na geração do external_reference`);
-                  res.status(400).json({ error: "External reference não corresponde ao usuário do pagamento" });
-                  return;
-                }
-              } else {
-                console.error(`❌ ERRO: User ID ${userId} extraído do external_reference não existe no banco`);
-                res.status(400).json({ error: "Usuário não encontrado" });
-                return;
-              }
-            }
-          }
-          
-          // Fallback: buscar por email (para external_references antigos)
-          if (!user) {
-            console.log(`⚠️ Fallback: Buscando usuário por email (external_reference sem user ID)`);
-            user = await storage.getUserByEmail(paymentInfo.payer.email);
+          if (user) {
+            console.log(`✅ Usuário encontrado: ${user.id} - ${user.email}`);
+          } else {
+            console.log(`=== CRIANDO USUÁRIO AUTOMATICAMENTE ===`);
             
-            if (user) {
-              console.log(`✅ Usuário encontrado por email: ${user.id} - ${user.email}`);
-            } else {
-              console.log(`=== CRIANDO USUÁRIO AUTOMATICAMENTE ===`);
-              
-              // Extrair username do email (parte antes do @)
-              const username = paymentInfo.payer.email.split('@')[0];
-              
-              // Gerar senha aleatória
-              const randomPassword = crypto.randomBytes(8).toString('hex');
-              const hashedPassword = await bcrypt.hash(randomPassword, 10);
-              
-              // Criar usuário automaticamente
-              user = await storage.createUser({
-                email: paymentInfo.payer.email,
-                username: username,
-                firstName: paymentInfo.payer.first_name || "Novo",
-                lastName: paymentInfo.payer.last_name || "Usuário", 
-                password: hashedPassword
-              });
-              
-              console.log(`✅ Usuário criado automaticamente: ${user.id} - ${user.email}`);
-              console.log(`Username gerado: ${username}`);
-              console.log(`Nome: ${user.firstName} ${user.lastName}`);
-            }
+            // Extrair username do email (parte antes do @)
+            const username = paymentInfo.payer.email.split('@')[0];
+            
+            // Gerar senha aleatória
+            const randomPassword = crypto.randomBytes(8).toString('hex');
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+            
+            // Criar usuário automaticamente
+            user = await storage.createUser({
+              email: paymentInfo.payer.email,
+              username: username,
+              firstName: paymentInfo.payer.first_name || "Novo",
+              lastName: paymentInfo.payer.last_name || "Usuário", 
+              password: hashedPassword
+            });
+            
+            console.log(`✅ Usuário criado automaticamente: ${user.id} - ${user.email}`);
+            console.log(`Username gerado: ${username}`);
+            console.log(`Nome: ${user.firstName} ${user.lastName}`);
           }
           
           // 2. DETERMINAR PLANO BASEADO NO VALOR
@@ -761,42 +726,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Plano: ${plan} (${durationDays} dias)`);
           console.log(`Valor: R$ ${transactionAmount/100}`);
           
-          // 3. VERIFICAR PAGAMENTO EXISTENTE E VALIDAR USUÁRIO
+          // 3. VERIFICAR PAGAMENTO EXISTENTE
           console.log(`=== VERIFICANDO PAGAMENTO EXISTENTE ===`);
           let payment = null;
-          
-          // Primeiro, tentar encontrar por external_reference
           if (paymentInfo.external_reference) {
             payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
-            console.log(`Busca por external_reference "${paymentInfo.external_reference}": ${payment ? 'Encontrado' : 'Não encontrado'}`);
-            
-            // VALIDAÇÃO CRÍTICA: Se pagamento encontrado, verificar se o usuário bate
-            if (payment) {
-              const paymentUser = await storage.getUser(payment.userId);
-              if (paymentUser && paymentUser.email !== paymentInfo.payer.email) {
-                console.error(`[WEBHOOK] ❌ ERRO CRÍTICO: External reference ${paymentInfo.external_reference} está vinculado ao usuário ${payment.userId} (${paymentUser.email}), mas o pagamento é de ${paymentInfo.payer.email}`);
-                console.error(`[WEBHOOK] Isto indica um problema na geração de external_reference ou tentativa de fraude.`);
-                res.status(400).json({ error: "External reference não corresponde ao usuário do pagamento" });
-                return;
-              }
-              console.log(`✅ Validação OK: External reference corresponde ao usuário correto (${paymentUser?.email})`);
-            }
+            console.log(`Busca por external_reference: ${payment ? 'Encontrado' : 'Não encontrado'}`);
           }
-          
-          // Se não encontrou por external_reference, tentar por mercadoPagoId
           if (!payment && paymentId) {
             payment = await storage.getPaymentByMercadoPagoId(paymentId);
             console.log(`Busca por mercadoPagoId: ${payment ? 'Encontrado' : 'Não encontrado'}`);
           }
           
-          // 4. CRIAR OU ATUALIZAR PAGAMENTO NO BANCO (VINCULADO AO USUÁRIO CORRETO)
+          // 4. CRIAR OU ATUALIZAR PAGAMENTO NO BANCO
           if (!payment) {
             console.log(`=== CRIANDO NOVO REGISTRO DE PAGAMENTO ===`);
-            console.log(`Vinculando ao usuário: ${user.id} (${user.email})`);
-            console.log(`External Reference: ${paymentInfo.external_reference || `WEBHOOK-${paymentId}`}`);
-            
             payment = await storage.createPayment({
-              userId: user.id, // ✅ USUÁRIO CORRETO baseado no email do pagador
+              userId: user.id,
               plan,
               durationDays,
               transactionAmount,
@@ -809,28 +755,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               payerFirstName: paymentInfo.payer.first_name || "Usuario",
               payerLastName: paymentInfo.payer.last_name || "FovDark",
             });
-            console.log(`✅ Pagamento salvo no banco - ID: ${payment.id}, Usuário: ${user.id}`);
+            console.log(`✅ Pagamento salvo no banco - ID: ${payment.id}`);
           } else if (payment.status === "pending") {
             console.log(`=== ATUALIZANDO PAGAMENTO PENDENTE ===`);
-            console.log(`Pagamento existente: ID ${payment.id}, Usuário: ${payment.userId}`);
-            
-            // VALIDAÇÃO: Verificar se o usuário do pagamento pendente bate com o email do pagador
-            if (payment.userId !== user.id) {
-              console.error(`[WEBHOOK] ❌ ERRO: Pagamento pendente ${payment.id} está vinculado ao usuário ${payment.userId}, mas deveria ser ${user.id}`);
-              console.error(`[WEBHOOK] Email do pagamento: ${payment.payerEmail}, Email do pagador: ${paymentInfo.payer.email}`);
-              res.status(400).json({ error: "Inconsistência entre usuário do pagamento e pagador" });
-              return;
-            }
-            
             await storage.updatePayment(payment.id, {
               status: "approved",
               mercadoPagoId: paymentId,
               statusDetail: paymentInfo.status_detail || "approved",
             });
-            console.log(`✅ Pagamento atualizado para aprovado - ID: ${payment.id}, Usuário: ${payment.userId}`);
+            console.log(`✅ Pagamento atualizado para aprovado - ID: ${payment.id}`);
           } else {
             console.log(`=== PAGAMENTO JÁ PROCESSADO ===`);
-            console.log(`ID: ${payment.id}, Status: ${payment.status}, Usuário: ${payment.userId}`);
+            console.log(`ID: ${payment.id}, Status: ${payment.status}`);
             console.log(`Processando mesmo assim para garantir entrega da licença...`);
           }
           
@@ -846,14 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           console.log(`✅ Chave de ativação salva no banco`);
           
-          // 6. CRIAR OU ATUALIZAR LICENÇA DO USUÁRIO (CORRIGIDO)
-          console.log(`=== PROCESSANDO LICENÇA PARA USUÁRIO CORRETO ===`);
-          console.log(`User ID: ${user.id}`);
-          console.log(`Email: ${user.email}`);
-          console.log(`Plano: ${plan}`);
-          console.log(`Chave gerada: ${activationKey}`);
-          console.log(`External Reference: ${paymentInfo.external_reference}`);
-          
+          // 6. CRIAR OU ATUALIZAR LICENÇA DO USUÁRIO
           const existingLicense = await storage.getLicenseByUserId(user.id);
           
           const now = new Date();
@@ -871,7 +800,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (existingLicense) {
             console.log(`=== RENOVANDO LICENÇA EXISTENTE ===`);
             console.log(`Licença atual: ${existingLicense.key} (Status: ${existingLicense.status})`);
-            console.log(`Vinculada ao usuário: ${existingLicense.userId}`);
             
             await storage.updateLicense(existingLicense.id, {
               key: activationKey,
@@ -888,13 +816,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             console.log(`✅ LICENÇA RENOVADA - Nova chave: ${activationKey}`);
             console.log(`Nova expiração: ${expiryDate.toISOString()}`);
-            console.log(`Usuário: ${user.id} (${user.email})`);
           } else {
             console.log(`=== CRIANDO NOVA LICENÇA ===`);
-            console.log(`Para usuário: ${user.id} (${user.email})`);
             
-            const newLicense = await storage.createLicense({
-              userId: user.id, // ✅ USUÁRIO CORRETO
+            await storage.createLicense({
+              userId: user.id,
               key: activationKey,
               plan,
               status: "active",
@@ -906,13 +832,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               activatedAt: new Date(),
             });
             
-            console.log(`✅ NOVA LICENÇA CRIADA CORRETAMENTE:`);
-            console.log(`- ID da licença: ${newLicense.id}`);
-            console.log(`- Chave: ${activationKey}`);
-            console.log(`- Usuário: ${user.id} (${user.email})`);
-            console.log(`- Plano: ${plan}`);
-            console.log(`- Expira em: ${expiryDate.toISOString()}`);
-            console.log(`- External Reference: ${paymentInfo.external_reference}`);
+            console.log(`✅ NOVA LICENÇA CRIADA - Chave: ${activationKey}`);
+            console.log(`Expira em: ${expiryDate.toISOString()}`);
           }
           
           // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
@@ -1384,7 +1305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { license, action } = await createOrUpdateLicense(
         user.id,
         "test",
-        0.021 // 30 minutes
+        0.021, // 30 minutes
+        activationKey
       );
 
       res.json({
