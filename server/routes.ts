@@ -726,23 +726,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Plano: ${plan} (${durationDays} dias)`);
           console.log(`Valor: R$ ${transactionAmount/100}`);
           
-          // 3. VERIFICAR PAGAMENTO EXISTENTE
+          // 3. VERIFICAR PAGAMENTO EXISTENTE E VALIDAR USUÁRIO
           console.log(`=== VERIFICANDO PAGAMENTO EXISTENTE ===`);
           let payment = null;
+          
+          // Primeiro, tentar encontrar por external_reference
           if (paymentInfo.external_reference) {
             payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
-            console.log(`Busca por external_reference: ${payment ? 'Encontrado' : 'Não encontrado'}`);
+            console.log(`Busca por external_reference "${paymentInfo.external_reference}": ${payment ? 'Encontrado' : 'Não encontrado'}`);
+            
+            // VALIDAÇÃO CRÍTICA: Se pagamento encontrado, verificar se o usuário bate
+            if (payment) {
+              const paymentUser = await storage.getUser(payment.userId);
+              if (paymentUser && paymentUser.email !== paymentInfo.payer.email) {
+                console.error(`[WEBHOOK] ❌ ERRO CRÍTICO: External reference ${paymentInfo.external_reference} está vinculado ao usuário ${payment.userId} (${paymentUser.email}), mas o pagamento é de ${paymentInfo.payer.email}`);
+                console.error(`[WEBHOOK] Isto indica um problema na geração de external_reference ou tentativa de fraude.`);
+                res.status(400).json({ error: "External reference não corresponde ao usuário do pagamento" });
+                return;
+              }
+              console.log(`✅ Validação OK: External reference corresponde ao usuário correto (${paymentUser?.email})`);
+            }
           }
+          
+          // Se não encontrou por external_reference, tentar por mercadoPagoId
           if (!payment && paymentId) {
             payment = await storage.getPaymentByMercadoPagoId(paymentId);
             console.log(`Busca por mercadoPagoId: ${payment ? 'Encontrado' : 'Não encontrado'}`);
           }
           
-          // 4. CRIAR OU ATUALIZAR PAGAMENTO NO BANCO
+          // 4. CRIAR OU ATUALIZAR PAGAMENTO NO BANCO (VINCULADO AO USUÁRIO CORRETO)
           if (!payment) {
             console.log(`=== CRIANDO NOVO REGISTRO DE PAGAMENTO ===`);
+            console.log(`Vinculando ao usuário: ${user.id} (${user.email})`);
+            console.log(`External Reference: ${paymentInfo.external_reference || `WEBHOOK-${paymentId}`}`);
+            
             payment = await storage.createPayment({
-              userId: user.id,
+              userId: user.id, // ✅ USUÁRIO CORRETO baseado no email do pagador
               plan,
               durationDays,
               transactionAmount,
@@ -755,18 +774,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               payerFirstName: paymentInfo.payer.first_name || "Usuario",
               payerLastName: paymentInfo.payer.last_name || "FovDark",
             });
-            console.log(`✅ Pagamento salvo no banco - ID: ${payment.id}`);
+            console.log(`✅ Pagamento salvo no banco - ID: ${payment.id}, Usuário: ${user.id}`);
           } else if (payment.status === "pending") {
             console.log(`=== ATUALIZANDO PAGAMENTO PENDENTE ===`);
+            console.log(`Pagamento existente: ID ${payment.id}, Usuário: ${payment.userId}`);
+            
+            // VALIDAÇÃO: Verificar se o usuário do pagamento pendente bate com o email do pagador
+            if (payment.userId !== user.id) {
+              console.error(`[WEBHOOK] ❌ ERRO: Pagamento pendente ${payment.id} está vinculado ao usuário ${payment.userId}, mas deveria ser ${user.id}`);
+              console.error(`[WEBHOOK] Email do pagamento: ${payment.payerEmail}, Email do pagador: ${paymentInfo.payer.email}`);
+              res.status(400).json({ error: "Inconsistência entre usuário do pagamento e pagador" });
+              return;
+            }
+            
             await storage.updatePayment(payment.id, {
               status: "approved",
               mercadoPagoId: paymentId,
               statusDetail: paymentInfo.status_detail || "approved",
             });
-            console.log(`✅ Pagamento atualizado para aprovado - ID: ${payment.id}`);
+            console.log(`✅ Pagamento atualizado para aprovado - ID: ${payment.id}, Usuário: ${payment.userId}`);
           } else {
             console.log(`=== PAGAMENTO JÁ PROCESSADO ===`);
-            console.log(`ID: ${payment.id}, Status: ${payment.status}`);
+            console.log(`ID: ${payment.id}, Status: ${payment.status}, Usuário: ${payment.userId}`);
             console.log(`Processando mesmo assim para garantir entrega da licença...`);
           }
           
@@ -1305,8 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { license, action } = await createOrUpdateLicense(
         user.id,
         "test",
-        0.021, // 30 minutes
-        activationKey
+        0.021 // 30 minutes
       );
 
       res.json({
