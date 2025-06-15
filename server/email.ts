@@ -58,14 +58,36 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
 }
 
 export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
-  // 1. VERIFICAÇÃO CRÍTICA: Garantir que o email não está vazio
-  if (!email || email.trim() === '') {
-    console.error(`[EMAIL] ❌ ERRO CRÍTICO: Email está vazio ou nulo`);
-    console.error(`[EMAIL] Parâmetro recebido: "${email}"`);
+  // 1. SANITIZAR E LIMPAR O EMAIL
+  console.log(`[EMAIL] Email recebido (bruto): "${email}"`);
+  console.log(`[EMAIL] Tipo do email: ${typeof email}`);
+  
+  // Remover espaços, aspas e caracteres inválidos
+  const cleanEmail = email.trim().replace(/['"]+/g, '').replace(/\s+/g, '');
+  console.log(`[EMAIL] Email após limpeza: "${cleanEmail}"`);
+  
+  // 2. VALIDAÇÃO CRÍTICA DO EMAIL
+  if (!cleanEmail || cleanEmail === '') {
+    console.error(`[EMAIL] ❌ ERRO CRÍTICO: Email está vazio após limpeza`);
+    console.error(`[EMAIL] Email original: "${email}"`);
+    console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
     throw new Error('Email do destinatário não pode estar vazio');
   }
   
-  // 2. VERIFICAR SE A CHAVE E PLANO ESTÃO VÁLIDOS
+  // Verificar se contém @
+  if (!cleanEmail.includes('@')) {
+    console.error(`[EMAIL] ❌ ERRO: Email não contém @ - "${cleanEmail}"`);
+    throw new Error('Email deve conter @');
+  }
+  
+  // Validação com regex básico
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    console.error(`[EMAIL] ❌ ERRO: Formato de email inválido - "${cleanEmail}"`);
+    throw new Error('Formato de email inválido');
+  }
+  
+  // 3. VERIFICAR SE A CHAVE E PLANO ESTÃO VÁLIDOS
   if (!licenseKey || licenseKey.trim() === '') {
     console.error(`[EMAIL] ❌ ERRO: Chave de licença está vazia`);
     throw new Error('Chave de licença não pode estar vazia');
@@ -76,22 +98,22 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     throw new Error('Nome do plano não pode estar vazio');
   }
   
-  // 3. LOGS DE VERIFICAÇÃO ANTES DO ENVIO
-  console.log(`[EMAIL] ✅ Iniciando envio de email`);
-  console.log(`[EMAIL] Destinatário: "${email}"`);
+  // 4. LOGS DE VERIFICAÇÃO ANTES DO ENVIO
+  console.log(`[EMAIL] ✅ Email validado com sucesso!`);
+  console.log(`[EMAIL] Destinatário final: "${cleanEmail}"`);
   console.log(`[EMAIL] Chave de licença: "${licenseKey}"`);
   console.log(`[EMAIL] Plano: "${planName}"`);
   
   const transporter = createTransporter();
   
-  // 4. CONFIGURAR OPÇÕES DO EMAIL COM VERIFICAÇÃO ADICIONAL
+  // 5. CONFIGURAR OPÇÕES DO EMAIL COM EMAIL LIMPO
   const fromEmail = process.env.SMTP_USER || 'contato@suportefovdark.shop';
   console.log(`[EMAIL] From: "${fromEmail}"`);
-  console.log(`[EMAIL] To: "${email}"`);
+  console.log(`[EMAIL] To (final): "${cleanEmail}"`);
   
   const mailOptions = {
     from: `"FovDark" <${fromEmail}>`,
-    to: email.trim(), // Garantir que não há espaços extras
+    to: cleanEmail, // Usar email limpo e validado
     subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
@@ -142,22 +164,36 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   };
 
   try {
-    // 5. LOG ANTES DO ENVIO COM TODAS AS INFORMAÇÕES
-    console.log(`[EMAIL] ✅ Tentando enviar email...`);
-    console.log(`[EMAIL] Configuração do email:`);
+    // 6. VERIFICAÇÃO FINAL ANTES DO ENVIO
+    console.log(`[EMAIL] ✅ Verificação final antes do envio:`);
     console.log(`[EMAIL] - From: ${mailOptions.from}`);
-    console.log(`[EMAIL] - To: ${mailOptions.to}`);
+    console.log(`[EMAIL] - To: "${mailOptions.to}"`);
+    console.log(`[EMAIL] - To length: ${mailOptions.to.length}`);
+    console.log(`[EMAIL] - To type: ${typeof mailOptions.to}`);
     console.log(`[EMAIL] - Subject: ${mailOptions.subject}`);
     
+    // Verificação adicional para garantir que o campo to não está vazio
+    if (!mailOptions.to || mailOptions.to.trim() === '') {
+      console.error(`[EMAIL] ❌ ERRO FATAL: Campo 'to' está vazio na configuração final`);
+      console.error(`[EMAIL] Email original: "${email}"`);
+      console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
+      console.error(`[EMAIL] mailOptions.to: "${mailOptions.to}"`);
+      throw new Error('Campo destinatário vazio na configuração final do email');
+    }
+    
+    console.log(`[EMAIL] ✅ Enviando email agora...`);
     const result = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL] ✅ Email enviado com sucesso!`);
-    console.log(`[EMAIL] Destinatário: ${email}`);
+    
+    console.log(`[EMAIL] ✅ EMAIL ENVIADO COM SUCESSO!`);
+    console.log(`[EMAIL] Destinatário: ${cleanEmail}`);
     console.log(`[EMAIL] Message ID: ${result.messageId}`);
     console.log(`[EMAIL] Response: ${JSON.stringify(result.response)}`);
     return result;
+    
   } catch (error) {
     console.error(`[EMAIL] ❌ ERRO CRÍTICO AO ENVIAR EMAIL`);
-    console.error(`[EMAIL] Destinatário: "${email}"`);
+    console.error(`[EMAIL] Email original: "${email}"`);
+    console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
     console.error(`[EMAIL] Erro completo:`, error);
     
     // Log detalhado do erro
@@ -169,12 +205,13 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     // Verificar se é erro de "No recipients defined"
     if (error instanceof Error && error.message.includes('No recipients defined')) {
       console.error(`[EMAIL] ❌ ERRO ESPECÍFICO: No recipients defined`);
-      console.error(`[EMAIL] Valor do email recebido: "${email}"`);
-      console.error(`[EMAIL] Tipo do email: ${typeof email}`);
+      console.error(`[EMAIL] Email original: "${email}"`);
+      console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
       console.error(`[EMAIL] mailOptions.to: "${mailOptions.to}"`);
+      console.error(`[EMAIL] Tipo mailOptions.to: ${typeof mailOptions.to}`);
     }
     
-    throw new Error(`Falha ao enviar email com chave de licença: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    throw new Error(`Falha ao enviar email: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 }
 
