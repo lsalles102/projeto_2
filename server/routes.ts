@@ -1100,26 +1100,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const { key } = activateKeySchema.parse(req.body);
 
+      console.log(`=== INICIANDO ATIVAÇÃO DE LICENÇA ===`);
+      console.log(`Usuário: ${user.id} (${user.email})`);
+      console.log(`Chave solicitada: ${key}`);
+
       // Check if activation key exists and is not used
       const activationKey = await storage.getActivationKey(key);
       if (!activationKey) {
+        console.log(`❌ Chave de ativação não encontrada: ${key}`);
         return res.status(404).json({ message: "Chave de ativação não encontrada" });
       }
 
       if (activationKey.isUsed) {
+        console.log(`❌ Chave já foi utilizada: ${key}`);
         return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
       }
 
-      // Buscar licença existente para sobrescrever
-      const existingLicense = await storage.getLicenseByUserId(user.id);
+      console.log(`✅ Chave válida encontrada - Plano: ${activationKey.plan}, Duração: ${activationKey.durationDays} dias`);
+
+      // Verificar se a chave já está sendo usada por outro usuário (constraint check)
+      const existingLicenseWithKey = await storage.getLicenseByKey(key);
+      if (existingLicenseWithKey && existingLicenseWithKey.userId !== user.id) {
+        console.log(`❌ Chave já está vinculada a outro usuário: ${existingLicenseWithKey.userId}`);
+        return res.status(400).json({ message: "Esta chave já está vinculada a outro usuário" });
+      }
+
+      // Buscar licença existente do usuário atual
+      const userExistingLicense = await storage.getLicenseByUserId(user.id);
 
       // Calculate expiration date based on plan
       let totalMinutes: number;
       if (activationKey.plan === "test") {
-        // Test plan: 30 minutes
-        totalMinutes = 30;
+        totalMinutes = 30; // Test plan: 30 minutes
       } else {
-        // Other plans: use durationDays
         totalMinutes = activationKey.durationDays * 24 * 60;
       }
 
@@ -1130,14 +1143,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt.setDate(expiresAt.getDate() + activationKey.durationDays);
       }
 
-      // SEMPRE sobrescrever licença existente ou criar nova
-      if (existingLicense) {
-        console.log(`=== SOBRESCREVENDO LICENÇA EXISTENTE ===`);
-        console.log(`Usuário: ${user.id}, Licença atual: ${existingLicense.key}`);
-        console.log(`Nova chave: ${key}, Novo plano: ${activationKey.plan}`);
+      console.log(`Tempo calculado: ${totalMinutes} minutos, expira em: ${expiresAt.toISOString()}`);
+
+      // Se o usuário já tem licença, sobrescrever. Se não, criar nova.
+      if (userExistingLicense) {
+        console.log(`=== ATUALIZANDO LICENÇA EXISTENTE DO USUÁRIO ===`);
+        console.log(`Licença atual: ${userExistingLicense.key} → Nova: ${key}`);
         
-        await storage.updateLicense(existingLicense.id, {
-          key: key, // Sobrescrever com nova chave
+        await storage.updateLicense(userExistingLicense.id, {
+          key: key,
           status: "active",
           plan: activationKey.plan,
           expiresAt,
@@ -1146,13 +1160,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hoursRemaining: Math.ceil(totalMinutes / 60),
           minutesRemaining: totalMinutes,
           activatedAt: new Date(),
-          hwid: null, // Reset HWID para permitir nova ativação
+          hwid: null, // Reset HWID para nova ativação
         });
         
-        console.log(`✅ LICENÇA SOBRESCRITA COM SUCESSO`);
+        console.log(`✅ LICENÇA ATUALIZADA COM SUCESSO`);
+      } else if (existingLicenseWithKey) {
+        // Se a chave existe mas é do usuário atual, apenas ativar/atualizar
+        console.log(`=== REATIVANDO LICENÇA EXISTENTE COM ESTA CHAVE ===`);
+        
+        await storage.updateLicense(existingLicenseWithKey.id, {
+          userId: user.id, // Garantir que é do usuário atual
+          status: "active",
+          plan: activationKey.plan,
+          expiresAt,
+          totalMinutesRemaining: totalMinutes,
+          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
+          hoursRemaining: Math.ceil(totalMinutes / 60),
+          minutesRemaining: totalMinutes,
+          activatedAt: new Date(),
+          hwid: null,
+        });
+        
+        console.log(`✅ LICENÇA REATIVADA COM SUCESSO`);
       } else {
         console.log(`=== CRIANDO NOVA LICENÇA ===`);
-        console.log(`Usuário: ${user.id}, Chave: ${key}, Plano: ${activationKey.plan}`);
         
         await storage.createLicense({
           userId: user.id,
@@ -1172,6 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Mark activation key as used
       await storage.markActivationKeyAsUsed(key, user.id);
+      console.log(`✅ Chave marcada como utilizada`);
 
       res.json({ message: "Licença ativada com sucesso" });
     } catch (error) {
