@@ -814,7 +814,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             durationDays,
             isUsed: true, // Marcar como usada imediatamente
             usedBy: user.id, // Vincular ao usuário correto
-            usedAt: new Date(),
           });
           console.log(`✅ Chave de ativação salva no banco - Vinculada ao usuário ${user.id}`);
           
@@ -1148,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // License activation endpoint
+  // License activation endpoint - CORRIGIDO para vinculação correta ao comprador
   app.post("/api/licenses/activate", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
@@ -1158,26 +1157,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Usuário: ${user.id} (${user.email})`);
       console.log(`Chave solicitada: ${key}`);
 
-      // Check if activation key exists and is not used
-      const activationKey = await storage.getActivationKey(key);
-      if (!activationKey) {
-        console.log(`❌ Chave de ativação não encontrada: ${key}`);
-        return res.status(404).json({ message: "Chave de ativação não encontrada" });
+      // PRINCIPAL: Verificar se a licença já existe na tabela licenses (criada pelo webhook)
+      const existingLicense = await storage.getLicenseByKey(key);
+      
+      if (existingLicense) {
+        console.log(`=== LICENÇA ENCONTRADA NA TABELA LICENSES ===`);
+        console.log(`Dono da licença: Usuário ID ${existingLicense.userId}`);
+        console.log(`Usuário tentando ativar: ${user.id}`);
+        
+        // VERIFICAÇÃO CRÍTICA: A licença pertence ao usuário correto?
+        if (existingLicense.userId !== user.id) {
+          console.log(`❌ ERRO CRÍTICO: Chave ${key} pertence ao usuário ${existingLicense.userId}, não ao usuário atual ${user.id}`);
+          return res.status(403).json({ 
+            message: "Esta chave de licença não pertence ao seu usuário. Verifique se você está logado com a conta correta ou entre em contato com o suporte." 
+          });
+        }
+
+        // Licença pertence ao usuário correto - ativar se necessário
+        console.log(`✅ LICENÇA VERIFICADA - Pertence ao usuário correto`);
+        console.log(`Status atual: ${existingLicense.status}, Plano: ${existingLicense.plan}`);
+        
+        if (existingLicense.status === "inactive") {
+          console.log(`Ativando licença inativa...`);
+          await storage.updateLicense(existingLicense.id, {
+            status: "active",
+            activatedAt: new Date(),
+          });
+          console.log(`✅ Licença ativada com sucesso`);
+        } else {
+          console.log(`✅ Licença já está ativa`);
+        }
+
+        return res.json({ message: "Licença ativada com sucesso" });
       }
 
+      // FALLBACK: Verificar na tabela activation_keys para compatibilidade com sistema antigo
+      console.log(`Licença não encontrada em licenses, verificando activation_keys...`);
+      const activationKey = await storage.getActivationKey(key);
+      
+      if (!activationKey) {
+        console.log(`❌ Chave não encontrada em nenhuma tabela: ${key}`);
+        return res.status(404).json({ message: "Chave de ativação não encontrada. Verifique se a chave está correta." });
+      }
+
+      // Verificar se já foi usada e por quem
       if (activationKey.isUsed) {
-        console.log(`❌ Chave já foi utilizada: ${key}`);
-        return res.status(400).json({ message: "Chave de ativação já foi utilizada" });
+        if (activationKey.usedBy && activationKey.usedBy !== user.id) {
+          console.log(`❌ Chave já foi utilizada por outro usuário: ${activationKey.usedBy}`);
+          return res.status(400).json({ message: "Esta chave já foi utilizada por outro usuário" });
+        } else if (activationKey.usedBy === user.id) {
+          console.log(`✅ Chave já foi utilizada pelo usuário atual - permitindo reativação`);
+        } else {
+          console.log(`❌ Chave já foi utilizada: ${key}`);
+          return res.status(400).json({ message: "Esta chave de ativação já foi utilizada" });
+        }
       }
 
       console.log(`✅ Chave válida encontrada - Plano: ${activationKey.plan}, Duração: ${activationKey.durationDays} dias`);
-
-      // Verificar se a chave já está sendo usada por outro usuário (constraint check)
-      const existingLicenseWithKey = await storage.getLicenseByKey(key);
-      if (existingLicenseWithKey && existingLicenseWithKey.userId !== user.id) {
-        console.log(`❌ Chave já está vinculada a outro usuário: ${existingLicenseWithKey.userId}`);
-        return res.status(400).json({ message: "Esta chave já está vinculada a outro usuário" });
-      }
 
       // Buscar licença existente do usuário atual
       const userExistingLicense = await storage.getLicenseByUserId(user.id);
@@ -1218,26 +1254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ LICENÇA ATUALIZADA COM SUCESSO`);
-      } else if (existingLicenseWithKey) {
-        // Se a chave existe mas é do usuário atual, apenas ativar/atualizar
-        console.log(`=== REATIVANDO LICENÇA EXISTENTE COM ESTA CHAVE ===`);
-        
-        await storage.updateLicense(existingLicenseWithKey.id, {
-          userId: user.id, // Garantir que é do usuário atual
-          status: "active",
-          plan: activationKey.plan,
-          expiresAt,
-          totalMinutesRemaining: totalMinutes,
-          daysRemaining: Math.ceil(totalMinutes / (24 * 60)),
-          hoursRemaining: Math.ceil(totalMinutes / 60),
-          minutesRemaining: totalMinutes,
-          activatedAt: new Date(),
-          hwid: null,
-        });
-        
-        console.log(`✅ LICENÇA REATIVADA COM SUCESSO`);
       } else {
-        console.log(`=== CRIANDO NOVA LICENÇA ===`);
+        console.log(`=== CRIANDO NOVA LICENÇA A PARTIR DE ACTIVATION KEY ===`);
         
         await storage.createLicense({
           userId: user.id,
