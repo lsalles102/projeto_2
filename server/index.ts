@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes-fixed";
+import { registerRoutes } from "./routes";
 import { licenseCleanupService } from "./license-cleanup";
 import path from "path";
 import fs from "fs";
@@ -29,6 +29,8 @@ async function setupVite(app: express.Express, server: any) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { port: 24678 },
+    host: "0.0.0.0",
+    allowedHosts: "all",
   };
 
   const vite = await createViteServer({
