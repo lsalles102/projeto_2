@@ -910,26 +910,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Status: ATIVA - Usuário pode fazer login para verificar`);
             console.log(`=== LICENÇA PRONTA PARA USO ===`);
           } else {
-            // Tentar enviar email normalmente
-            try {
-              console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
-              console.log(`[EMAIL] Enviando para: ${emailToUse}`);
-              console.log(`[EMAIL] Plano: ${planName}`);
-              console.log(`[EMAIL] Chave: ${activationKey}`);
-              
-              await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+            // Tentar enviar email com sistema robusto
+            console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
+            console.log(`[EMAIL] Enviando para: ${emailToUse}`);
+            console.log(`[EMAIL] Plano: ${planName}`);
+            console.log(`[EMAIL] Chave: ${activationKey}`);
+            
+            const { sendLicenseKeyEmailRobust } = await import('./email');
+            const emailResult = await sendLicenseKeyEmailRobust(emailToUse, activationKey, planName);
+            
+            if (emailResult.success) {
               console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
-            } catch (emailError) {
-              console.error("[WEBHOOK] ❌ FALHA NO ENVIO DE EMAIL");
-              console.error("Detalhes:", emailError);
-              
-              // Mesmo com falha no email, a licença está ativada
-              console.log(`=== LICENÇA ATIVADA MESMO SEM EMAIL ===`);
-              console.log(`Usuário: ${user.email} (ID: ${user.id})`);
-              console.log(`Chave gerada: ${activationKey}`);
-              console.log(`Plano: ${planName}`);
-              console.log(`Status: ATIVA - Usuário pode fazer login para verificar`);
-              console.log(`=== LICENÇA PRONTA PARA USO ===`);
+            } else {
+              console.log(`⚠️ FALHA NO EMAIL MAS LICENÇA ATIVADA`);
+              console.log(`Erro: ${emailResult.error}`);
+              console.log(`Usuário pode fazer login para ver sua licença ativa`);
             }
           }
           

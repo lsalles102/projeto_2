@@ -57,45 +57,79 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
   }
 }
 
-export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
-  // 1. SANITIZAR E LIMPAR O EMAIL
-  console.log(`[EMAIL] Email recebido (bruto): "${email}"`);
-  console.log(`[EMAIL] Tipo do email: ${typeof email}`);
+// Função para validar email
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
   
-  // Remover espaços, aspas e caracteres inválidos
+  // Remover espaços e caracteres inválidos
   const cleanEmail = email.trim().replace(/['"]+/g, '').replace(/\s+/g, '');
-  console.log(`[EMAIL] Email após limpeza: "${cleanEmail}"`);
   
-  // 2. VALIDAÇÃO CRÍTICA DO EMAIL
-  if (!cleanEmail || cleanEmail === '') {
-    console.error(`[EMAIL] ❌ ERRO CRÍTICO: Email está vazio após limpeza`);
-    console.error(`[EMAIL] Email original: "${email}"`);
-    console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
-    throw new Error('Email do destinatário não pode estar vazio');
-  }
+  // Verificar se é email mascarado
+  if (cleanEmail.includes('XXXXX') || /^X+$/.test(cleanEmail)) return false;
   
-  // Verificar se é um email mascarado (XXXXXXXXXXX)
-  if (cleanEmail.includes('XXXXX') || /^X+$/.test(cleanEmail)) {
-    console.error(`[EMAIL] ❌ ERRO: Email mascarado ou oculto recebido - "${cleanEmail}"`);
-    console.error(`[EMAIL] Isso pode indicar que o Mercado Pago está ocultando o email real`);
-    throw new Error('Email mascarado - não é possível enviar para email oculto');
-  }
-  
-  // Verificar se contém @
-  if (!cleanEmail.includes('@')) {
-    console.error(`[EMAIL] ❌ ERRO: Email não contém @ - "${cleanEmail}"`);
-    console.error(`[EMAIL] Verifique se o email real está sendo enviado pelo Mercado Pago`);
-    throw new Error('Email deve conter @');
-  }
-  
-  // Validação com regex básico
+  // Verificar formato básico
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(cleanEmail)) {
-    console.error(`[EMAIL] ❌ ERRO: Formato de email inválido - "${cleanEmail}"`);
-    throw new Error('Formato de email inválido');
+  return emailRegex.test(cleanEmail);
+}
+
+// Função para buscar email alternativo no banco de dados
+async function findUserEmailFromDatabase(licenseKey: string): Promise<string | null> {
+  try {
+    // Importar storage dinamicamente para evitar dependência circular
+    const { storage } = await import('./storage');
+    
+    // Buscar licença pela chave
+    const license = await storage.getLicenseByKey(licenseKey);
+    if (!license) {
+      console.log(`[EMAIL] Licença não encontrada para chave: ${licenseKey}`);
+      return null;
+    }
+    
+    // Buscar usuário pela licença
+    const user = await storage.getUser(license.userId);
+    if (!user || !user.email) {
+      console.log(`[EMAIL] Usuário não encontrado ou sem email para licença: ${licenseKey}`);
+      return null;
+    }
+    
+    console.log(`[EMAIL] Email encontrado no banco: ${user.email}`);
+    return user.email;
+    
+  } catch (error) {
+    console.error(`[EMAIL] Erro ao buscar email no banco:`, error);
+    return null;
   }
+}
+
+// Nova função para tentar envio robusto sem quebrar o fluxo
+export async function sendLicenseKeyEmailRobust(email: string, licenseKey: string, planName: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sendLicenseKeyEmail(email, licenseKey, planName);
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error(`[EMAIL] ❌ Falha no envio robusto:`, errorMessage);
+    
+    // Registrar falha detalhadamente mas não quebrar
+    console.log(`[EMAIL] ⚠️ REGISTRO DE FALHA - SISTEMA CONTINUARÁ FUNCIONANDO`);
+    console.log(`[EMAIL] - Email tentado: "${email}"`);
+    console.log(`[EMAIL] - Chave de licença: "${licenseKey}"`);
+    console.log(`[EMAIL] - Plano: "${planName}"`);
+    console.log(`[EMAIL] - Erro: ${errorMessage}`);
+    console.log(`[EMAIL] - Timestamp: ${new Date().toISOString()}`);
+    console.log(`[EMAIL] ℹ️ Usuário pode fazer login no sistema para ver sua licença ativada`);
+    
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
+  console.log(`[EMAIL] Iniciando envio de email de licença`);
+  console.log(`[EMAIL] Email recebido: "${email}"`);
+  console.log(`[EMAIL] Chave de licença: "${licenseKey}"`);
+  console.log(`[EMAIL] Plano: "${planName}"`);
   
-  // 3. VERIFICAR SE A CHAVE E PLANO ESTÃO VÁLIDOS
+  // 1. VALIDAR PARÂMETROS OBRIGATÓRIOS
   if (!licenseKey || licenseKey.trim() === '') {
     console.error(`[EMAIL] ❌ ERRO: Chave de licença está vazia`);
     throw new Error('Chave de licença não pode estar vazia');
@@ -106,22 +140,43 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     throw new Error('Nome do plano não pode estar vazio');
   }
   
-  // 4. LOGS DE VERIFICAÇÃO ANTES DO ENVIO
-  console.log(`[EMAIL] ✅ Email validado com sucesso!`);
-  console.log(`[EMAIL] Destinatário final: "${cleanEmail}"`);
-  console.log(`[EMAIL] Chave de licença: "${licenseKey}"`);
-  console.log(`[EMAIL] Plano: "${planName}"`);
+  // 2. DETERMINAR EMAIL VÁLIDO PARA ENVIO
+  let finalEmail: string | null = null;
   
+  // Tentar usar o email fornecido primeiro
+  if (email && isValidEmail(email)) {
+    finalEmail = email.trim().replace(/['"]+/g, '').replace(/\s+/g, '');
+    console.log(`[EMAIL] ✅ Email do Mercado Pago válido: "${finalEmail}"`);
+  } else {
+    console.log(`[EMAIL] ⚠️ Email do Mercado Pago inválido ou mascarado: "${email}"`);
+    
+    // Tentar buscar email alternativo no banco de dados
+    const dbEmail = await findUserEmailFromDatabase(licenseKey);
+    if (dbEmail && isValidEmail(dbEmail)) {
+      finalEmail = dbEmail;
+      console.log(`[EMAIL] ✅ Email encontrado no banco de dados: "${finalEmail}"`);
+    } else {
+      console.log(`[EMAIL] ❌ Email do banco também inválido ou não encontrado`);
+    }
+  }
+  
+  // 3. VERIFICAR SE TEMOS UM EMAIL VÁLIDO
+  if (!finalEmail) {
+    const errorMsg = `Não foi possível encontrar um email válido para envio. Email MP: "${email}", Chave: "${licenseKey}"`;
+    console.error(`[EMAIL] ❌ ERRO CRÍTICO: ${errorMsg}`);
+    
+    // Registrar falha mas não quebrar o fluxo
+    console.log(`[EMAIL] ⚠️ Registrando falha de envio mas continuando processamento`);
+    throw new Error(errorMsg);
+  }
+  
+  // 4. PREPARAR E ENVIAR EMAIL
   const transporter = createTransporter();
-  
-  // 5. CONFIGURAR OPÇÕES DO EMAIL COM EMAIL LIMPO
   const fromEmail = process.env.SMTP_USER || 'contato@suportefovdark.shop';
-  console.log(`[EMAIL] From: "${fromEmail}"`);
-  console.log(`[EMAIL] To (final): "${cleanEmail}"`);
   
   const mailOptions = {
     from: `"FovDark" <${fromEmail}>`,
-    to: cleanEmail, // Usar email limpo e validado
+    to: finalEmail,
     subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
@@ -172,51 +227,26 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   };
 
   try {
-    // 6. VERIFICAÇÃO FINAL ANTES DO ENVIO
-    console.log(`[EMAIL] ✅ Verificação final antes do envio:`);
-    console.log(`[EMAIL] - From: ${mailOptions.from}`);
-    console.log(`[EMAIL] - To: "${mailOptions.to}"`);
-    console.log(`[EMAIL] - To length: ${mailOptions.to.length}`);
-    console.log(`[EMAIL] - To type: ${typeof mailOptions.to}`);
-    console.log(`[EMAIL] - Subject: ${mailOptions.subject}`);
-    
-    // Verificação adicional para garantir que o campo to não está vazio
-    if (!mailOptions.to || mailOptions.to.trim() === '') {
-      console.error(`[EMAIL] ❌ ERRO FATAL: Campo 'to' está vazio na configuração final`);
-      console.error(`[EMAIL] Email original: "${email}"`);
-      console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
-      console.error(`[EMAIL] mailOptions.to: "${mailOptions.to}"`);
-      throw new Error('Campo destinatário vazio na configuração final do email');
-    }
-    
-    console.log(`[EMAIL] ✅ Enviando email agora...`);
+    console.log(`[EMAIL] ✅ Enviando email para: "${finalEmail}"`);
     const result = await transporter.sendMail(mailOptions);
     
     console.log(`[EMAIL] ✅ EMAIL ENVIADO COM SUCESSO!`);
-    console.log(`[EMAIL] Destinatário: ${cleanEmail}`);
+    console.log(`[EMAIL] Destinatário: ${finalEmail}`);
     console.log(`[EMAIL] Message ID: ${result.messageId}`);
-    console.log(`[EMAIL] Response: ${JSON.stringify(result.response)}`);
+    
     return result;
     
   } catch (error) {
-    console.error(`[EMAIL] ❌ ERRO CRÍTICO AO ENVIAR EMAIL`);
-    console.error(`[EMAIL] Email original: "${email}"`);
-    console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
-    console.error(`[EMAIL] Erro completo:`, error);
+    console.error(`[EMAIL] ❌ ERRO AO ENVIAR EMAIL`);
+    console.error(`[EMAIL] Destinatário: "${finalEmail}"`);
+    console.error(`[EMAIL] Erro:`, error);
     
-    // Log detalhado do erro
+    // Log detalhado para debug
     if (error instanceof Error) {
-      console.error(`[EMAIL] Mensagem do erro: ${error.message}`);
-      console.error(`[EMAIL] Stack trace: ${error.stack}`);
-    }
-    
-    // Verificar se é erro de "No recipients defined"
-    if (error instanceof Error && error.message.includes('No recipients defined')) {
-      console.error(`[EMAIL] ❌ ERRO ESPECÍFICO: No recipients defined`);
-      console.error(`[EMAIL] Email original: "${email}"`);
-      console.error(`[EMAIL] Email limpo: "${cleanEmail}"`);
-      console.error(`[EMAIL] mailOptions.to: "${mailOptions.to}"`);
-      console.error(`[EMAIL] Tipo mailOptions.to: ${typeof mailOptions.to}`);
+      console.error(`[EMAIL] Mensagem: ${error.message}`);
+      if (error.message.includes('No recipients defined')) {
+        console.error(`[EMAIL] ❌ ERRO: No recipients defined - verificar configuração`);
+      }
     }
     
     throw new Error(`Falha ao enviar email: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
