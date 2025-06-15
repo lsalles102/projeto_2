@@ -1215,6 +1215,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual activation with HWID protection
+  app.post("/api/license/activate-manual", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { key, hwid } = req.body;
+
+      // Validate input
+      if (!key || typeof key !== 'string') {
+        return res.status(400).json({ message: "Chave de ativação é obrigatória" });
+      }
+      
+      if (!hwid || typeof hwid !== 'string') {
+        return res.status(400).json({ message: "HWID é obrigatório" });
+      }
+
+      console.log(`=== ATIVAÇÃO MANUAL COM HWID ===`);
+      console.log(`Usuário: ${user.id} (${user.email})`);
+      console.log(`Chave: ${key}`);
+      console.log(`HWID: ${hwid}`);
+
+      // Use license utilities for activation
+      const { activateLicenseManually } = await import('./license-utils');
+      const result = await activateLicenseManually(key, hwid, user.id);
+
+      if (result.success) {
+        res.json({ 
+          success: true,
+          message: result.message,
+          license: result.license
+        });
+      } else {
+        res.status(400).json({ 
+          success: false,
+          message: result.message 
+        });
+      }
+    } catch (error) {
+      console.error("Manual license activation error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno durante a ativação" 
+      });
+    }
+  });
+
   // Test webhook endpoint for manual testing
   app.post("/api/test-webhook-activation", isAuthenticated, async (req, res) => {
     try {
@@ -1244,75 +1289,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         statusDetail: "accredited",
       });
 
-      // Create activation key
-      const activationKey = `FOVD-TEST-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      // Use license utilities for robust key generation and license creation
+      const { generateUniqueActivationKey, createOrUpdateLicense } = await import('./license-utils');
       
+      const activationKey = await generateUniqueActivationKey();
+      
+      // Create activation key in database for tracking
       await storage.createActivationKey({
         key: activationKey,
         plan: "test",
-        durationDays: 0.021,
+        durationDays: 0.021, // 30 minutes as decimal days
       });
 
-      // Create/update license automatically
-      const existingLicense = await storage.getLicenseByUserId(user.id);
-      
-      if (existingLicense) {
-        // Renew existing license
-        const currentExpiry = new Date(existingLicense.expiresAt);
-        const now = new Date();
-        const startDate = currentExpiry > now ? currentExpiry : now;
-        const newExpiryDate = new Date(startDate.getTime() + (30 * 60 * 1000)); // 30 minutes
-        
-        await storage.updateLicense(existingLicense.id, {
-          status: "active",
-          expiresAt: newExpiryDate,
-          totalMinutesRemaining: (existingLicense.totalMinutesRemaining || 0) + 30,
-          daysRemaining: 1,
-          hoursRemaining: 1,
-          minutesRemaining: 30,
-          activatedAt: new Date(),
-        });
-        
-        res.json({
-          success: true,
-          message: "Licença renovada com sucesso via teste manual",
-          license: {
-            key: existingLicense.key,
-            expiresAt: newExpiryDate,
-            status: "active"
-          },
-          activationKey,
-          testPaymentId: testPayment.id
-        });
-      } else {
-        // Create new license
-        const expiryDate = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutes
-        
-        const newLicense = await storage.createLicense({
-          userId: user.id,
-          key: activationKey,
-          plan: "test",
-          status: "active",
-          expiresAt: expiryDate,
-          totalMinutesRemaining: 30,
-          daysRemaining: 1,
-          hoursRemaining: 1,
-          minutesRemaining: 30,
-          activatedAt: new Date(),
-        });
-        
-        res.json({
-          success: true,
-          message: "Nova licença criada com sucesso via teste manual",
-          license: {
-            key: newLicense.key,
-            expiresAt: expiryDate,
-            status: "active"
-          },
-          activationKey,
-          testPaymentId: testPayment.id
-        });
-      }
+      // Create/update license automatically using utilities
+      const { license, action } = await createOrUpdateLicense(
+        user.id,
+        "test",
+        0.021, // 30 minutes
+        activationKey
+      );
+
+      res.json({
+        success: true,
+        message: `Licença ${action} com sucesso via teste manual`,
+        license: {
+          key: license.key,
+          expiresAt: license.expiresAt,
+          status: license.status,
+          plan: license.plan,
+          totalMinutesRemaining: license.totalMinutesRemaining
+        },
+        activationKey,
+        testPaymentId: testPayment.id,
+        action
+      });
       
     } catch (error) {
       console.error("Erro no teste de webhook:", error);
