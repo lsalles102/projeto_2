@@ -1,0 +1,100 @@
+2025-06-15T05:21:14.836183447Z #12 6.775 ../dist/public/assets/form-DogI7Sdl.js                2.02 kB │ gzip:  0.95 kB
+2025-06-15T05:21:14.836186007Z #12 6.775 ../dist/public/assets/TestPage-CBU48Yrq.js            2.35 kB │ gzip:  0.99 kB
+2025-06-15T05:21:14.836188467Z #12 6.775 ../dist/public/assets/ForgotPassword-BMWiy7PW.js      3.15 kB │ gzip:  1.27 kB
+2025-06-15T05:21:14.836223378Z #12 6.775 ../dist/public/assets/Terms-D8Rk_xSd.js               3.25 kB │ gzip:  1.23 kB
+2025-06-15T05:21:14.836226928Z #12 6.775 ../dist/public/assets/PaymentSuccess-Sh8Vn_Z9.js      3.31 kB │ gzip:  1.26 kB
+2025-06-15T05:21:14.836237208Z #12 6.775 ../dist/public/assets/checkbox-CXteKJn3.js            3.37 kB │ gzip:  1.71 kB
+2025-06-15T05:21:14.836240168Z #12 6.775 ../dist/public/assets/Login-BcExTAaG.js               3.45 kB │ gzip:  1.42 kB
+2025-06-15T05:21:14.836242838Z #12 6.775 ../dist/public/assets/Register-Bdt9HOTk.js            4.50 kB │ gzip:  1.61 kB
+2025-06-15T05:21:14.836245718Z #12 6.775 ../dist/public/assets/ResetPassword-xy6Q0JUk.js       4.60 kB │ gzip:  1.49 kB
+2025-06-15T05:21:14.836248678Z #12 6.775 ../dist/public/assets/Settings-K5Ew0j1A.js            4.71 kB │ gzip:  1.65 kB
+2025-06-15T05:21:14.836251308Z #12 6.775 ../dist/public/assets/Home-BaFTr46A.js                6.49 kB │ gzip:  2.09 kB
+2025-06-15T05:21:14.836254008Z #12 6.775 ../dist/public/assets/Pricing-CvGO23EB.js             6.76 kB │ gzip:  2.29 kB
+2025-06-15T05:21:14.836256608Z #12 6.775 ../dist/public/assets/Support-BmKu830d.js             7.00 kB │ gzip:  2.34 kB
+2025-06-15T05:21:14.836265079Z #12 6.775 ../dist/public/assets/Checkout-BtswY8Tu.js            9.11 kB │ gzip:  3.39 kB
+2025-06-15T05:21:14.836267699Z #12 6.775 ../dist/public/assets/useQuery-Cv__LQGZ.js           10.31 kB │ gzip:  3.64 kB
+2025-06-15T05:21:14.836270319Z #12 6.775 ../dist/public/assets/Payment-A77H9gCd.js            10.64 kB │ gzip:  3.66 kB
+2025-06-15T05:21:14.836272829Z #12 6.775 ../dist/public/assets/Privacy-CqEfBLQ3.js            13.28 kB │ gzip:  3.39 kB
+2025-06-15T05:21:14.836276379Z #12 6.775 ../dist/public/assets/Dashboard-BF0i4P9L.js          17.57 kB │ gzip:  4.44 kB
+2025-06-15T05:21:14.836278949Z #12 6.775 ../dist/public/assets/schema-B1m9iZKT.js             46.22 kB │ gzip: 12.97 kB
+2025-06-15T05:21:14.836281409Z #12 6.775 ../dist/public/assets/AdminDashboard-4Lz3ogBi.js     51.38 kB │ gzip: 13.60 kB
+2025-06-15T05:21:14.836284129Z #12 6.775 ../dist/public/assets/index-Bwq8ynDc.js              88.30 kB │ gzip: 24.73 kB
+2025-06-15T05:21:14.836286839Z #12 6.775 ../dist/public/assets/index-B_vPk9Kr.js             305.28 kB │ gzip: 99.32 kB
+2025-06-15T05:21:14.836289409Z #12 6.776 ✓ built in 6.27s
+2025-06-15T05:21:14.836296169Z #12 6.877 
+2025-06-15T05:21:14.836299489Z #12 6.877   dist/index.prod.js  132.8kb
+2025-06-15T05:21:14.8363048Z #12 6.877 
+2025-06-15T05:21:14.83631911Z #12 6.877 ⚡ Done in 15ms
+2025-06-15T05:21:14.986779107Z #12 DONE 7.0s
+2025-06-15T05:21:14.986807618Z 
+2025-06-15T05:21:14.986814248Z #13 [7/9] RUN npm ci --only=production && npm cache clean --force
+2025-06-15T05:21:15.137646724Z #13 0.207 npm warn config only Use `--omit=dev` to omit dev dependencies from the install.
+2025-06-15T05:21:28.610216984Z #13 13.61 npm warn deprecated crypto@1.0.1: This package is no longer supported. It's now a built-in Node module. If you've depended on crypto, you should switch to the one that's built-in.
+2025-06-15T05:21:34.739060105Z #13 19.81 
+2025-06-15T05:21:34.739083955Z #13 19.81 added 469 packages, and audited 470 packages in 20s
+2025-06-15T05:21:34.739089195Z #13 19.81 
+2025-06-15T05:21:34.739093715Z #13 19.81 60 packages are looking for funding
+2025-06-15T05:21:34.739097655Z #13 19.81   run `npm fund` for details
+2025-06-15T05:21:34.889342208Z #13 19.81 
+2025-06-15T05:21:34.889360608Z #13 19.81 1 low severity vulnerability
+2025-06-15T05:21:34.889363868Z #13 19.81 
+2025-06-15T05:21:34.889366678Z #13 19.81 To address all issues, run:
+2025-06-15T05:21:34.889370269Z #13 19.81   npm audit fix
+2025-06-15T05:21:34.889372929Z #13 19.81 
+2025-06-15T05:21:34.889375989Z #13 19.81 Run `npm audit` for details.
+2025-06-15T05:21:35.040079411Z #13 19.99 npm warn using --force Recommended protections disabled.
+2025-06-15T05:21:47.680719962Z #13 DONE 32.6s
+2025-06-15T05:21:47.680755833Z 
+2025-06-15T05:21:47.680761743Z #14 [8/9] RUN mkdir -p public
+2025-06-15T05:21:47.944367768Z #14 DONE 0.3s
+2025-06-15T05:21:47.944393608Z 
+2025-06-15T05:21:47.944399679Z #15 [9/9] RUN cp -r dist/client/* public/ 2>/dev/null || echo "No client files to copy"
+2025-06-15T05:21:47.944405079Z #15 0.052 No client files to copy
+2025-06-15T05:21:48.094374805Z #15 DONE 0.1s
+2025-06-15T05:21:48.094398296Z 
+2025-06-15T05:21:48.094404056Z #16 exporting to docker image format
+2025-06-15T05:21:48.094409036Z #16 exporting layers
+2025-06-15T05:21:58.141516471Z #16 exporting layers 10.2s done
+2025-06-15T05:21:58.254965156Z #16 exporting manifest sha256:610df63d5d9a0e6417794ff084e38f2f57ea47228d133fe826cf59c06a415fec 0.1s done
+2025-06-15T05:21:58.254990406Z #16 exporting config sha256:82a59d0b5eee79ed18771051a67a94187dae130c3bfa1c3ca68097ce2ef3b7b7 0.1s done
+2025-06-15T05:22:01.499069948Z #16 DONE 13.5s
+2025-06-15T05:22:01.499107919Z 
+2025-06-15T05:22:01.499112679Z #17 exporting cache to client directory
+2025-06-15T05:22:01.499115499Z #17 preparing build cache for export
+2025-06-15T05:22:03.965685929Z #17 writing cache manifest sha256:1228dc8a54367be1e37b59861772d8310742ab1f25ca1736183aeb249c6ceecf done
+2025-06-15T05:22:03.965711019Z #17 DONE 2.5s
+2025-06-15T05:22:04.792509574Z Pushing image to registry...
+2025-06-15T05:22:08.425330984Z Upload succeeded
+2025-06-15T05:22:10.094588283Z ==> Deploying...
+2025-06-15T05:22:29.24526747Z 
+2025-06-15T05:22:29.245306061Z > rest-express@1.0.0 start:prod
+2025-06-15T05:22:29.245311851Z > NODE_ENV=production node dist/index.prod.js
+2025-06-15T05:22:29.245314501Z 
+2025-06-15T05:22:34.144484587Z 🛑 Sistema de limpeza automática DESABILITADO para correções
+2025-06-15T05:22:34.54017421Z 🧹 Sistema de limpeza automática de licenças inicializado
+2025-06-15T05:22:34.540386585Z 🔒 Sistema de auditoria de segurança inicializado
+2025-06-15T05:22:34.544094055Z file:///app/dist/index.prod.js:3296
+2025-06-15T05:22:34.544112625Z   server.listen({
+2025-06-15T05:22:34.544117236Z          ^
+2025-06-15T05:22:34.544211598Z 
+2025-06-15T05:22:34.544217107Z TypeError: server.listen is not a function
+2025-06-15T05:22:34.544221038Z     at file:///app/dist/index.prod.js:3296:10
+2025-06-15T05:22:34.544467352Z 
+2025-06-15T05:22:34.544478223Z Node.js v20.19.2
+2025-06-15T05:22:35.640806735Z ==> Exited with status 1
+2025-06-15T05:22:35.658325022Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-06-15T05:22:37.109534146Z 
+2025-06-15T05:22:37.109565677Z > rest-express@1.0.0 start:prod
+2025-06-15T05:22:37.109569907Z > NODE_ENV=production node dist/index.prod.js
+2025-06-15T05:22:37.109571637Z 
+2025-06-15T05:22:41.309525371Z 🛑 Sistema de limpeza automática DESABILITADO para correções
+2025-06-15T05:22:41.704709215Z 🧹 Sistema de limpeza automática de licenças inicializado
+2025-06-15T05:22:41.704732666Z 🔒 Sistema de auditoria de segurança inicializado
+2025-06-15T05:22:41.707365926Z file:///app/dist/index.prod.js:3296
+2025-06-15T05:22:41.707383186Z   server.listen({
+2025-06-15T05:22:41.707388126Z          ^
+2025-06-15T05:22:41.707392436Z 
+2025-06-15T05:22:41.707396657Z TypeError: server.listen is not a function
+2025-06-15T05:22:41.707401086Z     at file:///app/dist/index.prod.js:3296:10
+2025-06-15T05:22:41.707405157Z 
+2025-06-15T05:22:41.707409017Z Node.js v20.19.2
