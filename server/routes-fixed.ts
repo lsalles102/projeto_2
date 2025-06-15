@@ -497,12 +497,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!licenseResult.success || !licenseResult.license) {
             console.error(`❌ Erro ao criar/renovar licença: ${licenseResult.message}`);
+            securityAudit.logWebhookProcessed(paymentId, paymentRecord.userId, false, {
+              error: licenseResult.message,
+              externalReference: paymentInfo.external_reference
+            });
             return res.status(500).json({ error: "Failed to create license" });
           }
           
           const { license } = licenseResult;
           const licenseKey = license.key;
           const action = "criada/renovada";
+          
+          // Registrar sucesso na auditoria
+          securityAudit.logPaymentApproved(paymentRecord.userId, user.email, paymentId, licenseKey);
+          securityAudit.logWebhookProcessed(paymentId, paymentRecord.userId, true, {
+            licenseKey,
+            plan: paymentRecord.plan,
+            externalReference: paymentInfo.external_reference
+          });
           
           // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
           const planName = paymentRecord.plan === "test" ? "Teste (30 minutos)" : 
@@ -793,8 +805,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize license cleanup service
+  // Security audit routes
+  app.get('/api/admin/security-stats', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = securityAudit.getSecurityStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting security stats:", error);
+      res.status(500).json({ message: "Erro ao obter estatísticas de segurança" });
+    }
+  });
+
+  app.get('/api/admin/security-events', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 7;
+      const events = securityAudit.getRecentEvents(days);
+      res.json(events);
+    } catch (error) {
+      console.error("Error getting security events:", error);
+      res.status(500).json({ message: "Erro ao obter eventos de segurança" });
+    }
+  });
+
+  // Initialize systems
   console.log("🧹 Sistema de limpeza automática de licenças inicializado");
+  console.log("🔒 Sistema de auditoria de segurança inicializado");
 
   return {} as Server;
 }
