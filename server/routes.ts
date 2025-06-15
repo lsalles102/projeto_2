@@ -96,6 +96,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Test payment validation and license activation endpoint
+  app.post("/api/test/validate-payment", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { plan = "test", durationDays = 0.021 } = req.body; // 30 minutos para teste
+      
+      console.log(`=== TESTE DE VALIDAÇÃO E ATIVAÇÃO DE LICENÇA ===`);
+      console.log(`Usuário: ${user.email} (ID: ${user.id})`);
+      console.log(`Plano: ${plan}`);
+      console.log(`Duração: ${durationDays} dias`);
+      
+      // Usar o sistema robusto de validação
+      const { validateAndActivateLicense } = await import('./payment-license-validator');
+      
+      // Simular dados de pagamento aprovado
+      const mockPaymentId = `test_${Date.now()}`;
+      const mockExternalReference = `test_ref_${user.id}_${Date.now()}`;
+      const mockAmount = plan === "test" ? 100 : plan === "7days" ? 2990 : 4990; // em centavos
+      
+      // Primeiro, criar um pagamento simulado no banco
+      const paymentData = {
+        userId: user.id,
+        externalReference: mockExternalReference,
+        status: "pending",
+        transactionAmount: mockAmount,
+        currency: "BRL",
+        plan,
+        durationDays,
+        payerEmail: user.email,
+        payerFirstName: user.firstName,
+        payerLastName: user.lastName,
+      };
+      
+      const payment = await storage.createPayment(paymentData);
+      console.log(`✅ Pagamento simulado criado: ${payment.id}`);
+      
+      // Testar validação e ativação
+      const validationResult = await validateAndActivateLicense(
+        mockPaymentId,
+        mockExternalReference,
+        mockAmount,
+        user.email
+      );
+      
+      if (!validationResult.success) {
+        console.error(`❌ Falha na validação: ${validationResult.message}`);
+        return res.status(400).json({
+          success: false,
+          message: validationResult.message
+        });
+      }
+      
+      console.log(`✅ TESTE CONCLUÍDO COM SUCESSO!`);
+      console.log(`Usuário: ${validationResult.userEmail}`);
+      console.log(`Chave gerada: ${validationResult.licenseKey}`);
+      console.log(`Licença ID: ${validationResult.licenseId}`);
+      
+      res.json({
+        success: true,
+        message: "License validated and activated successfully",
+        data: {
+          userId: validationResult.userId,
+          userEmail: validationResult.userEmail,
+          licenseKey: validationResult.licenseKey,
+          licenseId: validationResult.licenseId,
+          paymentId: payment.id,
+          testPaymentId: mockPaymentId
+        }
+      });
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("❌ Erro no teste de validação:", errorMessage);
+      res.status(500).json({
+        success: false,
+        message: "Test validation failed",
+        error: errorMessage
+      });
+    }
+  });
+
   // Test payment simulation endpoint
   app.post("/api/test/simulate-payment", isAuthenticated, async (req, res) => {
     try {
@@ -520,6 +601,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // USAR SISTEMA ROBUSTO DE VALIDAÇÃO E ATIVAÇÃO
           const { validateAndActivateLicense } = await import('./payment-license-validator');
           const { findBestEmailForUser } = await import('./license-utils');
+          
+          // Garantir que transaction_amount existe
+          if (!paymentInfo.transaction_amount) {
+            console.error(`❌ Transaction amount não encontrado no pagamento`);
+            return res.status(200).json({ received: true, error: "Transaction amount missing" });
+          }
           
           const validationResult = await validateAndActivateLicense(
             paymentId,
