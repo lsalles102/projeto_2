@@ -230,6 +230,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 15, 2025. Successfully completed migration from Replit Agent to standard Replit environment
 - June 15, 2025. Fixed critical license linking issue - licenses now properly associated with correct buyer's user ID
 - June 15, 2025. Enhanced webhook validation to prevent license assignment to wrong users
+- June 15, 2025. Fixed password reset system - corrected 404 error on reset password links
+- June 15, 2025. Added missing password reset endpoints (/api/auth/forgot-password and /api/auth/reset-password)
+- June 15, 2025. Corrected email URL format to use query parameters (?token=) instead of path parameters
 - June 15, 2025. Verified complete system functionality - ready for production use
 
 ## User Preferences
