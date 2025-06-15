@@ -1818,6 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(payment => 
           payment.status === "approved" && 
           !licenses.some(license => license.userId === payment.userId && 
+            license.createdAt && payment.createdAt &&
             new Date(license.createdAt) >= new Date(payment.createdAt))
         )
         .map(payment => {
@@ -1836,7 +1837,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedAt: payment.updatedAt
           };
         })
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
       
       res.json({ orphanPayments });
     } catch (error) {
