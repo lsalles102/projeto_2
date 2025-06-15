@@ -146,6 +146,16 @@ export default function Register() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  A senha deve conter pelo menos:
+                  <ul className="list-disc list-inside mt-1 space-y-0.5">
+                    <li>8 caracteres</li>
+                    <li>1 letra minúscula (a-z)</li>
+                    <li>1 letra maiúscula (A-Z)</li>
+                    <li>1 número (0-9)</li>
+                    <li>1 caractere especial (@$!%*?&)</li>
+                  </ul>
+                </div>
                 {form.formState.errors.password && (
                   <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
                 )}

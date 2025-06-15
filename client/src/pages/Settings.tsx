@@ -20,8 +20,12 @@ import { z } from "zod";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Senha atual é obrigatória"),
-  newPassword: z.string().min(6, "Nova senha deve ter pelo menos 6 caracteres"),
-  confirmPassword: z.string().min(6, "Confirmação é obrigatória"),
+  newPassword: z.string()
+    .min(8, "Nova senha deve ter pelo menos 8 caracteres")
+    .max(128, "Nova senha muito longa")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
+      "Nova senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
+  confirmPassword: z.string().min(8, "Confirmação é obrigatória"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -159,6 +163,16 @@ export default function Settings() {
                         {...passwordForm.register("newPassword")}
                         className="bg-background/50 border-primary/20 focus:border-primary"
                       />
+                      <div className="text-xs text-gray-400 mt-1">
+                        A senha deve conter pelo menos:
+                        <ul className="list-disc list-inside mt-1 space-y-0.5">
+                          <li>8 caracteres</li>
+                          <li>1 letra minúscula (a-z)</li>
+                          <li>1 letra maiúscula (A-Z)</li>
+                          <li>1 número (0-9)</li>
+                          <li>1 caractere especial (@$!%*?&)</li>
+                        </ul>
+                      </div>
                       {passwordForm.formState.errors.newPassword && (
                         <p className="text-sm text-red-500 mt-1">
                           {passwordForm.formState.errors.newPassword.message}
