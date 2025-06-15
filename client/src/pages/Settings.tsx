@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PasswordValidator, getPasswordStrength, isPasswordValid } from "@/components/PasswordValidator";
 import { Link } from "wouter";
 import { 
   ArrowLeft,
@@ -36,6 +37,7 @@ type ChangePasswordData = z.infer<typeof changePasswordSchema>;
 export default function Settings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("security");
+  const [newPassword, setNewPassword] = useState("");
 
   // Fetch user data
   const { data: userData, isLoading } = useQuery({

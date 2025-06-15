@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { registerSchema } from "@shared/schema";
+import { PasswordValidator, getPasswordStrength, isPasswordValid } from "@/components/PasswordValidator";
 import { Crosshair, Eye, EyeOff } from "lucide-react";
 import type { z } from "zod";
 
@@ -22,6 +23,7 @@ export default function Register() {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [password, setPassword] = useState("");
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -129,6 +131,11 @@ export default function Register() {
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-semibold">
                   Senha
+                  {password && (
+                    <span className={`ml-2 text-xs ${getPasswordStrength(password).color}`}>
+                      {getPasswordStrength(password).label}
+                    </span>
+                  )}
                 </Label>
                 <div className="relative">
                   <Input
@@ -136,7 +143,9 @@ export default function Register() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     className="bg-background/50 border-primary/20 focus:border-primary pr-10"
-                    {...form.register("password")}
+                    {...form.register("password", {
+                      onChange: (e) => setPassword(e.target.value)
+                    })}
                   />
                   <button
                     type="button"
@@ -146,18 +155,15 @@ export default function Register() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  A senha deve conter pelo menos:
-                  <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    <li>8 caracteres</li>
-                    <li>1 letra minúscula (a-z)</li>
-                    <li>1 letra maiúscula (A-Z)</li>
-                    <li>1 número (0-9)</li>
-                    <li>1 caractere especial (@$!%*?&)</li>
-                  </ul>
-                </div>
+                
+                {password && (
+                  <div className="mt-3">
+                    <PasswordValidator password={password} showTitle={false} />
+                  </div>
+                )}
+                
                 {form.formState.errors.password && (
-                  <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
+                  <p className="text-sm text-red-500 mt-2">{form.formState.errors.password.message}</p>
                 )}
               </div>
 
