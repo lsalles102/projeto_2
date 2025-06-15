@@ -58,15 +58,40 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
 }
 
 export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
-  console.log(`[EMAIL] Iniciando envio de email para: ${email}`);
-  console.log(`[EMAIL] Chave de licença: ${licenseKey}`);
-  console.log(`[EMAIL] Plano: ${planName}`);
+  // 1. VERIFICAÇÃO CRÍTICA: Garantir que o email não está vazio
+  if (!email || email.trim() === '') {
+    console.error(`[EMAIL] ❌ ERRO CRÍTICO: Email está vazio ou nulo`);
+    console.error(`[EMAIL] Parâmetro recebido: "${email}"`);
+    throw new Error('Email do destinatário não pode estar vazio');
+  }
+  
+  // 2. VERIFICAR SE A CHAVE E PLANO ESTÃO VÁLIDOS
+  if (!licenseKey || licenseKey.trim() === '') {
+    console.error(`[EMAIL] ❌ ERRO: Chave de licença está vazia`);
+    throw new Error('Chave de licença não pode estar vazia');
+  }
+  
+  if (!planName || planName.trim() === '') {
+    console.error(`[EMAIL] ❌ ERRO: Nome do plano está vazio`);
+    throw new Error('Nome do plano não pode estar vazio');
+  }
+  
+  // 3. LOGS DE VERIFICAÇÃO ANTES DO ENVIO
+  console.log(`[EMAIL] ✅ Iniciando envio de email`);
+  console.log(`[EMAIL] Destinatário: "${email}"`);
+  console.log(`[EMAIL] Chave de licença: "${licenseKey}"`);
+  console.log(`[EMAIL] Plano: "${planName}"`);
   
   const transporter = createTransporter();
   
+  // 4. CONFIGURAR OPÇÕES DO EMAIL COM VERIFICAÇÃO ADICIONAL
+  const fromEmail = process.env.SMTP_USER || 'contato@suportefovdark.shop';
+  console.log(`[EMAIL] From: "${fromEmail}"`);
+  console.log(`[EMAIL] To: "${email}"`);
+  
   const mailOptions = {
-    from: process.env.SMTP_USER || 'noreply@fovdark.shop',
-    to: email,
+    from: `"FovDark" <${fromEmail}>`,
+    to: email.trim(), // Garantir que não há espaços extras
     subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
@@ -117,18 +142,36 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   };
 
   try {
-    console.log(`[EMAIL] Tentando enviar email...`);
+    // 5. LOG ANTES DO ENVIO COM TODAS AS INFORMAÇÕES
+    console.log(`[EMAIL] ✅ Tentando enviar email...`);
+    console.log(`[EMAIL] Configuração do email:`);
+    console.log(`[EMAIL] - From: ${mailOptions.from}`);
+    console.log(`[EMAIL] - To: ${mailOptions.to}`);
+    console.log(`[EMAIL] - Subject: ${mailOptions.subject}`);
+    
     const result = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${email}`);
+    console.log(`[EMAIL] ✅ Email enviado com sucesso!`);
+    console.log(`[EMAIL] Destinatário: ${email}`);
     console.log(`[EMAIL] Message ID: ${result.messageId}`);
+    console.log(`[EMAIL] Response: ${JSON.stringify(result.response)}`);
     return result;
   } catch (error) {
-    console.error(`[EMAIL] ❌ Erro ao enviar email para ${email}:`, error);
+    console.error(`[EMAIL] ❌ ERRO CRÍTICO AO ENVIAR EMAIL`);
+    console.error(`[EMAIL] Destinatário: "${email}"`);
+    console.error(`[EMAIL] Erro completo:`, error);
     
     // Log detalhado do erro
     if (error instanceof Error) {
-      console.error(`[EMAIL] Erro detalhado: ${error.message}`);
-      console.error(`[EMAIL] Stack: ${error.stack}`);
+      console.error(`[EMAIL] Mensagem do erro: ${error.message}`);
+      console.error(`[EMAIL] Stack trace: ${error.stack}`);
+    }
+    
+    // Verificar se é erro de "No recipients defined"
+    if (error instanceof Error && error.message.includes('No recipients defined')) {
+      console.error(`[EMAIL] ❌ ERRO ESPECÍFICO: No recipients defined`);
+      console.error(`[EMAIL] Valor do email recebido: "${email}"`);
+      console.error(`[EMAIL] Tipo do email: ${typeof email}`);
+      console.error(`[EMAIL] mailOptions.to: "${mailOptions.to}"`);
     }
     
     throw new Error(`Falha ao enviar email com chave de licença: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);

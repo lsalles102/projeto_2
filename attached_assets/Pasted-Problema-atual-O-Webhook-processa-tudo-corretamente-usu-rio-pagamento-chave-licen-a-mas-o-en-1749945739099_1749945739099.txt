@@ -1,0 +1,74 @@
+Problema atual:
+
+O Webhook processa tudo corretamente (usuário, pagamento, chave, licença), mas o envio de email está falhando com o seguinte erro:
+
+yaml
+Copiar
+Editar
+Error: No recipients defined
+E o log do Nodemailer mostra:
+
+nginx
+Copiar
+Editar
+Sending message <xxxx@suportefovdark.shop> to <>
+Ou seja:
+O campo "to" do email está vazio, o Nodemailer está tentando enviar para nenhum destinatário.
+
+✅ Correção que quero que a IA faça:
+
+✅ 1. Corrigir a função de envio de email (sendLicenseKeyEmail):
+A função deve garantir que o campo to: sempre receba o email real do comprador, vindo do Mercado Pago.
+
+Exemplo esperado:
+
+ts
+Copiar
+Editar
+await transporter.sendMail({
+  from: '"FovDark" <contato@suportefovdark.shop>',
+  to: userEmail,  // ← Esse campo precisa estar com o email correto
+  subject: `Sua licença FovDark - Plano ${planName}`,
+  html: htmlBody,
+});
+✅ 2. Garantir que o parâmetro userEmail nunca esteja vazio:
+✔️ Antes de chamar o envio do email dentro do webhook, adicionar uma verificação:
+
+ts
+Copiar
+Editar
+if (!user.email) {
+  console.error("[WEBHOOK] ERRO: Email do usuário está vazio. Não será possível enviar a chave de licença.");
+  return;
+}
+✅ 3. Adicionar logs de verificação antes do envio:
+✔️ Antes de enviar o email, adicionar:
+
+ts
+Copiar
+Editar
+console.log(`[EMAIL] Enviando para: ${user.email}`);
+E também:
+
+ts
+Copiar
+Editar
+console.log(`[EMAIL] Plano: ${planName}`);
+console.log(`[EMAIL] Chave: ${activationKey}`);
+✅ 4. Extra (se possível):
+Se o campo paymentInfo.payer.email vindo do Mercado Pago estiver vazio, adicionar um log crítico no webhook, tipo:
+
+ts
+Copiar
+Editar
+console.error("[WEBHOOK] Erro crítico: Email do pagador vazio no webhook recebido do Mercado Pago.");
+✅ 5. Garantir que o Webhook continue sempre respondendo com:
+ts
+Copiar
+Editar
+res.status(200).json({ received: true });
+Mesmo que o email falhe.
+
+✅ Resumo final da tarefa:
+
+Corrija o erro "No recipients defined", garanta que o campo to: no Nodemailer sempre contenha o email real do comprador, adicione logs claros, e proteja o código para não quebrar o Webhook mesmo que o email falhe.

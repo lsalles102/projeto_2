@@ -668,7 +668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Verificar se email está presente
           if (!paymentInfo.payer?.email || paymentInfo.payer.email.trim() === '') {
-            console.warn("⚠️ Email do pagador está vazio ou nulo no webhook");
+            console.error("[WEBHOOK] ❌ Erro crítico: Email do pagador vazio no webhook recebido do Mercado Pago.");
+            console.error("[WEBHOOK] Dados do payer:", JSON.stringify(paymentInfo.payer, null, 2));
             res.status(200).json({ received: true });
             return;
           }
@@ -839,21 +840,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const planName = plan === "test" ? "Teste (30 minutos)" : 
                            plan === "7days" ? "7 Dias" : "15 Dias";
           
-          try {
-            console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
-            console.log(`Destinatário: ${paymentInfo.payer.email}`);
-            console.log(`Chave: ${activationKey}`);
-            console.log(`Plano: ${planName}`);
-            
-            await sendLicenseKeyEmail(paymentInfo.payer.email, activationKey, planName);
-            console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
-          } catch (emailError) {
-            console.error("❌ ERRO AO ENVIAR EMAIL:");
-            console.error("Detalhes:", emailError);
-            console.error(`Chave não entregue: ${activationKey}`);
-            console.error(`Email destinatário: ${paymentInfo.payer.email}`);
-            console.error("=== FALHA NO ENVIO DE EMAIL - INTERVENÇÃO MANUAL NECESSÁRIA ===");
-            // Não quebrar o webhook, apenas logar o erro
+          // VERIFICAÇÃO CRÍTICA: Garantir que o email do usuário não está vazio
+          if (!user.email || user.email.trim() === '') {
+            console.error("[WEBHOOK] ❌ ERRO CRÍTICO: Email do usuário está vazio. Não será possível enviar a chave de licença.");
+            console.error(`[WEBHOOK] Dados do usuário: ID=${user.id}, Email="${user.email}"`);
+            console.error(`[WEBHOOK] Email do Mercado Pago: "${paymentInfo.payer.email}"`);
+            // Não quebrar o webhook, apenas logar o erro crítico
+          } else {
+            try {
+              console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
+              console.log(`[EMAIL] Enviando para: ${user.email}`);
+              console.log(`[EMAIL] Plano: ${planName}`);
+              console.log(`[EMAIL] Chave: ${activationKey}`);
+              
+              // Usar o email do usuário criado/encontrado no banco
+              await sendLicenseKeyEmail(user.email, activationKey, planName);
+              console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
+            } catch (emailError) {
+              console.error("[WEBHOOK] ❌ ERRO AO ENVIAR EMAIL:");
+              console.error("Detalhes:", emailError);
+              console.error(`Chave não entregue: ${activationKey}`);
+              console.error(`Email destinatário: ${user.email}`);
+              console.error("=== FALHA NO ENVIO DE EMAIL - INTERVENÇÃO MANUAL NECESSÁRIA ===");
+              
+              // Log adicional para debug
+              if (emailError instanceof Error && emailError.message.includes('No recipients defined')) {
+                console.error("[WEBHOOK] Erro específico: Campo 'to' do email está vazio");
+                console.error(`[WEBHOOK] user.email: "${user.email}"`);
+                console.error(`[WEBHOOK] paymentInfo.payer.email: "${paymentInfo.payer.email}"`);
+              }
+              // Não quebrar o webhook, apenas logar o erro
+            }
           }
           
           console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
