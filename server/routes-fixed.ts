@@ -433,14 +433,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`✅ Usuário encontrado: ${user.email}`);
           
-          // 6. GERAR CHAVE DE ATIVAÇÃO ÚNICA E CRIAR/ATUALIZAR LICENÇA
-          const { createOrUpdateLicense, findBestEmailForUser } = await import('./license-utils');
+          // 6. CRIAR/RENOVAR LICENÇA DO USUÁRIO
+          const { renewUserLicense } = await import('./user-license');
+          const { findBestEmailForUser } = await import('./license-utils');
           
-          const { license, action, licenseKey } = await createOrUpdateLicense(
+          const licenseResult = await renewUserLicense(
             user.id,
-            paymentRecord.plan,
+            paymentRecord.plan as "test" | "7days" | "15days",
             paymentRecord.durationDays
           );
+          
+          if (!licenseResult.success || !licenseResult.license) {
+            console.error(`❌ Erro ao criar/renovar licença: ${licenseResult.message}`);
+            return res.status(500).json({ error: "Failed to create license" });
+          }
+          
+          const { license } = licenseResult;
+          const licenseKey = license.key;
+          const action = "criada/renovada";
           
           // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
           const planName = paymentRecord.plan === "test" ? "Teste (30 minutos)" : 
@@ -660,9 +670,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Chave: ${key}`);
       console.log(`HWID: ${hwid}`);
 
-      // Use license utilities for activation
-      const { activateLicenseManually } = await import('./license-utils');
-      const result = await activateLicenseManually(key, hwid, user.id);
+      // Use new centralized license system
+      const { activateLicenseKeyForUser } = await import('./user-license');
+      const result = await activateLicenseKeyForUser(user.id, key, hwid);
 
       if (result.success) {
         res.json({ 

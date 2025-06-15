@@ -24,7 +24,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
   hwid: varchar("hwid"),
-  licenses: text("licenses").array(), // Array de chaves de licença do usuário
+  licenses: jsonb("licenses"), // Objeto JSON com informações da licença ativa do usuário
   isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -265,6 +265,24 @@ export const adminResetHwidSchema = z.object({
   reason: z.string().min(10, "Motivo deve ter pelo menos 10 caracteres").max(500, "Motivo muito longo"),
   newHwid: z.string().optional(), // Se fornecido, força um HWID específico
 });
+
+// User License schema for the new centralized license system
+export const userLicenseSchema = z.object({
+  key: z.string(),
+  plan: z.enum(["test", "7days", "15days"]),
+  status: z.enum(["inactive", "active", "expired", "pending"]).default("pending"),
+  hwid: z.string().optional(),
+  daysRemaining: z.number().min(0).default(0),
+  hoursRemaining: z.number().min(0).max(23).default(0),
+  minutesRemaining: z.number().min(0).max(59).default(0),
+  totalMinutesRemaining: z.number().min(0).default(0),
+  expiresAt: z.string(), // ISO date string
+  activatedAt: z.string().optional(), // ISO date string
+  lastHeartbeat: z.string().optional(), // ISO date string
+  createdAt: z.string(), // ISO date string
+});
+
+export type UserLicense = z.infer<typeof userLicenseSchema>;
 
 // PIX payment schemas
 export const createPixPaymentSchema = z.object({
