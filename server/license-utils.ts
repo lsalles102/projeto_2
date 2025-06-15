@@ -3,17 +3,15 @@ import { storage } from "./storage";
 
 /**
  * Generates a unique activation key with retry mechanism
- * Format: XXXX-XXXX-XXXX-XXXX
+ * Format: FOV-XXXXXXX (7 random characters after FOV-)
  */
 export async function generateUniqueActivationKey(): Promise<string> {
   const maxAttempts = 10;
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // Generate key in format XXXX-XXXX-XXXX-XXXX
-    const segments = Array.from({ length: 4 }, () => 
-      nanoid(4).toUpperCase().replace(/[^A-Z0-9]/g, 'X')
-    );
-    const key = segments.join('-');
+    // Generate key in format FOV-XXXXXXX
+    const randomPart = Math.random().toString(36).substr(2, 7).toUpperCase();
+    const key = `FOV-${randomPart}`;
     
     // Check if key already exists in activation keys
     const existingActivationKey = await storage.getActivationKey(key);

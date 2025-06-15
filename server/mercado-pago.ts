@@ -40,8 +40,8 @@ export interface PixPaymentResponse {
 }
 
 export async function createPixPayment(data: CreatePixPaymentData): Promise<PixPaymentResponse> {
-  const externalReference = `payment_${nanoid()}`;
-  const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais
+  const externalReference = `user_${data.userId}_${nanoid()}`;
+  const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais para o MP
   
   console.log('CreatePixPayment called with data:', JSON.stringify(data, null, 2));
   console.log('Transaction amount:', transactionAmount);

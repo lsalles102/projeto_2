@@ -571,10 +571,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Signature:", signature);
       console.log("Request ID:", requestId);
       
-      // PROCESSAR APENAS WEBHOOKS DE PAGAMENTO
+      // PROCESSAR WEBHOOKS DE PAGAMENTO - Suporte a múltiplos formatos
       const webhookData = req.body;
-      if (webhookData.type === "payment" && webhookData.data?.id) {
-        const paymentId = webhookData.data.id;
+      let paymentId: string | null = null;
+      
+      // Detectar formato do webhook
+      if (webhookData.resource && webhookData.topic === "payment") {
+        // Novo formato: { resource: "/v1/payments/123456", topic: "payment" }
+        paymentId = webhookData.resource.split('/').pop();
+        console.log(`=== FORMATO NOVO - TOPIC PAYMENT ===`);
+      } else if (webhookData.type === "payment" && webhookData.data?.id) {
+        // Formato antigo: { type: "payment", data: { id: "123456" } }
+        paymentId = webhookData.data.id;
+        console.log(`=== FORMATO ANTIGO - TYPE PAYMENT ===`);
+      } else if (webhookData.action === "payment.updated" && webhookData.data?.id) {
+        // Formato action: { action: "payment.updated", data: { id: "123456" } }
+        paymentId = webhookData.data.id;
+        console.log(`=== FORMATO ACTION - PAYMENT UPDATED ===`);
+      }
+      
+      if (paymentId) {
         console.log(`=== PROCESSANDO PAGAMENTO ${paymentId} ===`);
         
         // BUSCAR INFORMAÇÕES DO PAGAMENTO NO MERCADO PAGO

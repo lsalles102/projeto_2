@@ -1,0 +1,46 @@
+Estou com um projeto Node.js Express com Supabase e integração com Mercado Pago.
+
+Preciso que você faça as seguintes correções:
+
+✅ 1. Correção do tipo de dados no banco (erro de "invalid input syntax for type integer"):
+Atualmente, ao criar um pagamento PIX, estou tentando gravar um valor decimal (ex: 0.021) em um campo Postgres que espera um INTEGER.
+
+Corrija o código para converter o valor para inteiro (por exemplo: se for valor monetário, transformar de reais para centavos antes de salvar).
+
+Alternativamente, se for melhor, altere o tipo da coluna no banco de INTEGER para NUMERIC ou FLOAT, dependendo de como estiver o código.
+
+✅ 2. Vincular a licença gerada ao usuário comprador:
+Toda vez que o pagamento for aprovado, a chave de licença precisa ser gerada e salva no Supabase relacionada ao ID do usuário que fez a compra.
+
+O ID do usuário está sendo enviado na criação do pagamento, dentro do campo external_reference do Mercado Pago (exemplo: external_reference = user.id).
+
+No webhook, ao receber a notificação de pagamento aprovado (status === 'approved'), o sistema deve:
+
+Buscar o external_reference para saber o user_id.
+
+Gerar uma chave de licença (exemplo: algo tipo 'FOV-XXXXXXX').
+
+Salvar essa chave no banco Supabase, criando um registro na tabela de licenças (licenses), com os campos: user_id, key, active = true, payment_id, etc.
+
+(Opcional) Enviar um e-mail ao usuário com a licença.
+
+✅ 3. Corrigir o webhook do Mercado Pago:
+O webhook atual está ignorando a notificação com a mensagem "Tipo não é payment ou ID não encontrado".
+
+Corrija o handler do webhook para:
+
+Ler o campo correto (resource e topic).
+
+Buscar os detalhes do pagamento via API do Mercado Pago usando o resource (que contém o payment_id).
+
+Processar o pagamento somente quando o status for "approved".
+
+✅ 4. (Opcional) Exemplo de geração de chave de licença:
+Se quiser, use uma função como essa para gerar a chave:
+
+javascript
+Copiar
+Editar
+function generateLicenseKey() {
+  return 'FOV-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+}
