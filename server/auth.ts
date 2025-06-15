@@ -2,7 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
-import bcrypt from "bcrypt";
+
 import jwt from "jsonwebtoken";
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
@@ -71,9 +71,8 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Credenciais inválidas" });
         }
 
-        // Compare hashed passwords
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
+        // Compare passwords directly (no encryption)
+        if (password !== user.password) {
           return done(null, false, { message: "Credenciais inválidas" });
         }
 

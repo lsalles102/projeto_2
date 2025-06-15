@@ -13,7 +13,7 @@ import {
   type HwidResetLog,
   type InsertHwidResetLog
 } from "@shared/schema";
-import bcrypt from "bcrypt";
+
 
 export interface IStorage {
   // User operations
@@ -109,12 +109,13 @@ export class MemStorage implements IStorage {
       id: this.nextUserId++,
       email: "admin@test.com",
       username: "admin",
-      password: bcrypt.hashSync("admin123", 10),
+      password: "Admin123!",
       firstName: "Admin",
       lastName: "User",
       profileImageUrl: null,
       googleId: null,
       hwid: null,
+      licenses: null,
       isAdmin: true,
       createdAt: new Date(),
       updatedAt: new Date(),

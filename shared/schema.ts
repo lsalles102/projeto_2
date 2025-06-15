@@ -148,8 +148,10 @@ export const registerSchema = z.object({
   email: z.string().email("Email inválido").max(254, "Email muito longo"),
   username: z.string().min(1, "Username é obrigatório").max(50, "Username muito longo"),
   password: z.string()
-    .min(6, "Senha deve ter pelo menos 6 caracteres")
-    .max(128, "Senha muito longa"),
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .max(128, "Senha muito longa")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
+      "Senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
   firstName: z.string()
     .min(1, "Nome é obrigatório")
     .max(50, "Nome muito longo")
@@ -182,8 +184,12 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(6),
-  confirmPassword: z.string().min(6),
+  password: z.string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .max(128, "Senha muito longa")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
+      "Senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
+  confirmPassword: z.string().min(8),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -191,8 +197,12 @@ export const resetPasswordSchema = z.object({
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Senha atual é obrigatória"),
-  newPassword: z.string().min(6, "Nova senha deve ter pelo menos 6 caracteres"),
-  confirmPassword: z.string().min(6, "Confirmação de senha é obrigatória"),
+  newPassword: z.string()
+    .min(8, "Nova senha deve ter pelo menos 8 caracteres")
+    .max(128, "Nova senha muito longa")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
+      "Nova senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
+  confirmPassword: z.string().min(8, "Confirmação de senha é obrigatória"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
