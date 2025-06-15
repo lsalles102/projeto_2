@@ -608,37 +608,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Valor: R$ ${paymentInfo.transaction_amount}`);
           console.log(`External Reference: ${paymentInfo.external_reference}`);
           
-          // VALIDAR EXTERNAL REFERENCE
+          // VALIDAR EXTERNAL REFERENCE E EXTRAIR USER_ID
           if (!paymentInfo.external_reference) {
             console.log(`❌ External reference não encontrada no pagamento`);
             return res.status(200).json({ received: true, error: "External reference missing" });
           }
           
-          // USAR SISTEMA ROBUSTO DE VALIDAÇÃO E ATIVAÇÃO
-          const { validateAndActivateLicense } = await import('./payment-license-validator');
-          const { findBestEmailForUser } = await import('./license-utils');
+          console.log(`=== EXTRAINDO USER_ID DO EXTERNAL_REFERENCE ===`);
+          console.log(`External Reference: ${paymentInfo.external_reference}`);
           
-          // Garantir que transaction_amount existe
+          // Extrair user_id do external_reference (formato: user_123_randomstring)
+          const userIdMatch = paymentInfo.external_reference.match(/user_(\d+)_/);
+          if (!userIdMatch || !userIdMatch[1]) {
+            console.error(`❌ Não foi possível extrair user_id do external_reference: ${paymentInfo.external_reference}`);
+            return res.status(200).json({ received: true, error: "Invalid external reference format" });
+          }
+          
+          const userId = parseInt(userIdMatch[1]);
+          console.log(`✅ User ID extraído: ${userId}`);
+          
+          // Verificar se o usuário existe
+          const user = await storage.getUser(userId);
+          if (!user) {
+            console.error(`❌ Usuário ${userId} não encontrado no banco de dados`);
+            return res.status(200).json({ received: true, error: "User not found" });
+          }
+          
+          console.log(`✅ Usuário encontrado: ${user.email} (ID: ${user.id})`);
+          
+          // Garantir que transaction_amount existe e converter para centavos se necessário
           if (!paymentInfo.transaction_amount) {
             console.error(`❌ Transaction amount não encontrado no pagamento`);
             return res.status(200).json({ received: true, error: "Transaction amount missing" });
           }
           
-          const validationResult = await validateAndActivateLicense(
-            paymentId,
-            paymentInfo.external_reference,
-            paymentInfo.transaction_amount,
-            paymentInfo.payer?.email
-          );
+          // O Mercado Pago retorna valores em reais (float), precisamos converter para centavos (integer)
+          const transactionAmountCents = Math.round(paymentInfo.transaction_amount * 100);
+          console.log(`Valor do pagamento: R$ ${paymentInfo.transaction_amount} = ${transactionAmountCents} centavos`);
           
-          if (!validationResult.success) {
-            console.error(`❌ FALHA NA VALIDAÇÃO/ATIVAÇÃO: ${validationResult.message}`);
-            return res.status(200).json({ 
-              received: true, 
-              error: "License validation/activation failed",
-              details: validationResult.message 
-            });
+          // DETERMINAR PLANO BASEADO NO VALOR PAGO
+          let plan = 'test';
+          let durationDays = 0.021; // 30 minutos
+          
+          if (transactionAmountCents === 100) { // R$ 1,00
+            plan = 'test';
+            durationDays = 0.021; // 30 minutos
+          } else if (transactionAmountCents === 1990) { // R$ 19,90
+            plan = '7days';
+            durationDays = 7;
+          } else if (transactionAmountCents === 3490) { // R$ 34,90
+            plan = '15days';
+            durationDays = 15;
+          } else {
+            console.warn(`⚠️ Valor não reconhecido: ${transactionAmountCents} centavos. Usando plano test como fallback.`);
           }
+          
+          console.log(`Plano determinado: ${plan} (${durationDays} dias)`);
+          
+          // GERAR CHAVE DE LICENÇA NO FORMATO FOV-XXXXXXX
+          const { generateUniqueActivationKey, calculateExpirationDate, calculateTotalMinutes } = await import('./license-utils');
+          const licenseKey = await generateUniqueActivationKey();
+          console.log(`✅ Chave de licença gerada: ${licenseKey}`);
+          
+          // CALCULAR DADOS DE EXPIRAÇÃO
+          const expiresAt = calculateExpirationDate(durationDays);
+          const totalMinutes = calculateTotalMinutes(durationDays);
+          
+          // Calcular dias, horas e minutos restantes
+          const daysRemaining = Math.floor(durationDays);
+          const hoursRemaining = Math.floor((durationDays - daysRemaining) * 24);
+          const minutesRemaining = Math.floor(((durationDays - daysRemaining) * 24 - hoursRemaining) * 60);
+          
+          console.log(`Dados de expiração:`);
+          console.log(`- Expira em: ${expiresAt.toISOString()}`);
+          console.log(`- Dias restantes: ${daysRemaining}`);
+          console.log(`- Horas restantes: ${hoursRemaining}`);
+          console.log(`- Minutos restantes: ${minutesRemaining}`);
+          console.log(`- Total de minutos: ${totalMinutes}`);
+          
+          // CRIAR LICENÇA DIRETAMENTE NO BANCO
+          const newLicense = await storage.createLicense({
+            userId: userId,
+            key: licenseKey,
+            plan: plan,
+            status: 'active',
+            daysRemaining: daysRemaining,
+            hoursRemaining: hoursRemaining,
+            minutesRemaining: minutesRemaining,
+            totalMinutesRemaining: totalMinutes,
+            expiresAt: expiresAt,
+            activatedAt: new Date(),
+          });
+          
+          console.log(`✅ Licença criada no banco - ID: ${newLicense.id}`);
+          
+          // REGISTRAR PAGAMENTO NO BANCO COM VALOR EM CENTAVOS
+          const payment = await storage.createPayment({
+            userId: userId,
+            mercadoPagoId: paymentId,
+            externalReference: paymentInfo.external_reference,
+            status: 'approved',
+            transactionAmount: transactionAmountCents, // Valor em centavos
+            currency: 'BRL',
+            plan: plan,
+            durationDays: Math.round(durationDays * 1000) / 1000, // Arredondar para 3 casas decimais
+            payerEmail: paymentInfo.payer?.email || user.email,
+            payerFirstName: paymentInfo.payer?.first_name || user.firstName || '',
+            payerLastName: paymentInfo.payer?.last_name || user.lastName || '',
+            paymentMethodId: paymentInfo.payment_method_id || 'pix',
+          });
+          
+          console.log(`✅ Pagamento registrado no banco - ID: ${payment.id}`);
+          
+          const validationResult = {
+            success: true,
+            message: 'Licença ativada com sucesso',
+            userId: userId,
+            userEmail: user.email,
+            licenseKey: licenseKey,
+            licenseId: newLicense.id
+          };
           
           console.log(`✅ LICENÇA ATIVADA COM SUCESSO!`);
           console.log(`Usuário: ${validationResult.userEmail} (ID: ${validationResult.userId})`);
@@ -646,15 +735,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // ENVIAR EMAIL COM A CHAVE DE LICENÇA
           if (validationResult.userId && validationResult.licenseKey) {
-            const user = await storage.getUser(validationResult.userId);
             const license = await storage.getLicenseByKey(validationResult.licenseKey);
             
             if (user && license) {
               const planName = license.plan === "test" ? "Teste (30 minutos)" : 
                                license.plan === "7days" ? "7 Dias" : "15 Dias";
               
-              // Buscar melhor email disponível
-              const emailToUse = await findBestEmailForUser(user, paymentInfo);
+              // Usar email do pagador ou email do usuário cadastrado
+              const emailToUse = paymentInfo.payer?.email || user.email;
               
               if (!emailToUse) {
                 console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
@@ -683,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
-          console.log(`Pagamento: ${paymentId} (R$ ${(paymentInfo.transaction_amount || 0)/100})`);
+          console.log(`Pagamento: ${paymentId} (R$ ${paymentInfo.transaction_amount})`);
           console.log(`Usuário: ${validationResult.userEmail}`);
           console.log(`Chave gerada: ${validationResult.licenseKey}`);
           console.log(`Status: LICENÇA ATIVA E VINCULADA AO USUÁRIO CORRETO`);
