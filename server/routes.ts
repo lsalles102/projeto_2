@@ -490,13 +490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Signature:", signature);
       console.log("Request ID:", requestId);
       
-      // 2. PROCESSAR APENAS WEBHOOKS DE PAGAMENTO
+      // PROCESSAR APENAS WEBHOOKS DE PAGAMENTO
       const webhookData = req.body;
       if (webhookData.type === "payment" && webhookData.data?.id) {
         const paymentId = webhookData.data.id;
         console.log(`=== PROCESSANDO PAGAMENTO ${paymentId} ===`);
         
-        // 3. BUSCAR INFORMAÇÕES DO PAGAMENTO NO MERCADO PAGO
+        // BUSCAR INFORMAÇÕES DO PAGAMENTO NO MERCADO PAGO
         console.log("Buscando informações do pagamento no Mercado Pago...");
         const paymentInfo = await getPaymentInfo(paymentId);
         if (!paymentInfo) {
@@ -505,150 +505,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log("Informações do pagamento:", JSON.stringify(paymentInfo, null, 2));
         
-        // 4. VERIFICAR SE O PAGAMENTO FOI APROVADO
+        // VERIFICAR SE O PAGAMENTO FOI APROVADO
         if (paymentInfo?.status === "approved") {
           console.log(`=== PAGAMENTO APROVADO! ===`);
           console.log(`Valor: R$ ${paymentInfo.transaction_amount}`);
           console.log(`External Reference: ${paymentInfo.external_reference}`);
           
-          // 5. BUSCAR O PAGAMENTO NO BANCO PELA EXTERNAL REFERENCE
+          // VALIDAR EXTERNAL REFERENCE
           if (!paymentInfo.external_reference) {
             console.log(`❌ External reference não encontrada no pagamento`);
-            return res.status(400).json({ error: "External reference missing" });
+            return res.status(200).json({ received: true, error: "External reference missing" });
           }
           
-          const paymentRecord = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
-          if (!paymentRecord) {
-            console.log(`❌ Pagamento não encontrado no banco: ${paymentInfo.external_reference}`);
-            return res.status(404).json({ error: "Payment not found in database" });
-          }
-          
-          console.log(`✅ Pagamento encontrado no banco: ID ${paymentRecord.id}`);
-          console.log(`Usuário: ${paymentRecord.userId}`);
-          console.log(`Plano: ${paymentRecord.plan} (${paymentRecord.durationDays} dias)`);
-          
-          // 6. BUSCAR O USUÁRIO
-          const user = await storage.getUser(paymentRecord.userId);
-          if (!user) {
-            console.log(`❌ Usuário não encontrado: ${paymentRecord.userId}`);
-            return res.status(404).json({ error: "User not found" });
-          }
-          
-          console.log(`✅ Usuário encontrado: ${user.email}`);
-          
-          // 6. VALIDAÇÃO DE SEGURANÇA: Verificar se o usuário do pagamento é o mesmo do banco
-          const securityValidation = securityAudit.validateLicenseOwnership(paymentRecord.userId, user.id);
-          if (!securityValidation.valid) {
-            securityAudit.logSecurityEvent({
-              userId: user.id,
-              userEmail: user.email,
-              eventType: 'WEBHOOK_FRAUD_ATTEMPT',
-              severity: 'CRITICAL',
-              details: {
-                paymentUserId: paymentRecord.userId,
-                requestingUserId: user.id,
-                externalReference: paymentInfo.external_reference,
-                paymentId,
-                reason: securityValidation.reason
-              }
-            });
-            
-            console.error(`❌ TENTATIVA DE FRAUDE BLOQUEADA!`);
-            console.error(`Usuário do pagamento: ${paymentRecord.userId}`);
-            console.error(`Usuário encontrado: ${user.id}`);
-            console.error(`External Reference: ${paymentInfo.external_reference}`);
-            return res.status(403).json({ error: "Security validation failed" });
-          }
-          
-          // 7. VERIFICAR SE JÁ FOI PROCESSADO (evitar duplicação)
-          if (paymentRecord.status === "approved") {
-            console.log(`⚠️ Pagamento já foi processado anteriormente: ${paymentRecord.id}`);
-            return res.status(200).json({ received: true, message: "Already processed" });
-          }
-          
-          // 8. ATUALIZAR STATUS DO PAGAMENTO NO BANCO
-          await storage.updatePayment(paymentRecord.id, {
-            status: "approved",
-            mercadoPagoId: paymentId,
-            statusDetail: paymentInfo.status_detail || "accredited",
-          });
-          
-          // 9. CRIAR/RENOVAR LICENÇA DO USUÁRIO (APENAS PARA O USUÁRIO CORRETO)
-          const { renewUserLicense } = await import('./user-license');
+          // USAR SISTEMA ROBUSTO DE VALIDAÇÃO E ATIVAÇÃO
+          const { validateAndActivateLicense } = await import('./payment-license-validator');
           const { findBestEmailForUser } = await import('./license-utils');
           
-          console.log(`✅ Criando licença para o usuário correto: ${user.id} (${user.email})`);
-          
-          const licenseResult = await renewUserLicense(
-            paymentRecord.userId, // Usar o userId do pagamento para garantia extra
-            paymentRecord.plan as "test" | "7days" | "15days",
-            paymentRecord.durationDays
+          const validationResult = await validateAndActivateLicense(
+            paymentId,
+            paymentInfo.external_reference,
+            paymentInfo.transaction_amount,
+            paymentInfo.payer?.email
           );
           
-          if (!licenseResult.success || !licenseResult.license) {
-            console.error(`❌ Erro ao criar/renovar licença: ${licenseResult.message}`);
-            securityAudit.logWebhookProcessed(paymentId, paymentRecord.userId, false, {
-              error: licenseResult.message,
-              externalReference: paymentInfo.external_reference
+          if (!validationResult.success) {
+            console.error(`❌ FALHA NA VALIDAÇÃO/ATIVAÇÃO: ${validationResult.message}`);
+            return res.status(200).json({ 
+              received: true, 
+              error: "License validation/activation failed",
+              details: validationResult.message 
             });
-            return res.status(500).json({ error: "Failed to create license" });
           }
           
-          const { license } = licenseResult;
-          const licenseKey = license.key;
-          const action = "criada/renovada";
+          console.log(`✅ LICENÇA ATIVADA COM SUCESSO!`);
+          console.log(`Usuário: ${validationResult.userEmail} (ID: ${validationResult.userId})`);
+          console.log(`Chave: ${validationResult.licenseKey}`);
           
-          // Registrar sucesso na auditoria
-          securityAudit.logPaymentApproved(paymentRecord.userId, user.email, paymentId, licenseKey);
-          securityAudit.logWebhookProcessed(paymentId, paymentRecord.userId, true, {
-            licenseKey,
-            plan: paymentRecord.plan,
-            externalReference: paymentInfo.external_reference
-          });
-          
-          // 7. ENVIAR EMAIL COM A CHAVE DE LICENÇA
-          const planName = paymentRecord.plan === "test" ? "Teste (30 minutos)" : 
-                           paymentRecord.plan === "7days" ? "7 Dias" : "15 Dias";
-          
-          // Buscar melhor email disponível
-          const emailToUse = await findBestEmailForUser(user, paymentInfo);
-          
-          // Tentar envio se email válido encontrado
-          if (!emailToUse) {
-            console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
-            console.log(`[EMAIL] - Email usuário: "${user.email}"`);
-            console.log(`[EMAIL] - Email Mercado Pago: "${paymentInfo.payer?.email || 'N/A'}"`);
-            console.log(`[EMAIL] - External reference: "${paymentInfo.external_reference || 'N/A'}"`);
-            console.log(`[EMAIL] ✅ Licença ativada no sistema - usuário pode fazer login para verificar`);
+          // ENVIAR EMAIL COM A CHAVE DE LICENÇA
+          if (validationResult.userId && validationResult.licenseKey) {
+            const user = await storage.getUser(validationResult.userId);
+            const license = await storage.getLicenseByKey(validationResult.licenseKey);
             
-            // Log estruturado para monitoramento
-            console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
-            console.log(`Usuário ID: ${user.id}`);
-            console.log(`Email cadastrado: ${user.email}`);
-            console.log(`Chave gerada: ${licenseKey}`);
-            console.log(`Plano: ${planName}`);
-            console.log(`Válida até: ${license.expiresAt}`);
-            console.log(`Status: ATIVA - Disponível no dashboard`);
-          } else {
-            console.log(`[EMAIL] ✅ Email selecionado para envio: "${emailToUse}"`);
-            
-            try {
-              // Importar função de envio e tentar enviar
-              const { sendLicenseKeyEmail } = await import('./email');
-              await sendLicenseKeyEmail(emailToUse, licenseKey, planName);
-              console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
-            } catch (emailError) {
-              console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
-              console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
+            if (user && license) {
+              const planName = license.plan === "test" ? "Teste (30 minutos)" : 
+                               license.plan === "7days" ? "7 Dias" : "15 Dias";
+              
+              // Buscar melhor email disponível
+              const emailToUse = await findBestEmailForUser(user, paymentInfo);
+              
+              if (!emailToUse) {
+                console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
+                console.log(`[EMAIL] ✅ Licença ativada no sistema - usuário pode fazer login para verificar`);
+                
+                console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
+                console.log(`Usuário ID: ${user.id}`);
+                console.log(`Email cadastrado: ${user.email}`);
+                console.log(`Chave gerada: ${validationResult.licenseKey}`);
+                console.log(`Plano: ${planName}`);
+                console.log(`Válida até: ${license.expiresAt}`);
+                console.log(`Status: ATIVA - Disponível no dashboard`);
+              } else {
+                console.log(`[EMAIL] ✅ Email selecionado para envio: "${emailToUse}"`);
+                
+                try {
+                  const { sendLicenseKeyEmail } = await import('./email');
+                  await sendLicenseKeyEmail(emailToUse, validationResult.licenseKey, planName);
+                  console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
+                } catch (emailError) {
+                  console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
+                  console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
+                }
+              }
             }
           }
           
           console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
           console.log(`Pagamento: ${paymentId} (R$ ${(paymentInfo.transaction_amount || 0)/100})`);
-          console.log(`Usuário: ${user.email}`);
-          console.log(`Chave gerada: ${licenseKey}`);
-          console.log(`Válida até: ${license.expiresAt}`);
-          console.log(`Ação: Licença ${action}`);
+          console.log(`Usuário: ${validationResult.userEmail}`);
+          console.log(`Chave gerada: ${validationResult.licenseKey}`);
+          console.log(`Status: LICENÇA ATIVA E VINCULADA AO USUÁRIO CORRETO`);
           
         } else {
           console.log(`=== PAGAMENTO NÃO APROVADO ===`);
@@ -659,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Tipo não é payment ou ID não encontrado`);
       }
       
-      // 8. SEMPRE RETORNAR 200 PARA EVITAR RETRIES DO MERCADO PAGO
+      // SEMPRE RETORNAR 200 PARA EVITAR RETRIES DO MERCADO PAGO
       res.status(200).json({ received: true });
       
     } catch (error) {
