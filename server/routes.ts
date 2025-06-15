@@ -465,16 +465,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Registration route
   app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
     try {
-      const { email, username, password, firstName, lastName } = registerSchema.parse(req.body);
+      console.log("=== TENTATIVA DE REGISTRO ===");
+      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
+      
+      const { email, password, firstName, lastName } = registerSchema.parse(req.body);
+      console.log("Dados validados com sucesso");
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
+        console.log("Email já existe:", email);
         return res.status(400).json({ message: "Email já está em uso" });
       }
 
+      // Generate username from first and last name
+      const username = `${firstName || ''}${lastName || ''}`.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/[^a-z0-9]/g, '') // Remove caracteres especiais
+        .substring(0, 20) + Math.floor(Math.random() * 1000);
+
+      console.log("Username gerado:", username);
+
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
+      console.log("Senha hasheada com sucesso");
 
       // Create user
       const user = await storage.createUser({
@@ -485,15 +500,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
       });
 
-      res.status(201).json({ 
-        user: { ...user, password: undefined },
-        message: "Usuário criado com sucesso" 
+      console.log("✅ Usuário criado com sucesso:", user.email);
+
+      // Automatically log the user in after registration
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Erro no login automático:", err);
+          return res.status(201).json({ 
+            user: { ...user, password: undefined },
+            message: "Usuário criado com sucesso. Faça login para continuar." 
+          });
+        }
+        
+        const token = generateToken(user.id);
+        res.status(201).json({ 
+          user: { ...user, password: undefined },
+          token,
+          message: "Usuário criado e logado com sucesso" 
+        });
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Erro de validação:", error.errors);
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
-      console.error("Registration error:", error);
+      console.error("Erro no registro:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
