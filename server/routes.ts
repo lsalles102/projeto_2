@@ -840,91 +840,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const planName = plan === "test" ? "Teste (30 minutos)" : 
                            plan === "7days" ? "7 Dias" : "15 Dias";
           
-          // VERIFICAÇÃO E CORREÇÃO DE EMAIL URGENTE
-          console.log(`=== VERIFICANDO E CORRIGINDO EMAIL PARA ENVIO ===`);
-          console.log(`[WEBHOOK] Email do usuário no banco: "${user.email}"`);
-          console.log(`[WEBHOOK] Email original do Mercado Pago: "${paymentInfo.payer.email || 'não disponível'}"`);
+          // 7. SISTEMA ROBUSTO DE SELEÇÃO DE EMAIL
+          console.log(`=== SELECIONANDO EMAIL VÁLIDO PARA ENVIO ===`);
           
-          // Função para validar e limpar email
+          // Função robusta para validar e limpar email
           const validateAndCleanEmail = (email: string | null | undefined): string | null => {
-            if (!email) return null;
-            const cleaned = email.trim().replace(/['"]+/g, '');
+            if (!email || typeof email !== 'string') return null;
             
-            // Verificar se é mascarado
+            // Remover espaços e aspas
+            const cleaned = email.trim().replace(/['"]+/g, '').replace(/\s+/g, '');
+            
+            // Rejeitar emails mascarados
             if (cleaned.includes('XXXXX') || /^X+$/.test(cleaned) || cleaned === '') {
               return null;
             }
             
-            // Verificar formato básico
-            if (cleaned.includes('@') && cleaned.includes('.')) {
-              return cleaned;
+            // Verificar se contém @ e .
+            if (!cleaned.includes('@') || !cleaned.includes('.')) {
+              return null;
             }
             
-            return null;
+            // Validar formato com regex simples
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(cleaned)) {
+              return null;
+            }
+            
+            return cleaned;
           };
           
-          // Verificar emails disponíveis
+          // 1. Validar email do usuário no banco
           const userEmailClean = validateAndCleanEmail(user.email);
+          console.log(`[EMAIL] Email do usuário: "${user.email}" → ${userEmailClean ? 'VÁLIDO' : 'INVÁLIDO'}`);
+          
+          // 2. Validar email do Mercado Pago
           const mpEmailClean = validateAndCleanEmail(paymentInfo.payer?.email);
+          console.log(`[EMAIL] Email do Mercado Pago: "${paymentInfo.payer?.email || 'N/A'}" → ${mpEmailClean ? 'VÁLIDO' : 'INVÁLIDO'}`);
           
-          console.log(`[WEBHOOK] Email do usuário após limpeza: "${userEmailClean || 'inválido'}"`);
-          console.log(`[WEBHOOK] Email do MP após limpeza: "${mpEmailClean || 'inválido'}"`);
-          
-          // Priorizar email do usuário (mais confiável)
+          // 3. Escolher o melhor email disponível (priorizar usuário)
           let emailToUse = userEmailClean || mpEmailClean;
           
-          // SOLUÇÃO PARA EMAILS MASCARADOS: Buscar email do pagamento original
-          if (!emailToUse) {
-            console.log(`[WEBHOOK] ⚠️ Emails mascarados detectados - buscando email alternativo`);
-            
-            // Buscar email do pagamento original (se foi criado via PIX)
+          // 4. Se ambos inválidos, buscar no pagamento original
+          if (!emailToUse && paymentInfo.external_reference) {
+            console.log(`[EMAIL] Buscando email no pagamento original...`);
             try {
-              const externalRef = paymentInfo.external_reference || '';
-              if (externalRef) {
-                const originalPayment = await storage.getPaymentByExternalReference(externalRef);
-                if (originalPayment && originalPayment.payerEmail) {
-                  const originalEmailClean = validateAndCleanEmail(originalPayment.payerEmail);
-                  if (originalEmailClean) {
-                    emailToUse = originalEmailClean;
-                    console.log(`[WEBHOOK] ✅ Email encontrado no pagamento original: "${emailToUse}"`);
-                  }
+              const originalPayment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
+              if (originalPayment?.payerEmail) {
+                const originalEmailClean = validateAndCleanEmail(originalPayment.payerEmail);
+                if (originalEmailClean) {
+                  emailToUse = originalEmailClean;
+                  console.log(`[EMAIL] Email encontrado no pagamento: "${originalEmailClean}" → VÁLIDO`);
+                } else {
+                  console.log(`[EMAIL] Email do pagamento inválido: "${originalPayment.payerEmail}"`);
                 }
+              } else {
+                console.log(`[EMAIL] Pagamento não encontrado ou sem email`);
               }
             } catch (searchError) {
-              console.log(`[WEBHOOK] Não foi possível buscar email do pagamento original:`, searchError);
+              console.log(`[EMAIL] Erro ao buscar pagamento original:`, searchError);
             }
           }
           
-          // FALLBACK: Usar email padrão do sistema se todos falharam
+          // 5. Tentar envio se email válido encontrado
           if (!emailToUse) {
-            console.log(`[WEBHOOK] ⚠️ FALLBACK: Todos os emails estão mascarados`);
-            console.log(`[WEBHOOK] ✅ SOLUÇÃO: Licença ativada automaticamente no sistema`);
-            console.log(`[WEBHOOK] O usuário pode fazer login e ver sua licença ativada no dashboard`);
+            console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
+            console.log(`[EMAIL] - Email usuário: "${user.email}"`);
+            console.log(`[EMAIL] - Email Mercado Pago: "${paymentInfo.payer?.email || 'N/A'}"`);
+            console.log(`[EMAIL] - External reference: "${paymentInfo.external_reference || 'N/A'}"`);
+            console.log(`[EMAIL] ✅ Licença ativada no sistema - usuário pode fazer login para verificar`);
             
-            // Criar log especial para emails mascarados
-            console.log(`=== LICENÇA ATIVADA SEM EMAIL (EMAILS MASCARADOS) ===`);
-            console.log(`Usuário: ${user.email} (ID: ${user.id})`);
+            // Log estruturado para monitoramento
+            console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
+            console.log(`Usuário ID: ${user.id}`);
+            console.log(`Email cadastrado: ${user.email}`);
             console.log(`Chave gerada: ${activationKey}`);
             console.log(`Plano: ${planName}`);
             console.log(`Válida até: ${expiryDate.toISOString()}`);
-            console.log(`Status: ATIVA - Usuário pode fazer login para verificar`);
-            console.log(`=== LICENÇA PRONTA PARA USO ===`);
+            console.log(`Status: ATIVA - Disponível no dashboard`);
           } else {
-            // Tentar enviar email com sistema robusto
-            console.log(`=== ENVIANDO EMAIL COM CHAVE ===`);
-            console.log(`[EMAIL] Enviando para: ${emailToUse}`);
-            console.log(`[EMAIL] Plano: ${planName}`);
-            console.log(`[EMAIL] Chave: ${activationKey}`);
+            console.log(`[EMAIL] ✅ Email selecionado para envio: "${emailToUse}"`);
             
-            const { sendLicenseKeyEmailRobust } = await import('./email');
-            const emailResult = await sendLicenseKeyEmailRobust(emailToUse, activationKey, planName);
-            
-            if (emailResult.success) {
-              console.log(`✅ EMAIL ENVIADO COM SUCESSO!`);
-            } else {
-              console.log(`⚠️ FALHA NO EMAIL MAS LICENÇA ATIVADA`);
-              console.log(`Erro: ${emailResult.error}`);
-              console.log(`Usuário pode fazer login para ver sua licença ativa`);
+            try {
+              // Importar função de envio e tentar enviar
+              const { sendLicenseKeyEmail } = await import('./email');
+              await sendLicenseKeyEmail(emailToUse, activationKey, planName);
+              console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
+            } catch (emailError) {
+              console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
+              console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
             }
           }
           
