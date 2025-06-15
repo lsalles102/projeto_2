@@ -19,12 +19,14 @@ function log(message: string, source = "express") {
 }
 
 function serveStatic(app: express.Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    console.warn(`Build directory not found: ${distPath}, serving API only`);
+    app.use("*", (_req, res) => {
+      res.status(404).json({ message: "Frontend not built" });
+    });
+    return;
   }
 
   app.use(express.static(distPath));
@@ -82,8 +84,8 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = process.env.PORT || 5000;
-  app.listen(port, "0.0.0.0", () => {
+  const port = parseInt(process.env.PORT || "5000", 10);
+  app.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();
