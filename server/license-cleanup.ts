@@ -12,7 +12,8 @@ export class LicenseCleanupService {
   private isRunning = false;
 
   constructor() {
-    this.startCleanupScheduler();
+    // Desabilitado temporariamente para evitar exclusão indevida de usuários
+    console.log("🛑 Sistema de limpeza automática DESABILITADO para correções");
   }
 
   /**
