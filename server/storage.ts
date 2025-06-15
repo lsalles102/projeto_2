@@ -161,6 +161,7 @@ export class MemStorage implements IStorage {
       profileImageUrl: userData.profileImageUrl ?? null,
       googleId: userData.googleId ?? null,
       hwid: userData.hwid ?? null,
+      licenses: null,
       isAdmin: userData.isAdmin ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),

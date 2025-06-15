@@ -1,6 +1,6 @@
 import { Express, Request, Response, RequestHandler } from "express";
 import { Server } from "http";
-import bcrypt from "bcrypt";
+
 import { z } from "zod";
 import passport from "passport";
 import crypto from "crypto";
@@ -215,14 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email já está em uso" });
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
+      // Create user with plain password (no encryption)
       const user = await storage.createUser({
         email,
         username,
-        password: hashedPassword,
+        password: password,
         firstName,
         lastName,
       });
@@ -365,11 +362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Usuário não encontrado" });
       }
 
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Update user password
-      await storage.updateUser(user.id, { password: hashedPassword });
+      // Update user password (no encryption)
+      await storage.updateUser(user.id, { password: password });
 
       // Mark token as used
       await storage.markPasswordResetTokenAsUsed(token);
