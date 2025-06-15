@@ -11,6 +11,7 @@ import { setupAuth, isAuthenticated, generateToken } from "./auth";
 import { sendPasswordResetEmail, sendLicenseKeyEmail } from "./email";
 import { createPixPayment, getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
 import { licenseCleanupService } from "./license-cleanup";
+import { securityAudit } from "./security-audit";
 import { 
   registerSchema, 
   loginSchema, 
@@ -296,6 +297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("=== INÍCIO DA CRIAÇÃO DE PAGAMENTO PIX ===");
       const user = req.user as any;
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      
       console.log(`Usuário autenticado: ${user.id} - ${user.email}`);
       console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
       
@@ -310,6 +313,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payerFirstName: requestData.payerFirstName,
         payerLastName: requestData.payerLastName,
       };
+      
+      // Registrar tentativa de pagamento para auditoria
+      securityAudit.logPaymentAttempt(
+        user.id, 
+        user.email, 
+        requestData.plan, 
+        requestData.plan === 'test' ? 100 : requestData.plan === '7days' ? 1500 : 2500,
+        clientIp
+      );
       
       console.log("Dados do pagamento preparados:", JSON.stringify(paymentData, null, 2));
       
@@ -434,12 +446,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`✅ Usuário encontrado: ${user.email}`);
           
-          // 6. CRIAR/RENOVAR LICENÇA DO USUÁRIO
+          // 6. VALIDAÇÃO DE SEGURANÇA: Verificar se o usuário do pagamento é o mesmo do banco
+          const securityValidation = securityAudit.validateLicenseOwnership(paymentRecord.userId, user.id);
+          if (!securityValidation.valid) {
+            securityAudit.logSecurityEvent({
+              userId: user.id,
+              userEmail: user.email,
+              eventType: 'WEBHOOK_FRAUD_ATTEMPT',
+              severity: 'CRITICAL',
+              details: {
+                paymentUserId: paymentRecord.userId,
+                requestingUserId: user.id,
+                externalReference: paymentInfo.external_reference,
+                paymentId,
+                reason: securityValidation.reason
+              }
+            });
+            
+            console.error(`❌ TENTATIVA DE FRAUDE BLOQUEADA!`);
+            console.error(`Usuário do pagamento: ${paymentRecord.userId}`);
+            console.error(`Usuário encontrado: ${user.id}`);
+            console.error(`External Reference: ${paymentInfo.external_reference}`);
+            return res.status(403).json({ error: "Security validation failed" });
+          }
+          
+          // 7. VERIFICAR SE JÁ FOI PROCESSADO (evitar duplicação)
+          if (paymentRecord.status === "approved") {
+            console.log(`⚠️ Pagamento já foi processado anteriormente: ${paymentRecord.id}`);
+            return res.status(200).json({ received: true, message: "Already processed" });
+          }
+          
+          // 8. ATUALIZAR STATUS DO PAGAMENTO NO BANCO
+          await storage.updatePayment(paymentRecord.id, {
+            status: "approved",
+            mercadoPagoId: paymentId,
+            statusDetail: paymentInfo.status_detail || "accredited",
+          });
+          
+          // 9. CRIAR/RENOVAR LICENÇA DO USUÁRIO (APENAS PARA O USUÁRIO CORRETO)
           const { renewUserLicense } = await import('./user-license');
           const { findBestEmailForUser } = await import('./license-utils');
           
+          console.log(`✅ Criando licença para o usuário correto: ${user.id} (${user.email})`);
+          
           const licenseResult = await renewUserLicense(
-            user.id,
+            paymentRecord.userId, // Usar o userId do pagamento para garantia extra
             paymentRecord.plan as "test" | "7days" | "15days",
             paymentRecord.durationDays
           );

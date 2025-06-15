@@ -70,12 +70,21 @@ export function calculateTotalMinutes(durationDays: number): number {
 /**
  * Creates or updates license for user after payment approval
  * Chave é gerada e vinculada diretamente ao usuário
+ * VALIDAÇÃO DE SEGURANÇA: Apenas o usuário que efetuou o pagamento pode receber a licença
  */
 export async function createOrUpdateLicense(
   userId: number,
   plan: string,
-  durationDays: number
+  durationDays: number,
+  requesterUserId?: number // ID do usuário que está solicitando (para validação extra)
 ) {
+  // VALIDAÇÃO DE SEGURANÇA: Se um ID solicitante foi fornecido, deve ser o mesmo
+  if (requesterUserId && requesterUserId !== userId) {
+    console.error(`❌ TENTATIVA DE FRAUDE DETECTADA NA CRIAÇÃO DE LICENÇA!`);
+    console.error(`Usuário da licença: ${userId}`);
+    console.error(`Usuário solicitante: ${requesterUserId}`);
+    throw new Error(`SECURITY: License can only be created for the requesting user`);
+  }
   const expiryDate = calculateExpirationDate(durationDays);
   const totalMinutes = calculateTotalMinutes(durationDays);
   
