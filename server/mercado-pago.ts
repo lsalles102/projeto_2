@@ -41,7 +41,8 @@ export interface PixPaymentResponse {
 
 export async function createPixPayment(data: CreatePixPaymentData): Promise<PixPaymentResponse> {
   const externalReference = `user_${data.userId}_${nanoid()}`;
-  const transactionAmount = PLAN_PRICES[data.plan] / 100; // Converter centavos para reais para o MP
+  const transactionAmountCents = PLAN_PRICES[data.plan]; // Manter em centavos para consistência
+  const transactionAmount = transactionAmountCents / 100; // Converter para reais apenas para o MP
   
   console.log('CreatePixPayment called with data:', JSON.stringify(data, null, 2));
   console.log('Transaction amount:', transactionAmount);
@@ -169,7 +170,7 @@ export async function createPixPayment(data: CreatePixPaymentData): Promise<PixP
       initPoint: prefResponse.init_point || '',
       pixQrCode,
       pixQrCodeBase64,
-      transactionAmount: PLAN_PRICES[data.plan], // Retornar em centavos
+      transactionAmount: transactionAmountCents, // Retornar em centavos para consistência
       currency: 'BRL',
     };
   } catch (error) {
@@ -192,7 +193,28 @@ export async function getPaymentInfo(paymentId: string) {
 }
 
 export function validateWebhookSignature(body: string, signature: string): boolean {
-  // Implementar validação de assinatura do webhook se necessário
-  // Por enquanto, retornamos true para desenvolvimento
-  return true;
+  try {
+    // Verificar se existe webhook secret configurado
+    const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.warn('⚠️ MERCADO_PAGO_WEBHOOK_SECRET não configurado - validação de webhook desabilitada para desenvolvimento');
+      return true; // Permitir em desenvolvimento
+    }
+
+    // Implementar validação real da assinatura conforme documentação MP
+    const crypto = require('crypto');
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(body)
+      .digest('hex');
+    
+    // Comparar assinaturas de forma segura
+    return crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  } catch (error) {
+    console.error('Erro na validação da assinatura do webhook:', error);
+    return false;
+  }
 }
