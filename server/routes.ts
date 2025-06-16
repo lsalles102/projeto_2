@@ -889,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: { 
           ...currentUser, 
           password: undefined,
-          status_license: statusLicense 
+          license_status: licenseStatus 
         },
         license,
         downloads,
@@ -1033,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { user, license } = result;
 
-      if (license.status === "expired") {
+      if (license.status === "expirada") {
         return res.status(400).json({ message: "Licença expirada" });
       }
 
@@ -1068,7 +1068,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes for license cleanup system
   app.get('/api/admin/cleanup-stats', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const stats = await licenseCleanupService.getCleanupStats();
+      const stats = await licenseService.getSystemStats();
       res.json(stats);
     } catch (error) {
       console.error("Error getting cleanup stats:", error);
@@ -1078,7 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/manual-cleanup', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      await licenseCleanupService.manualCleanup();
+      await licenseService.performCleanup();
       res.json({ message: "Limpeza manual executada com sucesso" });
     } catch (error) {
       console.error("Error during manual cleanup:", error);
@@ -1120,10 +1120,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
-      console.log(`Status atual da licença: ${currentUser.status_license}`);
+      console.log(`Status atual da licença: ${currentUser.license_status}`);
       
       // Verificar status atual da licença
-      let statusAtual = currentUser.status_license || 'sem_licenca';
+      let statusAtual = currentUser.license_status || 'sem_licenca';
       
       res.json({
         status_license: statusAtual,
