@@ -5,7 +5,7 @@
 
 export interface SecurityEvent {
   timestamp: Date;
-  userId?: number;
+  userId?: string | number;
   userEmail?: string;
   eventType: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -77,7 +77,7 @@ class SecurityAudit {
   /**
    * Registra tentativa de pagamento
    */
-  logPaymentAttempt(userId: number, userEmail: string, plan: string, amount: number, ipAddress?: string) {
+  logPaymentAttempt(userId: string | number, userEmail: string, plan: string, amount: number, ipAddress?: string) {
     this.logSecurityEvent({
       userId,
       userEmail,
@@ -95,7 +95,7 @@ class SecurityAudit {
   /**
    * Registra pagamento aprovado
    */
-  logPaymentApproved(userId: number, userEmail: string, paymentId: string, licenseKey: string) {
+  logPaymentApproved(userId: string | number, userEmail: string, paymentId: string, licenseKey: string) {
     this.logSecurityEvent({
       userId,
       userEmail,
@@ -112,7 +112,7 @@ class SecurityAudit {
   /**
    * Registra webhook processado
    */
-  logWebhookProcessed(paymentId: string, userId: number, success: boolean, details?: any) {
+  logWebhookProcessed(paymentId: string, userId: string | number, success: boolean, details?: any) {
     this.logSecurityEvent({
       userId,
       eventType: 'WEBHOOK_PROCESSED',
@@ -129,7 +129,7 @@ class SecurityAudit {
   /**
    * Registra tentativa de ativação de licença
    */
-  logLicenseActivation(userId: number, userEmail: string, licenseKey: string, success: boolean, reason?: string) {
+  logLicenseActivation(userId: string | number, userEmail: string, licenseKey: string, success: boolean, reason?: string) {
     this.logSecurityEvent({
       userId,
       userEmail,

@@ -72,7 +72,7 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
           await storage.updatePaymentByExternalReference(paymentInfo.external_reference, {
             mercadoPagoId: paymentId,
             status: 'approved',
-            transactionAmount: Math.round(paymentInfo.transaction_amount * 100), // Converter para centavos
+            transactionAmount: Math.round((paymentInfo.transaction_amount || 0) * 100), // Converter para centavos
             paymentMethodId: paymentInfo.payment_method_id || 'pix',
           });
 
@@ -102,9 +102,9 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
           console.log(`Status: Licença ativa na conta do usuário`);
 
         } else {
-          console.log(`❌ Falha na ativação da licença: ${activationResult.message}`);
+          console.log(`❌ Falha na ativação da licença`);
           securityAudit.logWebhookProcessed(paymentId, user.id, false, { 
-            error: activationResult.message 
+            error: "License activation failed" 
           });
         }
 
