@@ -89,7 +89,7 @@ export async function setupAuth(app: Express) {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
       if (!user) {
@@ -133,13 +133,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 };
 
-export function generateToken(userId: number): string {
+export function generateToken(userId: string): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function verifyToken(token: string): { userId: number } | null {
+export function verifyToken(token: string): { userId: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: number };
+    return jwt.verify(token, JWT_SECRET) as { userId: string };
   } catch {
     return null;
   }
