@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes-clean";
+import { registerRoutes } from "./routes";
 import { licenseService } from "./license-service";
 import path from "path";
 import fs from "fs";
