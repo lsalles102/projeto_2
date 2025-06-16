@@ -13,20 +13,6 @@ export async function generateUniqueActivationKey(): Promise<string> {
     const randomPart = Math.random().toString(36).substr(2, 7).toUpperCase();
     const key = `FOV-${randomPart}`;
     
-    // Check if key already exists in activation keys
-    const existingActivationKey = await storage.getActivationKey(key);
-    if (existingActivationKey) {
-      console.log(`Tentativa ${attempt}: Chave de ativação ${key} já existe, gerando nova...`);
-      continue;
-    }
-    
-    // Check if key already exists in licenses
-    const existingLicense = await storage.getLicenseByKey(key);
-    if (existingLicense) {
-      console.log(`Tentativa ${attempt}: Chave de licença ${key} já existe, gerando nova...`);
-      continue;
-    }
-    
     console.log(`✅ Chave única gerada na tentativa ${attempt}: ${key}`);
     return key;
   }

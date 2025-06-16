@@ -212,11 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Pagamento teste criado: ID ${testPayment.id}`);
 
-      // Use license utilities for robust key generation and license creation
-      const { createOrUpdateLicense } = await import('./license-utils');
+      // Use simplified license system
+      const { activateLicenseForUser } = await import('./license-simple');
 
-      // Create/update license automatically using utilities
-      const { license, action, licenseKey } = await createOrUpdateLicense(
+      // Activate license for user
+      const result = await activateLicenseForUser(
         user.id,
         plan,
         durationDays
@@ -231,10 +231,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`=== ENVIANDO EMAIL COM CHAVE DE LICENÇA ===`);
         console.log(`Email destino: ${emailToUse}`);
-        console.log(`Chave: ${licenseKey}`);
+        console.log(`Chave: ${result.licenseKey}`);
         console.log(`Plano: ${planName}`);
         
-        await sendLicenseKeyEmail(emailToUse, licenseKey, planName);
+        await sendLicenseKeyEmail(emailToUse, result.licenseKey, planName);
         console.log(`✅ EMAIL ENVIADO COM SUCESSO PARA: ${emailToUse}`);
         
         res.json({
