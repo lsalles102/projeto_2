@@ -725,7 +725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               transactionAmount: transactionAmountCents, // Valor em centavos
               currency: 'BRL',
               plan: plan,
-              durationDays: Math.round(durationDays * 1000) / 1000, // Arredondar para 3 casas decimais
+              durationDays: (Math.round(durationDays * 1000) / 1000).toString(), // Arredondar para 3 casas decimais
               payerEmail: paymentInfo.payer?.email || user.email,
               payerFirstName: paymentInfo.payer?.first_name || user.firstName || '',
               payerLastName: paymentInfo.payer?.last_name || user.lastName || '',
