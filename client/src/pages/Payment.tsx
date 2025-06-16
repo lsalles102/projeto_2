@@ -30,7 +30,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Shield, Clock, CheckCircle } from "lucide-react";
+import { QrCode, Shield, Clock, CheckCircle } from "lucide-react";
 // SDK do Mercado Pago será carregado via script tag
 
 const paymentSchema = z.object({
@@ -576,7 +576,7 @@ export default function Payment() {
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-4 h-4 mr-2" />
+                      <QrCode className="w-4 h-4 mr-2" />
                       Pagar com PIX
                     </>
                   )}

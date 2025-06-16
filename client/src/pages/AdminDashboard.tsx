@@ -18,7 +18,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { updateUserSchema, updateLicenseSchema } from "@shared/schema";
 import { 
   Users, 
-  CreditCard, 
+  QrCode, 
   BarChart3, 
   Trash2, 
   Edit, 
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
                 <p className="text-sm font-medium text-gray-400">Receita Mensal</p>
                 <p className="text-2xl font-bold text-blue-400">R$ {stats.monthlyRevenue || "0,00"}</p>
               </div>
-              <CreditCard className="h-8 w-8 text-blue-400" />
+              <QrCode className="h-8 w-8 text-blue-400" />
             </div>
           </CardContent>
         </Card>

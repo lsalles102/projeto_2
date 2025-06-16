@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Check, Copy, CreditCard, QrCode, Timer } from "lucide-react";
+import { Check, Copy, QrCode, Timer } from "lucide-react";
 import { createPixPaymentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
@@ -282,7 +282,7 @@ export default function PurchaseLicense() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
+                  <QrCode className="w-5 h-5" />
                   Dados para Pagamento
                 </CardTitle>
                 <CardDescription>
