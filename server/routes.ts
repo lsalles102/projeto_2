@@ -10,19 +10,17 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
 import { sendPasswordResetEmail, sendLicenseKeyEmail } from "./email";
 import { createPixPayment, getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
-import { licenseCleanupService } from "./license-cleanup";
+import { licenseService } from "./license-service";
 import { securityAudit } from "./security-audit";
 import { 
   registerSchema, 
   loginSchema, 
-  activateKeySchema,
+  licenseHeartbeatSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
   contactSchema,
-  createActivationKeySchema,
   updateUserSchema,
-  updateLicenseSchema,
   createPixPaymentSchema,
   mercadoPagoWebhookSchema
 } from "@shared/schema";
