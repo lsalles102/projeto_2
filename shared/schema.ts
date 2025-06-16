@@ -17,16 +17,14 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email").unique().notNull(),
-  senha_hash: varchar("senha_hash").notNull(),
-  data_expiracao: timestamp("data_expiracao", { withTimezone: true }),
+  password: varchar("password").notNull(), // Campo principal para senha
   is_admin: boolean("is_admin").default(false).notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   hwid: varchar("hwid"),
-  status_licenca: varchar("status_licenca").default("sem_licenca"), // "ativa", "expirada", "sem_licenca"
+  status_license: varchar("status_license").default("sem_licenca"), // "ativa", "expirada", "sem_licenca"
   // Campos mantidos para compatibilidade
   username: varchar("username"),
-  password: varchar("password"), // nullable for OAuth users  
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
