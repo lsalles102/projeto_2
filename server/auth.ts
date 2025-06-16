@@ -96,7 +96,7 @@ export async function setupAuth(app: Express) {
         return done(null, false);
       }
       // Certificar que isAdmin está disponível no objeto user
-      done(null, { ...user, isAdmin: user.isAdmin || false });
+      done(null, user);
     } catch (error) {
       done(error);
     }
