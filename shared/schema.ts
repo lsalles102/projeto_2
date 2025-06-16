@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, jsonb, index, serial, boolean, integer, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, index, serial, boolean, integer, decimal, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,25 +15,29 @@ export const sessions = pgTable(
 
 // Users table
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email").unique().notNull(),
-  username: varchar("username").notNull(),
-  password: varchar("password"), // nullable for OAuth users
+  senha_hash: varchar("senha_hash").notNull(),
+  data_expiracao: timestamp("data_expiracao", { withTimezone: true }),
+  is_admin: boolean("is_admin").default(false).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  hwid: varchar("hwid"),
+  status_licenca: varchar("status_licenca").default("sem_licenca"), // "ativa", "expirada", "sem_licenca"
+  // Campos mantidos para compatibilidade
+  username: varchar("username"),
+  password: varchar("password"), // nullable for OAuth users  
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
-  hwid: varchar("hwid"),
   licenses: jsonb("licenses"), // Objeto JSON com informações da licença ativa do usuário
-  isAdmin: boolean("is_admin").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Licenses table
 export const licenses = pgTable("licenses", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   key: varchar("key").unique().notNull(),
   plan: varchar("plan").notNull(), // basic, premium, vip
   status: varchar("status").notNull().default("inactive"), // inactive, active, expired, revoked
@@ -55,7 +59,7 @@ export const activationKeys = pgTable("activation_keys", {
   plan: varchar("plan").notNull(),
   durationDays: integer("duration_days").notNull().default(30), // Duração em dias da licença
   isUsed: boolean("is_used").default(false),
-  usedBy: integer("used_by").references(() => users.id),
+  usedBy: uuid("used_by").references(() => users.id),
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -63,7 +67,7 @@ export const activationKeys = pgTable("activation_keys", {
 // Download logs
 export const downloadLogs = pgTable("download_logs", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   licenseId: integer("license_id").references(() => licenses.id).notNull(),
   fileName: varchar("file_name").notNull(),
   downloadedAt: timestamp("downloaded_at").defaultNow(),
@@ -72,7 +76,7 @@ export const downloadLogs = pgTable("download_logs", {
 // Password reset tokens
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   token: varchar("token").unique().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false).notNull(),
@@ -82,20 +86,20 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 // HWID reset logs for tracking and rate limiting
 export const hwidResetLogs = pgTable("hwid_reset_logs", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   licenseId: integer("license_id").references(() => licenses.id).notNull(),
   oldHwid: varchar("old_hwid"),
   newHwid: varchar("new_hwid"),
   resetType: varchar("reset_type").notNull(), // 'manual', 'support', 'auto'
   resetReason: text("reset_reason"),
-  adminId: integer("admin_id").references(() => users.id), // Admin que autorizou o reset
+  adminId: uuid("admin_id").references(() => users.id), // Admin que autorizou o reset
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Mercado Pago payments table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   mercadoPagoId: varchar("mercado_pago_id").unique(), // ID do pagamento no Mercado Pago
   preferenceId: varchar("preference_id").unique(), // ID da preferência criada
   externalReference: varchar("external_reference").unique().notNull(), // Referência externa única
@@ -119,8 +123,8 @@ export const payments = pgTable("payments", {
 // Schema validations
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 });
 
 export const createUserSchema = insertUserSchema.omit({
