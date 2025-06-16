@@ -25,19 +25,20 @@ export async function createUserLicense(
     const newLicense: UserLicense = {
       key: licenseKey,
       plan,
-      status: "pending", // Will be activated when HWID is set
+      status: "active", // Ativa imediatamente após pagamento confirmado
       daysRemaining: Math.floor(durationDays),
       hoursRemaining: Math.floor((durationDays % 1) * 24),
       minutesRemaining: Math.floor(((durationDays % 1) * 24 % 1) * 60),
       totalMinutesRemaining: totalMinutes,
       expiresAt: expiresAt.toISOString(),
       createdAt: new Date().toISOString(),
+      activatedAt: new Date().toISOString(), // Ativada no momento do pagamento
     };
 
     // Update user with new license and status_license field
     await storage.updateUser(userId, { 
       licenses: newLicense,
-      status_license: "ativa" // Licença criada está ativa
+      status_license: "ativa" // Licença ativa após pagamento confirmado
     });
 
     console.log(`✓ Nova licença criada para usuário ${userId}: ${licenseKey} (${plan}, ${durationDays} dias)`);

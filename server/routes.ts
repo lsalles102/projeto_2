@@ -701,8 +701,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // ATUALIZAR STATUS DA LICENÇA DO USUÁRIO
           await storage.updateUser(userId, {
-            status_licenca: 'ativa',
-            data_expiracao: license.expiresAt
+            status_license: 'ativa',
+            expiresAt: license.expiresAt
           });
           
           console.log(`✅ Licença criada no banco - ID: ${license.id}`);
@@ -1114,26 +1114,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
-      console.log(`Status atual da licença: ${currentUser.status_licenca}`);
-      console.log(`Data de expiração: ${currentUser.data_expiracao}`);
+      console.log(`Status atual da licença: ${currentUser.status_license}`);
       
-      // Verificar se a licença expirou
-      let statusAtual = currentUser.status_licenca || 'sem_licenca';
-      if (statusAtual === 'ativa' && currentUser.data_expiracao) {
-        const agora = new Date();
-        const expiracao = new Date(currentUser.data_expiracao);
-        
-        if (agora > expiracao) {
-          // Licença expirou, atualizar status
-          await storage.updateUser(user.id, { status_licenca: 'expirada' });
-          statusAtual = 'expirada';
-          console.log(`Licença expirada automaticamente para usuário ${user.email}`);
-        }
-      }
+      // Verificar status atual da licença
+      let statusAtual = currentUser.status_license || 'sem_licenca';
       
       res.json({
-        status_licenca: statusAtual,
-        data_expiracao: currentUser.data_expiracao,
+        status_license: statusAtual,
         hwid: currentUser.hwid,
         email: currentUser.email,
         pode_baixar: statusAtual === 'ativa',
@@ -1149,31 +1136,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota administrativa para atualizar status de licença
   app.post('/api/admin/update-license-status', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { userId, status_licenca, data_expiracao } = req.body;
+      const { userId, status_license } = req.body;
       
-      if (!userId || !status_licenca) {
-        return res.status(400).json({ message: "userId e status_licenca são obrigatórios" });
+      if (!userId || !status_license) {
+        return res.status(400).json({ message: "userId e status_license são obrigatórios" });
       }
       
-      if (!['ativa', 'expirada', 'sem_licenca'].includes(status_licenca)) {
+      if (!['ativa', 'expirada', 'sem_licenca'].includes(status_license)) {
         return res.status(400).json({ 
-          message: "status_licenca deve ser: 'ativa', 'expirada' ou 'sem_licenca'" 
+          message: "status_license deve ser: 'ativa', 'expirada' ou 'sem_licenca'" 
         });
       }
       
-      const updateData: any = { status_licenca };
-      if (data_expiracao) {
-        updateData.data_expiracao = new Date(data_expiracao);
-      }
+      await storage.updateUser(parseInt(userId), { status_license });
       
-      await storage.updateUser(userId, updateData);
-      
-      console.log(`Admin atualizou status de licença do usuário ${userId} para: ${status_licenca}`);
+      console.log(`Admin atualizou status de licença do usuário ${userId} para: ${status_license}`);
       
       res.json({ 
         message: "Status de licença atualizado com sucesso",
-        status_licenca,
-        data_expiracao: updateData.data_expiracao
+        status_license
       });
       
     } catch (error) {
@@ -1190,49 +1171,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[DOWNLOAD] Solicitação de download para: ${filename} pelo usuário: ${user.email}`);
 
-      // Buscar usuário atualizado do banco
-      const currentUser = await storage.getUser(user.id);
-      if (!currentUser) {
-        console.log(`[DOWNLOAD] ❌ Usuário não encontrado: ${user.id}`);
-        return res.status(404).json({ message: "Usuário não encontrado" });
-      }
-
-      // VERIFICAÇÃO PRIMÁRIA: STATUS_LICENCA na tabela de usuários
-      console.log(`[DOWNLOAD] Status da licença do usuário: ${currentUser.status_licenca}`);
+      // Use sistema centralizado de licenças
+      const { getUserLicense } = await import('./user-license');
+      const license = await getUserLicense(user.id);
       
-      if (currentUser.status_licenca !== 'ativa') {
-        console.log(`[DOWNLOAD] ❌ Acesso negado - Status: ${currentUser.status_licenca}`);
+      // Verificar se possui licença
+      if (!license) {
+        console.log(`[DOWNLOAD] ❌ Usuário ${user.email} não possui licença`);
         return res.status(403).json({ 
-          message: `Acesso ao download negado. Status da licença: ${currentUser.status_licenca || 'sem_licenca'}. Adquira uma licença para continuar.`,
-          status_licenca: currentUser.status_licenca || 'sem_licenca',
-          pode_baixar: false 
+          message: "Licença ativa necessária para download. Compre uma licença primeiro.",
+          status_license: 'sem_licenca',
+          pode_baixar: false
         });
       }
 
-      // Verificação secundária: data de expiração
-      if (currentUser.data_expiracao) {
-        const now = new Date();
-        const expiracao = new Date(currentUser.data_expiracao);
-        
-        if (now > expiracao) {
-          // Licença expirou, atualizar status automaticamente
-          await storage.updateUser(user.id, { status_licenca: 'expirada' });
-          console.log(`[DOWNLOAD] ❌ Licença expirada automaticamente para ${user.email}`);
-          
-          return res.status(403).json({ 
-            message: "Sua licença expirou. Renove para continuar o download.",
-            status_licenca: 'expirada',
-            pode_baixar: false,
-            data_expiracao: currentUser.data_expiracao 
-          });
-        }
+      // Verificar se a licença está ativa
+      if (license.status !== 'active') {
+        console.log(`[DOWNLOAD] ❌ Licença do usuário ${user.email} não está ativa: ${license.status}`);
+        return res.status(403).json({ 
+          message: license.status === 'expired' ? 
+            "Sua licença expirou. Renove para continuar o download." : 
+            "Licença inativa. Entre em contato com o suporte.",
+          status_license: license.status === 'expired' ? 'expirada' : 'sem_licenca',
+          pode_baixar: false
+        });
       }
 
-      // Licença ativa, permitir download
-      console.log(`[DOWNLOAD] ✅ Acesso autorizado para ${user.email} - Status: ativa`);
-      
+      // Verificar se a licença não expirou
+      const now = new Date();
+      const expiresAt = new Date(license.expiresAt);
+      if (now > expiresAt) {
+        console.log(`[DOWNLOAD] ❌ Licença do usuário ${user.email} expirou`);
+        return res.status(403).json({ 
+          message: "Sua licença expirou. Renove para continuar o download.",
+          status_license: 'expirada',
+          pode_baixar: false,
+          expiresAt: license.expiresAt
+        });
+      }
+
       // Mapear arquivos disponíveis
-      const availableFiles = {
+      const files = {
         'cheat': {
           name: 'FovDarkloader.exe',
           url: process.env.DOWNLOAD_URL || "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/FovDarkloader.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9Gb3ZEYXJrbG9hZGVyLmV4ZSIsImlhdCI6MTc0OTkyMDMzNCwiZXhwIjoxNzgxNDU2MzM0fQ.C0hNoVrwxINjd_bve57G0bYCD7HdRBuQrm62ICq3o5g",
@@ -1247,31 +1226,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      const fileInfo = availableFiles[filename as keyof typeof availableFiles];
-      if (!fileInfo) {
+      const file = files[filename as keyof typeof files];
+      if (!file) {
         return res.status(404).json({ message: "Arquivo não encontrado" });
       }
 
-      // Registrar o download no log
-      try {
-        const activeLicense = await storage.getActiveLicense(user.id);
-        if (activeLicense) {
-          await storage.logDownload(user.id, activeLicense.id, fileInfo.name);
-        }
-      } catch (logError) {
-        console.error("Erro ao registrar download:", logError);
-        // Não bloquear o download por erro de log
-      }
-
-      console.log(`[DOWNLOAD] ✅ Download autorizado: ${fileInfo.name} para ${user.email}`);
+      console.log(`[DOWNLOAD] ✅ Download autorizado: ${file.name} para ${user.email}`);
       
       res.json({
         success: true,
         message: "Download autorizado",
-        file: fileInfo,
-        status_licenca: 'ativa',
+        downloadUrl: fileInfo.url,
+        fileName: fileInfo.name,
+        version: fileInfo.version,
+        size: fileInfo.size,
+        status_license: 'ativa',
         pode_baixar: true,
-        data_expiracao: currentUser.data_expiracao
+        licenseKey: license.key,
+        expiresAt: license.expiresAt
       });
       
     } catch (error) {
