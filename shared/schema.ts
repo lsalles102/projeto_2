@@ -216,12 +216,7 @@ export const contactSchema = z.object({
     .max(2000, "Mensagem muito longa"),
 });
 
-// Admin schemas
-export const createActivationKeySchema = z.object({
-  plan: z.enum(["test", "7days", "15days"]),
-  durationDays: z.number().min(1).max(365),
-  quantity: z.number().min(1).max(100).default(1),
-});
+// Admin schemas (activation keys removed - now automatic after payment)
 
 export const updateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
@@ -252,20 +247,18 @@ export const adminResetHwidSchema = z.object({
   newHwid: z.string().optional(), // Se fornecido, força um HWID específico
 });
 
-// User License schema for the new centralized license system
+// User License schema for the new centralized license system (no keys - automatic activation)
 export const userLicenseSchema = z.object({
-  key: z.string(),
   plan: z.enum(["test", "7days", "15days"]),
-  status: z.enum(["inactive", "active", "expired", "pending"]).default("pending"),
+  status: z.enum(["sem_licenca", "ativa", "expirada"]),
   hwid: z.string().optional(),
   daysRemaining: z.number().min(0).default(0),
   hoursRemaining: z.number().min(0).max(23).default(0),
   minutesRemaining: z.number().min(0).max(59).default(0),
   totalMinutesRemaining: z.number().min(0).default(0),
-  expiresAt: z.string(), // ISO date string
+  expiresAt: z.string().optional(), // ISO date string
   activatedAt: z.string().optional(), // ISO date string
   lastHeartbeat: z.string().optional(), // ISO date string
-  createdAt: z.string(), // ISO date string
 });
 
 export type UserLicense = z.infer<typeof userLicenseSchema>;
@@ -307,8 +300,4 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type HwidResetLog = typeof hwidResetLogs.$inferSelect;
 export type InsertHwidResetLog = typeof hwidResetLogs.$inferInsert;
 
-// Legacy schema for activation key (kept for compatibility)
-export const activateKeySchema = z.object({
-  key: z.string().min(1, "Chave de ativação é obrigatória"),
-  hwid: z.string().min(1, "HWID é obrigatório"),
-});
+

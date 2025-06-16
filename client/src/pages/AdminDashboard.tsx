@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { createActivationKeySchema, updateUserSchema, updateLicenseSchema } from "@shared/schema";
+import { updateUserSchema, updateLicenseSchema } from "@shared/schema";
 import { 
   Users, 
   Key, 
@@ -29,7 +29,6 @@ import {
   Download
 } from "lucide-react";
 
-type CreateKeyFormData = z.infer<typeof createActivationKeySchema>;
 type UpdateUserFormData = z.infer<typeof updateUserSchema>;
 type UpdateLicenseFormData = z.infer<typeof updateLicenseSchema>;
 
