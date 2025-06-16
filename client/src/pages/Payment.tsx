@@ -232,8 +232,12 @@ export default function Payment() {
   useEffect(() => {
     if (!pixData?.id) return;
 
+    console.log("Iniciando polling para pagamento:", pixData.id);
+    
     const interval = setInterval(async () => {
       try {
+        console.log("Verificando status do pagamento:", pixData.id);
+        
         // Check payment status using payment ID
         const response = await fetch(
           `/api/payments/${pixData.id}/status`,
@@ -244,7 +248,10 @@ export default function Payment() {
 
         if (response.ok) {
           const status = await response.json();
-          if (status.status === "approved") {
+          console.log("Status do pagamento recebido:", status);
+          
+          if (status.status === "approved" || status.hasActiveLicense) {
+            console.log("Pagamento aprovado ou licença ativa detectada!");
             setPaymentStatus("success");
             clearInterval(interval);
             toast({
@@ -253,14 +260,19 @@ export default function Payment() {
             });
             queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
           }
+        } else {
+          console.log("Erro na resposta:", response.status);
         }
       } catch (error) {
         console.error("Erro ao verificar status:", error);
       }
-    }, 5000); // Verifica a cada 5 segundos
+    }, 3000); // Verifica a cada 3 segundos
 
-    return () => clearInterval(interval);
-  }, [pixData?.id, pixData?.externalReference, queryClient, toast]);
+    return () => {
+      console.log("Limpando polling do pagamento");
+      clearInterval(interval);
+    };
+  }, [pixData?.id, queryClient, toast]);
 
   const onSubmit = (data: PaymentFormData) => {
     console.log("Iniciando criação de pagamento:", data);

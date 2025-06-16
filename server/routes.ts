@@ -102,7 +102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             licenseKey: result.licenseKey,
             plan,
             planName,
-            paymentId: testPayment.id,
             licenseAction: result.action,
             emailSent: true
           }
@@ -261,6 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { plan, durationDays, payerEmail, payerFirstName, payerLastName } = 
         createPixPaymentSchema.parse(req.body);
 
+      console.log(`🔥 Criando pagamento PIX para usuário ${user.id}, plano: ${plan}`);
+
       const pixData = await createPixPayment({
         userId: parseInt(user.id),
         plan,
@@ -271,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Save payment to database
-      console.log("Salvando pagamento no banco de dados...");
+      console.log("💾 Salvando pagamento no banco de dados...");
       const payment = await storage.createPayment({
         userId: user.id,
         preferenceId: pixData.preferenceId,
@@ -289,6 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`✅ Pagamento salvo no banco: ID ${payment.id}`);
+      console.log(`🔗 External Reference: ${pixData.externalReference}`);
       
       res.json({
         success: true,
@@ -309,38 +311,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      console.error("Erro ao criar pagamento PIX:", error);
+      console.error("❌ Erro ao criar pagamento PIX:", error);
       res.status(500).json({ message: "Erro ao criar pagamento PIX" });
     }
   });
 
-  // Webhook handler
+  // Webhook handler for Mercado Pago
   app.post("/api/payments/webhook", async (req, res) => {
     try {
-      console.log(`=== WEBHOOK MERCADO PAGO RECEBIDO ===`);
-      console.log(`Timestamp: ${new Date().toISOString()}`);
-      console.log(`Body:`, JSON.stringify(req.body, null, 2));
+      console.log(`🚀 === WEBHOOK MERCADO PAGO RECEBIDO ===`);
+      console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+      console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
 
       const webhookData = mercadoPagoWebhookSchema.parse(req.body);
       
       if (webhookData.type === 'payment' && webhookData.data?.id) {
         const paymentId = webhookData.data.id;
-        console.log(`🔍 Processando pagamento ID: ${paymentId}`);
+        console.log(`🔍 Processando pagamento Mercado Pago ID: ${paymentId}`);
         
         const paymentInfo = await getPaymentInfo(paymentId);
-        console.log(`📊 Status do pagamento: ${paymentInfo?.status}`);
+        console.log(`📊 Status do pagamento MP: ${paymentInfo?.status}`);
+        console.log(`🔗 External Reference: ${paymentInfo?.external_reference}`);
         
         if (paymentInfo?.status === "approved") {
-          console.log(`=== PAGAMENTO APROVADO! ===`);
+          console.log(`🎉 === PAGAMENTO APROVADO NO MERCADO PAGO! ===`);
           
           if (paymentInfo.external_reference) {
             const payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
             
             if (payment) {
+              console.log(`💳 Pagamento encontrado no banco: ID ${payment.id}`);
               const user = await storage.getUser(payment.userId);
               
               if (user) {
-                // Activate license
+                console.log(`👤 Usuário encontrado: ${user.email} (ID: ${user.id})`);
+                
+                // Activate license using simplified system
                 const { activateLicenseForUser } = await import('./license-simple');
                 const result = await activateLicenseForUser(
                   user.id, 
@@ -358,24 +364,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 );
                 
                 console.log(`✅ Licença ativada para usuário ${user.email}`);
+                console.log(`🔑 License Key: ${result.licenseKey}`);
                 
-                // Send email
+                // Send email notification
                 try {
                   const planName = payment.plan === "test" ? "Teste (30 minutos)" : 
                                    payment.plan === "7days" ? "7 Dias" : "15 Dias";
                   await sendLicenseKeyEmail(user.email, result.licenseKey, planName);
+                  console.log(`📧 Email de confirmação enviado para ${user.email}`);
                 } catch (emailError) {
-                  console.error("Erro no envio de email:", emailError);
+                  console.error("❌ Erro no envio de email:", emailError);
                 }
+              } else {
+                console.log(`❌ Usuário não encontrado: ${payment.userId}`);
               }
+            } else {
+              console.log(`❌ Pagamento não encontrado para external_reference: ${paymentInfo.external_reference}`);
             }
+          } else {
+            console.log(`❌ External reference não encontrada no pagamento MP`);
           }
+        } else {
+          console.log(`ℹ️ Pagamento não aprovado - Status: ${paymentInfo?.status}`);
         }
+      } else {
+        console.log(`ℹ️ Webhook ignorado - Tipo: ${webhookData.type}`);
       }
       
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error("Webhook error:", error);
+      console.error("❌ Erro crítico no webhook:", error);
       res.status(200).json({ received: true, error: "Webhook processing failed" });
     }
   });
