@@ -10,7 +10,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
 import { sendPasswordResetEmail, sendLicenseKeyEmail } from "./email";
 import { createPixPayment, getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
-import { licenseService } from "./license-service";
+import { licenseManager } from "./license-manager";
 import { securityAudit } from "./security-audit";
 import { 
   registerSchema, 
@@ -676,42 +676,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`Plano determinado: ${plan} (${durationDays} dias)`);
           
-          // GERAR CHAVE DE LICENÇA NO FORMATO FOV-XXXXXXX
-          const { generateUniqueActivationKey, calculateExpirationDate, calculateTotalMinutes } = await import('./license-utils');
-          const licenseKey = await generateUniqueActivationKey();
-          console.log(`✅ Chave de licença gerada: ${licenseKey}`);
+          console.log(`Plano a ser ativado: ${plan} (${durationDays} dias)`);
           
-          // CALCULAR DADOS DE EXPIRAÇÃO
-          const expiresAt = calculateExpirationDate(durationDays);
-          const totalMinutes = calculateTotalMinutes(durationDays);
-          
-          // Calcular dias, horas e minutos restantes
-          const daysRemaining = Math.floor(durationDays);
-          const hoursRemaining = Math.floor((durationDays - daysRemaining) * 24);
-          const minutesRemaining = Math.floor(((durationDays - daysRemaining) * 24 - hoursRemaining) * 60);
-          
-          console.log(`Dados de expiração:`);
-          console.log(`- Expira em: ${expiresAt.toISOString()}`);
-          console.log(`- Dias restantes: ${daysRemaining}`);
-          console.log(`- Horas restantes: ${hoursRemaining}`);
-          console.log(`- Minutos restantes: ${minutesRemaining}`);
-          console.log(`- Total de minutos: ${totalMinutes}`);
-          
-          // ATIVAR LICENÇA E ATUALIZAR STATUS DO USUÁRIO
-          const { createOrUpdateLicense } = await import('./license-utils');
-          const { license, action, licenseKey: finalLicenseKey } = await createOrUpdateLicense(
+          // ATIVAR LICENÇA USANDO SISTEMA CENTRALIZADO
+          const activationResult = await licenseManager.activateLicense(
             user.id,
-            plan,
-            Number(durationDays)
+            plan as "test" | "7days" | "15days",
+            durationDays
           );
-
-          // ATUALIZAR STATUS DA LICENÇA DO USUÁRIO
-          await storage.updateUser(user.id, {
-            license_status: 'ativa',
-            license_expires_at: new Date(license.expiresAt)
-          });
           
-          console.log(`✅ Licença criada no banco - ID: ${license.id}`);
+          if (!activationResult) {
+            console.error(`❌ Falha na ativação da licença para usuário ${user.id}`);
+            return res.status(200).json({ received: true, error: "License activation failed" });
+          }
+          
+          console.log(`✅ Licença ativada com sucesso para usuário ${user.id}`);
           
           // ATUALIZAR OU CRIAR PAGAMENTO NO BANCO (EVITAR DUPLICATAS)
           let payment = await storage.updatePaymentByExternalReference(paymentInfo.external_reference, {
@@ -740,17 +719,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // REGISTRAR AUDITORIA DE SEGURANÇA
-          securityAudit.logPaymentApproved(userId, user.email, paymentId, finalLicenseKey);
-          securityAudit.logWebhookProcessed(paymentId, userId, true, { plan, licenseKey: finalLicenseKey });
+          securityAudit.logPaymentApproved(userId, user.email, paymentId, "ACTIVATED_AUTOMATICALLY");
+          securityAudit.logWebhookProcessed(paymentId, userId, true, { plan, activation: "direct_to_user_account" });
           
-          // ENVIAR EMAIL COM CHAVE DE LICENÇA
+          // ENVIAR EMAIL DE CONFIRMAÇÃO
           const planName = plan === "test" ? "Teste (30 minutos)" : 
                            plan === "7days" ? "7 Dias" : "15 Dias";
           
           try {
             const { sendLicenseKeyEmail } = await import('./email');
-            await sendLicenseKeyEmail(user.email, finalLicenseKey, planName);
-            console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${user.email}`);
+            await sendLicenseKeyEmail(user.email, "LICENCA_ATIVADA_AUTOMATICAMENTE", planName);
+            console.log(`[EMAIL] ✅ Email de confirmação enviado para: ${user.email}`);
           } catch (emailError) {
             console.error(`[EMAIL] ❌ Falha no envio para ${user.email}:`, emailError);
             console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
@@ -758,60 +737,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`✅ Pagamento registrado no banco - ID: ${payment.id}`);
           
-          const validationResult = {
-            success: true,
-            message: 'Licença ativada com sucesso',
-            userId: userId,
-            userEmail: user.email,
-            licenseKey: finalLicenseKey,
-            licenseId: license.id
-          };
-          
           console.log(`✅ LICENÇA ATIVADA COM SUCESSO!`);
-          console.log(`Usuário: ${validationResult.userEmail} (ID: ${validationResult.userId})`);
-          console.log(`Chave: ${validationResult.licenseKey}`);
-          
-          // ENVIAR EMAIL COM A CHAVE DE LICENÇA
-          if (validationResult.userId && validationResult.licenseKey) {
-            const license = await storage.getLicenseByKey(validationResult.licenseKey);
-            
-            if (user && license) {
-              const planName = license.plan === "test" ? "Teste (30 minutos)" : 
-                               license.plan === "7days" ? "7 Dias" : "15 Dias";
-              
-              // Usar email do pagador ou email do usuário cadastrado
-              const emailToUse = paymentInfo.payer?.email || user.email;
-              
-              if (!emailToUse) {
-                console.warn(`[EMAIL] ⚠️ Nenhum email válido encontrado para envio`);
-                console.log(`[EMAIL] ✅ Licença ativada no sistema - usuário pode fazer login para verificar`);
-                
-                console.log(`=== LICENÇA ATIVADA SEM EMAIL ===`);
-                console.log(`Usuário ID: ${user.id}`);
-                console.log(`Email cadastrado: ${user.email}`);
-                console.log(`Chave gerada: ${validationResult.licenseKey}`);
-                console.log(`Plano: ${planName}`);
-                console.log(`Válida até: ${license.expiresAt}`);
-                console.log(`Status: ATIVA - Disponível no dashboard`);
-              } else {
-                console.log(`[EMAIL] ✅ Email selecionado para envio: "${emailToUse}"`);
-                
-                try {
-                  const { sendLicenseKeyEmail } = await import('./email');
-                  await sendLicenseKeyEmail(emailToUse, validationResult.licenseKey, planName);
-                  console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${emailToUse}`);
-                } catch (emailError) {
-                  console.error(`[EMAIL] ❌ Falha no envio para ${emailToUse}:`, emailError);
-                  console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
-                }
-              }
-            }
-          }
+          console.log(`Usuário: ${user.email} (ID: ${user.id})`);
+          console.log(`Plano: ${plan}`);
+          console.log(`Status: ATIVA - Disponível no dashboard`);
           
           console.log(`=== WEBHOOK PROCESSADO COM SUCESSO! ===`);
           console.log(`Pagamento: ${paymentId} (R$ ${paymentInfo.transaction_amount})`);
-          console.log(`Usuário: ${validationResult.userEmail}`);
-          console.log(`Chave gerada: ${validationResult.licenseKey}`);
+          console.log(`Usuário: ${user.email}`);
           console.log(`Status: LICENÇA ATIVA E VINCULADA AO USUÁRIO CORRETO`);
           
         } else {
