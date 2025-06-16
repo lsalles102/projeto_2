@@ -1155,6 +1155,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota de download controlada por status_licenca
+  app.get('/api/download/:filename', isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { filename } = req.params;
+      
+      console.log(`[DOWNLOAD] Solicitação de download para: ${filename} pelo usuário: ${user.email}`);
+
+      // Buscar usuário atualizado do banco
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        console.log(`[DOWNLOAD] ❌ Usuário não encontrado: ${user.id}`);
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // VERIFICAÇÃO PRIMÁRIA: STATUS_LICENCA na tabela de usuários
+      console.log(`[DOWNLOAD] Status da licença do usuário: ${currentUser.status_licenca}`);
+      
+      if (currentUser.status_licenca !== 'ativa') {
+        console.log(`[DOWNLOAD] ❌ Acesso negado - Status: ${currentUser.status_licenca}`);
+        return res.status(403).json({ 
+          message: `Acesso ao download negado. Status da licença: ${currentUser.status_licenca || 'sem_licenca'}. Adquira uma licença para continuar.`,
+          status_licenca: currentUser.status_licenca || 'sem_licenca',
+          pode_baixar: false 
+        });
+      }
+
+      // Verificação secundária: data de expiração
+      if (currentUser.data_expiracao) {
+        const now = new Date();
+        const expiracao = new Date(currentUser.data_expiracao);
+        
+        if (now > expiracao) {
+          // Licença expirou, atualizar status automaticamente
+          await storage.updateUser(user.id, { status_licenca: 'expirada' });
+          console.log(`[DOWNLOAD] ❌ Licença expirada automaticamente para ${user.email}`);
+          
+          return res.status(403).json({ 
+            message: "Sua licença expirou. Renove para continuar o download.",
+            status_licenca: 'expirada',
+            pode_baixar: false,
+            data_expiracao: currentUser.data_expiracao 
+          });
+        }
+      }
+
+      // Licença ativa, permitir download
+      console.log(`[DOWNLOAD] ✅ Acesso autorizado para ${user.email} - Status: ativa`);
+      
+      // Mapear arquivos disponíveis
+      const availableFiles = {
+        'cheat': {
+          name: 'FovDarkloader.exe',
+          url: process.env.DOWNLOAD_URL || "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/FovDarkloader.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9Gb3ZEYXJrbG9hZGVyLmV4ZSIsImlhdCI6MTc0OTkyMDMzNCwiZXhwIjoxNzgxNDU2MzM0fQ.C0hNoVrwxINjd_bve57G0bYCD7HdRBuQrm62ICq3o5g",
+          version: "2.4.1",
+          size: "26.5 MB"
+        },
+        'loader': {
+          name: 'FovDarkloader.exe',
+          url: process.env.DOWNLOAD_URL || "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/FovDarkloader.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9Gb3ZEYXJrbG9hZGVyLmV4ZSIsImlhdCI6MTc0OTkyMDMzNCwiZXhwIjoxNzgxNDU2MzM0fQ.C0hNoVrwxINjd_bve57G0bYCD7HdRBuQrm62ICq3o5g",
+          version: "2.4.1",
+          size: "26.5 MB"
+        }
+      };
+
+      const fileInfo = availableFiles[filename as keyof typeof availableFiles];
+      if (!fileInfo) {
+        return res.status(404).json({ message: "Arquivo não encontrado" });
+      }
+
+      // Registrar o download no log
+      try {
+        const activeLicense = await storage.getActiveLicense(user.id);
+        if (activeLicense) {
+          await storage.logDownload(user.id, activeLicense.id, fileInfo.name);
+        }
+      } catch (logError) {
+        console.error("Erro ao registrar download:", logError);
+        // Não bloquear o download por erro de log
+      }
+
+      console.log(`[DOWNLOAD] ✅ Download autorizado: ${fileInfo.name} para ${user.email}`);
+      
+      res.json({
+        success: true,
+        message: "Download autorizado",
+        file: fileInfo,
+        status_licenca: 'ativa',
+        pode_baixar: true,
+        data_expiracao: currentUser.data_expiracao
+      });
+      
+    } catch (error) {
+      console.error("[DOWNLOAD] Erro ao processar download:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Initialize systems
   console.log("🧹 Sistema de limpeza automática de licenças inicializado");
   console.log("🔒 Sistema de auditoria de segurança inicializado");
