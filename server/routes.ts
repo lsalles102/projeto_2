@@ -622,14 +622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`=== EXTRAINDO USER_ID DO EXTERNAL_REFERENCE ===`);
           console.log(`External Reference: ${paymentInfo.external_reference}`);
           
-          // Extrair user_id do external_reference (formato: user_123_randomstring)
-          const userIdMatch = paymentInfo.external_reference.match(/user_(\d+)_/);
+          // Extrair user_id do external_reference (formato: user_UUID_randomstring ou user_123_randomstring)
+          const userIdMatch = paymentInfo.external_reference.match(/user_([a-zA-Z0-9-]+)_/);
           if (!userIdMatch || !userIdMatch[1]) {
             console.error(`❌ Não foi possível extrair user_id do external_reference: ${paymentInfo.external_reference}`);
             return res.status(200).json({ received: true, error: "Invalid external reference format" });
           }
           
-          const userId = parseInt(userIdMatch[1]);
+          const userId = userIdMatch[1]; // Manter como string para suportar UUIDs
           console.log(`✅ User ID extraído: ${userId}`);
           
           // Verificar se o usuário existe
@@ -691,21 +691,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`- Minutos restantes: ${minutesRemaining}`);
           console.log(`- Total de minutos: ${totalMinutes}`);
           
-          // CRIAR LICENÇA DIRETAMENTE NO BANCO
-          const newLicense = await storage.createLicense({
-            userId: userId,
-            key: licenseKey,
-            plan: plan,
-            status: 'active',
-            daysRemaining: daysRemaining,
-            hoursRemaining: hoursRemaining,
-            minutesRemaining: minutesRemaining,
-            totalMinutesRemaining: totalMinutes,
-            expiresAt: expiresAt,
-            activatedAt: new Date(),
+          // ATIVAR LICENÇA E ATUALIZAR STATUS DO USUÁRIO
+          const { createOrUpdateLicense } = await import('./license-utils');
+          const { license, action, licenseKey: finalLicenseKey } = await createOrUpdateLicense(
+            userId,
+            plan,
+            durationDays
+          );
+
+          // ATUALIZAR STATUS DA LICENÇA DO USUÁRIO
+          await storage.updateUser(userId, {
+            status_licenca: 'ativa',
+            data_expiracao: license.expiresAt
           });
           
-          console.log(`✅ Licença criada no banco - ID: ${newLicense.id}`);
+          console.log(`✅ Licença criada no banco - ID: ${license.id}`);
           
           // ATUALIZAR OU CRIAR PAGAMENTO NO BANCO (EVITAR DUPLICATAS)
           let payment = await storage.updatePaymentByExternalReference(paymentInfo.external_reference, {
@@ -733,6 +733,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
+          // REGISTRAR AUDITORIA DE SEGURANÇA
+          securityAudit.logPaymentApproved(userId, user.email, paymentId, finalLicenseKey);
+          securityAudit.logWebhookProcessed(paymentId, userId, true, { plan, licenseKey: finalLicenseKey });
+          
+          // ENVIAR EMAIL COM CHAVE DE LICENÇA
+          const planName = plan === "test" ? "Teste (30 minutos)" : 
+                           plan === "7days" ? "7 Dias" : "15 Dias";
+          
+          try {
+            const { sendLicenseKeyEmail } = await import('./email');
+            await sendLicenseKeyEmail(user.email, finalLicenseKey, planName);
+            console.log(`[EMAIL] ✅ Email enviado com sucesso para: ${user.email}`);
+          } catch (emailError) {
+            console.error(`[EMAIL] ❌ Falha no envio para ${user.email}:`, emailError);
+            console.log(`[EMAIL] ✅ Licença permanece ativa no sistema - usuário pode fazer login`);
+          }
+          
           console.log(`✅ Pagamento registrado no banco - ID: ${payment.id}`);
           
           const validationResult = {
@@ -740,8 +757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: 'Licença ativada com sucesso',
             userId: userId,
             userEmail: user.email,
-            licenseKey: licenseKey,
-            licenseId: newLicense.id
+            licenseKey: finalLicenseKey,
+            licenseId: license.id
           };
           
           console.log(`✅ LICENÇA ATIVADA COM SUCESSO!`);
