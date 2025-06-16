@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, jsonb, index, serial, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, index, serial, boolean, integer, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -104,7 +104,7 @@ export const payments = pgTable("payments", {
   transactionAmount: integer("transaction_amount").notNull(), // Valor em centavos
   currency: varchar("currency").notNull().default("BRL"),
   plan: varchar("plan").notNull(), // basic, premium, vip
-  durationDays: integer("duration_days").notNull(),
+  durationDays: decimal("duration_days", { precision: 10, scale: 6 }).notNull(),
   payerEmail: varchar("payer_email"),
   payerFirstName: varchar("payer_first_name"),
   payerLastName: varchar("payer_last_name"),

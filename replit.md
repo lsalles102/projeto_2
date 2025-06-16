@@ -238,6 +238,12 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 15, 2025. Fixed critical production deployment error - corrected server.listen() to app.listen()
 - June 15, 2025. Enhanced production build system to handle missing frontend gracefully
 - June 15, 2025. Resolved Render deployment failure - application now deploys successfully
+- June 16, 2025. Fixed critical Mercado Pago payment system issues identified in security audit
+- June 16, 2025. Implemented value consistency - standardized to work in cents internally with proper MP conversion
+- June 16, 2025. Added updatePaymentByExternalReference() method to prevent webhook payment duplicates
+- June 16, 2025. Enhanced webhook signature validation with HMAC SHA256 security implementation
+- June 16, 2025. Removed duplicate endpoint /api/payments/pix/create - maintaining only /api/payments/create-pix
+- June 16, 2025. Fixed PostgreSQL schema to accept decimal values for durationDays (test plan 0.021 days support)
 
 ## User Preferences
 
