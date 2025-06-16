@@ -11,11 +11,15 @@ app.use(express.urlencoded({ extended: false }));
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't crash the process, just log it
 });
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  process.exit(1);
+  // Only exit on critical errors
+  if (error.message.includes('EADDRINUSE') || error.message.includes('listen')) {
+    process.exit(1);
+  }
 });
 
 function log(message: string, source = "express") {

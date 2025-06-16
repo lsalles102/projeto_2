@@ -71,8 +71,10 @@ export async function setupAuth(app: Express): Promise<any> {
           return done(null, false, { message: "Credenciais inválidas" });
         }
 
-        // Compare passwords directly (no encryption)
-        if (password !== user.password) {
+        // Compare passwords using bcrypt
+        const bcrypt = await import("bcrypt");
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
           return done(null, false, { message: "Credenciais inválidas" });
         }
 
