@@ -1,0 +1,888 @@
+Webhook URL configurada: https://fovdark.shop/api/payments/webhook
+Criando pagamento PIX: {
+  "transaction_amount": 1,
+  "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+  "payment_method_id": "pix",
+  "payer": {
+    "email": "luizsalles102@gmail.com",
+    "first_name": "luiz",
+    "last_name": "salles"
+  },
+  "external_reference": "user_5_kgYIaVqC9yqgfh7fEKA03",
+  "notification_url": "https://fovdark.shop/api/payments/webhook",
+  "additional_info": {
+    "items": [
+      {
+        "id": "license_test_1750038104277",
+        "title": "FovDark Cheat TESTE (30 MIN)",
+        "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+        "category_id": "software",
+        "quantity": 1,
+        "unit_price": 1
+      }
+    ]
+  }
+}
+Resposta do pagamento PIX: {
+  "accounts_info": null,
+  "acquirer_reconciliation": [],
+  "additional_info": {
+    "items": [
+      {
+        "category_id": "software",
+        "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+        "id": "license_test_1750038104277",
+        "quantity": "1",
+        "title": "FovDark Cheat TESTE (30 MIN)",
+        "unit_price": "1"
+      }
+    ],
+    "tracking_id": "platform:v20|v20.19.2,so:so;,type:SDK2.7.0,security:none"
+  },
+  "authorization_code": null,
+  "binary_mode": false,
+  "brand_id": null,
+  "build_version": "3.111.0-rc-2",
+  "call_for_authorize_id": null,
+  "callback_url": null,
+  "captured": true,
+  "card": {},
+  "charges_details": [
+    {
+      "accounts": {
+        "from": "collector",
+        "to": "mp"
+      },
+      "amounts": {
+        "original": 0.01,
+        "refunded": 0
+      },
+      "client_id": 0,
+      "date_created": "2025-06-15T21:41:44.669-04:00",
+      "id": "114779292071-001",
+      "last_updated": "2025-06-15T21:41:44.669-04:00",
+      "metadata": {
+        "reason": "",
+        "source": "rule-engine"
+      },
+      "name": "mercadopago_fee",
+      "refund_charges": [],
+      "reserve_id": null,
+      "type": "fee"
+    }
+  ],
+  "charges_execution_info": {
+    "internal_execution": {
+      "date": "2025-06-15T21:41:44.648-04:00",
+      "execution_id": "01JXV6CJGPFX29XFPZN0ANB56F"
+    }
+  },
+  "collector_id": 593494225,
+  "corporation_id": null,
+  "counter_currency": null,
+  "coupon_amount": 0,
+  "currency_id": "BRL",
+  "date_approved": null,
+  "date_created": "2025-06-15T21:41:44.667-04:00",
+  "date_last_updated": "2025-06-15T21:41:44.667-04:00",
+  "date_of_expiration": "2025-06-16T21:41:44.442-04:00",
+  "deduction_schema": null,
+  "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+  "differential_pricing_id": null,
+  "external_reference": "user_5_kgYIaVqC9yqgfh7fEKA03",
+  "fee_details": [],
+  "financing_group": null,
+  "id": 114779292071,
+  "installments": 1,
+  "integrator_id": null,
+  "issuer_id": "12501",
+  "live_mode": true,
+  "marketplace_owner": null,
+  "merchant_account_id": null,
+  "merchant_number": null,
+  "metadata": {},
+  "money_release_date": null,
+  "money_release_schema": null,
+  "money_release_status": "released",
+  "notification_url": "https://fovdark.shop/api/payments/webhook",
+  "operation_type": "regular_payment",
+  "order": {},
+  "payer": {
+    "email": null,
+    "entity_type": null,
+    "first_name": null,
+    "id": "2466974897",
+    "identification": {
+      "number": null,
+      "type": null
+    },
+    "last_name": null,
+    "operator_id": null,
+    "phone": {
+      "area_code": null,
+      "extension": null,
+      "number": null
+    },
+    "type": null
+  },
+  "payment_method": {
+    "id": "pix",
+    "issuer_id": "12501",
+    "type": "bank_transfer"
+  },
+  "payment_method_id": "pix",
+  "payment_type_id": "bank_transfer",
+  "platform_id": null,
+  "point_of_interaction": {
+    "application_data": {
+      "name": null,
+      "operating_system": null,
+      "version": null
+    },
+    "business_info": {
+      "branch": null,
+      "sub_unit": "sdk",
+      "unit": "online_payments"
+    },
+    "location": {
+      "source": null,
+      "state_id": null
+    },
+    "transaction_data": {
+      "bank_info": {
+        "collector": {
+          "account_holder_name": "Beatriz Celestino Viegas",
+          "account_id": null,
+          "long_name": null,
+          "transfer_account_id": null
+        },
+        "is_same_bank_account_owner": null,
+        "origin_bank_id": null,
+        "origin_wallet_id": null,
+        "payer": {
+          "account_id": null,
+          "branch": null,
+          "external_account_id": null,
+          "id": null,
+          "identification": {},
+          "is_end_consumer": null,
+          "long_name": null
+        }
+      },
+      "bank_transfer_id": null,
+      "e2e_id": null,
+      "financial_institution": null,
+      "merchant_category_code": null,
+      "qr_code": "00020126580014br.gov.bcb.pix013697ad88a4-e555-4185-9ff5-2b3f561701f152040000530398654041.005802BR5922BEATRIZCELESTINOVIEGAS6008So Paulo62250521mpqrinter1147792920716304A4FE",
+      "qr_code_base64": "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",
+      "ticket_url": "https://www.mercadopago.com.br/payments/114779292071/ticket?caller_id=2466974897&hash=be663edb-d825-4ad6-8994-011bb0d5ab2a",
+      "transaction_id": null
+    },
+    "type": "OPENPLATFORM"
+  },
+  "pos_id": null,
+  "processing_mode": "aggregator",
+  "refunds": [],
+  "release_info": null,
+  "shipping_amount": 0,
+  "sponsor_id": null,
+  "statement_descriptor": null,
+  "status": "pending",
+  "status_detail": "pending_waiting_transfer",
+  "store_id": null,
+  "tags": null,
+  "taxes_amount": 0,
+  "transaction_amount": 1,
+  "transaction_amount_refunded": 0,
+  "transaction_details": {
+    "acquirer_reference": null,
+    "bank_transfer_id": null,
+    "external_resource_url": null,
+    "financial_institution": null,
+    "installment_amount": 0,
+    "net_received_amount": 0,
+    "overpaid_amount": 0,
+    "payable_deferral_period": null,
+    "payment_method_reference_id": null,
+    "total_paid_amount": 1,
+    "transaction_id": null
+  },
+  "api_response": {
+    "status": 201,
+    "headers": {
+      "date": [
+        "Mon, 16 Jun 2025 01:41:45 GMT"
+      ],
+      "content-type": [
+        "application/json; charset=utf-8"
+      ],
+      "transfer-encoding": [
+        "chunked"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "cache-control": [
+        "max-age=0"
+      ],
+      "content-encoding": [
+        "gzip"
+      ],
+      "etag": [
+        "6a0d602814d7c7f880fcc872e063bc43"
+      ],
+      "processed-by": [
+        "transaction-intent"
+      ],
+      "vary": [
+        "Accept,Accept-Encoding,Accept-Encoding"
+      ],
+      "x-caller-id": [
+        "593494225"
+      ],
+      "x-request-id": [
+        "c9121ea1-3815-46a2-9375-cf86888f7dd1"
+      ],
+      "x-response-status": [
+        "pending/pending_waiting_transfer"
+      ],
+      "x-site-id": [
+        "MLB"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-xss-protection": [
+        "1; mode=block"
+      ],
+      "strict-transport-security": [
+        "max-age=16070400; includeSubDomains; preload"
+      ],
+      "access-control-allow-origin": [
+        "*"
+      ],
+      "access-control-allow-headers": [
+        "Content-Type"
+      ],
+      "access-control-allow-methods": [
+        "PUT, GET, POST, DELETE, OPTIONS"
+      ],
+      "access-control-max-age": [
+        "86400"
+      ],
+      "timing-allow-origin": [
+        "*"
+      ]
+    }
+  }
+}
+Resposta do Mercado Pago: {
+  "preferenceId": "593494225-2b3cb786-8996-43e9-9fdc-84458f48afe1",
+  "externalReference": "user_5_kgYIaVqC9yqgfh7fEKA03",
+  "initPoint": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=593494225-2b3cb786-8996-43e9-9fdc-84458f48afe1",
+  "pixQrCode": "00020126580014br.gov.bcb.pix013697ad88a4-e555-4185-9ff5-2b3f561701f152040000530398654041.005802BR5922BEATRIZCELESTINOVIEGAS6008So Paulo62250521mpqrinter1147792920716304A4FE",
+  "pixQrCodeBase64": "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",
+  "transactionAmount": 100,
+  "currency": "BRL"
+}
+Salvando pagamento no banco de dados...
+=== WEBHOOK MERCADO PAGO RECEBIDO ===
+Headers: {
+  "host": "fovdark.shop",
+  "user-agent": "MercadoPago WebHook v1.0 payment",
+  "content-length": "188",
+  "accept": "application/json",
+  "accept-encoding": "gzip, br",
+  "cdn-loop": "cloudflare; loops=1",
+  "cf-connecting-ip": "54.88.218.97",
+  "cf-ipcountry": "US",
+  "cf-ray": "95069b4d2c9407d7-PDX",
+  "cf-visitor": "{\"scheme\":\"https\"}",
+  "content-type": "application/json",
+  "referer": "https://mercadopago.com.ar",
+  "render-proxy-ttl": "4",
+  "rndr-id": "0ac7fc75-b0eb-479c",
+  "traceparent": "00-7314883bcabf5b8733b8cf6012cf379c-6e2909c6cf2d39bc-00",
+  "true-client-ip": "54.88.218.97",
+  "x-b3-parentspanid": "b15c9f265ad6b26e",
+  "x-b3-sampled": "0",
+  "x-b3-spanid": "6e2909c6cf2d39bc",
+  "x-b3-traceid": "7314883bcabf5b8733b8cf6012cf379c",
+  "x-forwarded-for": "54.88.218.97, 104.23.160.122, 10.220.221.111",
+  "x-forwarded-proto": "https",
+  "x-request-id": "6d4bf1bc-8a3d-4f42-8821-7f7b39880c2f",
+  "x-request-start": "1750038105220060",
+  "x-rest-pool-name": "pool_unknown",
+  "x-signature": "ts=1750018835,v1=fe7a36584d02babe0063f09e7a7f12f3096910fc12759ccb3620896f19250796",
+  "x-socket-timeout": "25000",
+  "x-trace-digest-22": "O6GmPhhK38TiRzuXcRaGsTX/xNhbiIsPPJIw76hVluTbw8mAre5O/mD9XVz9rUHoeMUlT2/Qx97YM6O17yi/hxCUq7ikkdn90nkERroTcjyhFaWsMba7yhx1VHqiOH7fqeiPW9xExalq5UcBYC4Vs/dcvsz4VhrRnqccn8ia+P4="
+}
+Body: {
+  "action": "payment.created",
+  "api_version": "v1",
+  "data": {
+    "id": "114779292071"
+  },
+  "date_created": "2025-06-16T01:41:44Z",
+  "id": 122209990054,
+  "live_mode": true,
+  "type": "payment",
+  "user_id": "593494225"
+}
+Signature: ts=1750018835,v1=fe7a36584d02babe0063f09e7a7f12f3096910fc12759ccb3620896f19250796
+Request ID: 6d4bf1bc-8a3d-4f42-8821-7f7b39880c2f
+=== FORMATO ANTIGO - TYPE PAYMENT ===
+=== PROCESSANDO PAGAMENTO 114779292071 ===
+Buscando informações do pagamento no Mercado Pago...
+Informações do pagamento: {
+  "accounts_info": null,
+  "acquirer_reconciliation": [],
+  "additional_info": {
+    "items": [
+      {
+        "category_id": "software",
+        "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+        "id": "license_test_1750038104277",
+        "quantity": "1",
+        "title": "FovDark Cheat TESTE (30 MIN)",
+        "unit_price": "1"
+      }
+    ],
+    "tracking_id": "platform:v20|v20.19.2,so:so;,type:SDK2.7.0,security:none"
+  },
+  "authorization_code": null,
+  "binary_mode": false,
+  "brand_id": null,
+  "build_version": "3.111.0-rc-2",
+  "call_for_authorize_id": null,
+  "callback_url": null,
+  "captured": true,
+  "card": {},
+  "charges_details": [
+    {
+      "accounts": {
+        "from": "collector",
+        "to": "mp"
+      },
+      "amounts": {
+        "original": 0.01,
+        "refunded": 0
+      },
+      "client_id": 0,
+      "date_created": "2025-06-15T21:41:44.000-04:00",
+      "id": "114779292071-001",
+      "last_updated": "2025-06-15T21:41:44.000-04:00",
+      "metadata": {
+        "reason": "",
+        "source": "rule-engine"
+      },
+      "name": "mercadopago_fee",
+      "refund_charges": [],
+      "reserve_id": null,
+      "type": "fee"
+    }
+  ],
+  "charges_execution_info": {
+    "internal_execution": {
+      "date": "2025-06-15T21:41:44.648-04:00",
+      "execution_id": "01JXV6CJGPFX29XFPZN0ANB56F"
+    }
+  },
+  "collector_id": 593494225,
+  "corporation_id": null,
+  "counter_currency": null,
+  "coupon_amount": 0,
+  "currency_id": "BRL",
+  "date_approved": null,
+  "date_created": "2025-06-15T21:41:44.000-04:00",
+  "date_last_updated": "2025-06-15T21:41:44.000-04:00",
+  "date_of_expiration": "2025-06-16T21:41:44.000-04:00",
+  "deduction_schema": null,
+  "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+  "differential_pricing_id": null,
+  "external_reference": "user_5_kgYIaVqC9yqgfh7fEKA03",
+  "fee_details": [],
+  "financing_group": null,
+  "id": 114779292071,
+  "installments": 1,
+  "integrator_id": null,
+  "issuer_id": "12501",
+  "live_mode": true,
+  "marketplace_owner": null,
+  "merchant_account_id": null,
+  "merchant_number": null,
+  "metadata": {},
+  "money_release_date": null,
+  "money_release_schema": null,
+  "money_release_status": "released",
+  "notification_url": "https://fovdark.shop/api/payments/webhook",
+  "operation_type": "regular_payment",
+  "order": {},
+  "payer": {
+    "email": null,
+    "entity_type": null,
+    "first_name": null,
+    "id": "2466974897",
+    "identification": {
+      "number": null,
+      "type": null
+    },
+    "last_name": null,
+    "operator_id": null,
+    "phone": {
+      "number": null,
+      "extension": null,
+      "area_code": null
+    },
+    "type": null
+  },
+  "payment_method": {
+    "id": "pix",
+    "issuer_id": "12501",
+    "type": "bank_transfer"
+  },
+  "payment_method_id": "pix",
+  "payment_type_id": "bank_transfer",
+  "platform_id": null,
+  "point_of_interaction": {
+    "application_data": {
+      "name": null,
+      "operating_system": null,
+      "version": null
+    },
+    "business_info": {
+      "branch": null,
+      "sub_unit": "sdk",
+      "unit": "online_payments"
+    },
+    "location": {
+      "source": null,
+      "state_id": null
+    },
+    "transaction_data": {
+      "bank_info": {
+        "collector": {
+          "account_holder_name": "Beatriz Celestino Viegas",
+          "account_id": null,
+          "long_name": null,
+          "transfer_account_id": null
+        },
+        "is_same_bank_account_owner": null,
+        "origin_bank_id": null,
+        "origin_wallet_id": null,
+        "payer": {
+          "account_id": null,
+          "branch": null,
+          "external_account_id": null,
+          "id": null,
+          "identification": {},
+          "is_end_consumer": null,
+          "long_name": null
+        }
+      },
+      "bank_transfer_id": null,
+      "e2e_id": null,
+      "financial_institution": null,
+      "infringement_notification": {
+        "status": null,
+        "type": null
+      },
+      "merchant_category_code": null,
+      "qr_code": "00020126580014br.gov.bcb.pix013697ad88a4-e555-4185-9ff5-2b3f561701f152040000530398654041.005802BR5922BEATRIZCELESTINOVIEGAS6008So Paulo62250521mpqrinter1147792920716304A4FE",
+      "qr_code_base64": "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",
+      "ticket_url": "https://www.mercadopago.com.br/payments/114779292071/ticket?caller_id=2466974897&hash=be663edb-d825-4ad6-8994-011bb0d5ab2a",
+      "transaction_id": null
+    },
+    "type": "OPENPLATFORM"
+  },
+  "pos_id": null,
+  "processing_mode": "aggregator",
+  "refunds": [],
+  "release_info": null,
+  "shipping_amount": 0,
+  "sponsor_id": null,
+  "statement_descriptor": null,
+  "status": "pending",
+  "status_detail": "pending_waiting_transfer",
+  "store_id": null,
+  "tags": null,
+  "taxes_amount": 0,
+  "transaction_amount": 1,
+  "transaction_amount_refunded": 0,
+  "transaction_details": {
+    "acquirer_reference": null,
+    "bank_transfer_id": null,
+    "external_resource_url": null,
+    "financial_institution": null,
+    "installment_amount": 0,
+    "net_received_amount": 0,
+    "overpaid_amount": 0,
+    "payable_deferral_period": null,
+    "payment_method_reference_id": null,
+    "total_paid_amount": 1,
+    "transaction_id": null
+  },
+  "api_response": {
+    "status": 200,
+    "headers": {
+      "date": [
+        "Mon, 16 Jun 2025 01:41:45 GMT"
+      ],
+      "content-type": [
+        "application/json;charset=UTF-8"
+      ],
+      "transfer-encoding": [
+        "chunked"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "vary": [
+        "Accept-Encoding, Accept,Accept-Encoding"
+      ],
+      "cache-control": [
+        "max-age=0"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-request-id": [
+        "218c5225-3f57-4335-a195-10ec94e5fd7b"
+      ],
+      "x-xss-protection": [
+        "1; mode=block"
+      ],
+      "strict-transport-security": [
+        "max-age=16070400; includeSubDomains; preload"
+      ],
+      "access-control-allow-origin": [
+        "*"
+      ],
+      "access-control-allow-headers": [
+        "Content-Type"
+      ],
+      "access-control-allow-methods": [
+        "PUT, GET, POST, DELETE, OPTIONS"
+      ],
+      "access-control-max-age": [
+        "86400"
+      ],
+      "timing-allow-origin": [
+        "*"
+      ],
+      "content-encoding": [
+        "gzip"
+      ]
+    }
+  }
+}
+Status do pagamento: pending
+Status detail: pending_waiting_transfer
+=== PAGAMENTO NÃO APROVADO ===
+Status: pending
+1:41:45 AM [express] POST /api/payments/webhook 200 in 116ms :: {"received":true}
+=== WEBHOOK MERCADO PAGO RECEBIDO ===
+Headers: {
+  "host": "fovdark.shop",
+  "user-agent": "MercadoPago Feed v2.0 payment",
+  "content-length": "45",
+  "accept": "application/json",
+  "accept-encoding": "gzip, br",
+  "cdn-loop": "cloudflare; loops=1",
+  "cf-connecting-ip": "18.206.34.84",
+  "cf-ipcountry": "US",
+  "cf-ray": "95069b4d4dbe3b2f-IAD",
+  "cf-visitor": "{\"scheme\":\"https\"}",
+  "content-type": "application/json",
+  "referer": "https://mercadopago.com.ar",
+  "render-proxy-ttl": "4",
+  "rndr-id": "aa02108c-cd73-408e",
+  "traceparent": "00-7314883bcabf5b8733b8cf6012cf379c-ebe1d07fcfa3ad95-00",
+  "true-client-ip": "18.206.34.84",
+  "x-b3-parentspanid": "b15c9f265ad6b26e",
+  "x-b3-sampled": "0",
+  "x-b3-spanid": "ebe1d07fcfa3ad95",
+  "x-b3-traceid": "7314883bcabf5b8733b8cf6012cf379c",
+  "x-forwarded-for": "18.206.34.84, 172.70.43.114, 10.220.63.148",
+  "x-forwarded-proto": "https",
+  "x-request-id": "6d4bf1bc-8a3d-4f42-8821-7f7b39880c2f",
+  "x-request-start": "1750038105425202",
+  "x-rest-pool-name": "pool_unknown",
+  "x-signature": "ts=1750018853,v1=d805f60e2c605667d928b1a361c356509bc010afdd8cf67ea5028e20500948fe",
+  "x-socket-timeout": "25000",
+  "x-trace-digest-49": "bdhQ5rAGE0OKL5XTNEEIavauSBCwUMl0o3plHfVkX80tH+A30VJ9H8OWaeSJoZ8SVAtRV397ttnq9rGNdtMMqFl1FaKq7QF86WyBkxpDOMIvcIPCj0S5E6AC5vvEYTyxIFZ9SJr6igaie1ODkMDX2WM8MwM7FDCZJGxnpCjPmfQ="
+}
+Body: {
+  "resource": "114779292071",
+  "topic": "payment"
+}
+Signature: ts=1750018853,v1=d805f60e2c605667d928b1a361c356509bc010afdd8cf67ea5028e20500948fe
+Request ID: 6d4bf1bc-8a3d-4f42-8821-7f7b39880c2f
+=== FORMATO NOVO - TOPIC PAYMENT ===
+=== PROCESSANDO PAGAMENTO 114779292071 ===
+Buscando informações do pagamento no Mercado Pago...
+❌ ERRO NA CRIAÇÃO DO PAGAMENTO PIX: PostgresError: invalid input syntax for type integer: "0.021"
+    at ErrorResponse (file:///app/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///app/node_modules/postgres/src/connection.js:480:6)
+    at TLSSocket.data (file:///app/node_modules/postgres/src/connection.js:315:9)
+    at TLSSocket.emit (node:events:524:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:191:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '22P02',
+  where: "unnamed portal parameter $8 = '...'",
+  file: 'numutils.c',
+  line: '616',
+  routine: 'pg_strtoint32_safe'
+}
+Informações do pagamento: {
+  "accounts_info": null,
+  "acquirer_reconciliation": [],
+  "additional_info": {
+    "items": [
+      {
+        "category_id": "software",
+        "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+        "id": "license_test_1750038104277",
+        "quantity": "1",
+        "title": "FovDark Cheat TESTE (30 MIN)",
+        "unit_price": "1"
+      }
+    ],
+    "tracking_id": "platform:v20|v20.19.2,so:so;,type:SDK2.7.0,security:none"
+  },
+  "authorization_code": null,
+  "binary_mode": false,
+  "brand_id": null,
+  "build_version": "3.111.0-rc-2",
+  "call_for_authorize_id": null,
+  "callback_url": null,
+  "captured": true,
+  "card": {},
+  "charges_details": [
+    {
+      "accounts": {
+        "from": "collector",
+        "to": "mp"
+      },
+      "amounts": {
+        "original": 0.01,
+        "refunded": 0
+      },
+      "client_id": 0,
+      "date_created": "2025-06-15T21:41:44.000-04:00",
+      "id": "114779292071-001",
+      "last_updated": "2025-06-15T21:41:44.000-04:00",
+      "metadata": {
+        "reason": "",
+        "source": "rule-engine"
+      },
+      "name": "mercadopago_fee",
+      "refund_charges": [],
+      "reserve_id": null,
+      "type": "fee"
+    }
+  ],
+  "charges_execution_info": {
+    "internal_execution": {
+      "date": "2025-06-15T21:41:44.648-04:00",
+      "execution_id": "01JXV6CJGPFX29XFPZN0ANB56F"
+    }
+  },
+  "collector_id": 593494225,
+  "corporation_id": null,
+  "counter_currency": null,
+  "coupon_amount": 0,
+  "currency_id": "BRL",
+  "date_approved": null,
+  "date_created": "2025-06-15T21:41:44.000-04:00",
+  "date_last_updated": "2025-06-15T21:41:44.000-04:00",
+  "date_of_expiration": "2025-06-16T21:41:44.000-04:00",
+  "deduction_schema": null,
+  "description": "Acesso completo ao FovDark Cheat por 30 minutos. Sistema profissional de cheats para games com suporte técnico incluído.",
+  "differential_pricing_id": null,
+  "external_reference": "user_5_kgYIaVqC9yqgfh7fEKA03",
+  "fee_details": [],
+  "financing_group": null,
+  "id": 114779292071,
+  "installments": 1,
+  "integrator_id": null,
+  "issuer_id": "12501",
+  "live_mode": true,
+  "marketplace_owner": null,
+  "merchant_account_id": null,
+  "merchant_number": null,
+  "metadata": {},
+  "money_release_date": null,
+  "money_release_schema": null,
+  "money_release_status": "released",
+  "notification_url": "https://fovdark.shop/api/payments/webhook",
+  "operation_type": "regular_payment",
+  "order": {},
+  "payer": {
+    "email": null,
+    "entity_type": null,
+    "first_name": null,
+    "id": "2466974897",
+    "identification": {
+      "number": null,
+      "type": null
+    },
+    "last_name": null,
+    "operator_id": null,
+    "phone": {
+      "number": null,
+      "extension": null,
+      "area_code": null
+    },
+    "type": null
+  },
+  "payment_method": {
+    "id": "pix",
+    "issuer_id": "12501",
+    "type": "bank_transfer"
+  },
+  "payment_method_id": "pix",
+  "payment_type_id": "bank_transfer",
+  "platform_id": null,
+  "point_of_interaction": {
+    "application_data": {
+      "name": null,
+      "operating_system": null,
+      "version": null
+    },
+    "business_info": {
+      "branch": null,
+      "sub_unit": "sdk",
+      "unit": "online_payments"
+    },
+    "location": {
+      "source": null,
+      "state_id": null
+    },
+    "transaction_data": {
+      "bank_info": {
+        "collector": {
+          "account_holder_name": "Beatriz Celestino Viegas",
+          "account_id": null,
+          "long_name": null,
+          "transfer_account_id": null
+        },
+        "is_same_bank_account_owner": null,
+        "origin_bank_id": null,
+        "origin_wallet_id": null,
+        "payer": {
+          "account_id": null,
+          "branch": null,
+          "external_account_id": null,
+          "id": null,
+          "identification": {},
+          "is_end_consumer": null,
+          "long_name": null
+        }
+      },
+      "bank_transfer_id": null,
+      "e2e_id": null,
+      "financial_institution": null,
+      "infringement_notification": {
+        "status": null,
+        "type": null
+      },
+      "merchant_category_code": null,
+      "qr_code": "00020126580014br.gov.bcb.pix013697ad88a4-e555-4185-9ff5-2b3f561701f152040000530398654041.005802BR5922BEATRIZCELESTINOVIEGAS6008So Paulo62250521mpqrinter1147792920716304A4FE",
+      "qr_code_base64": "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",
+      "ticket_url": "https://www.mercadopago.com.br/payments/114779292071/ticket?caller_id=2466974897&hash=be663edb-d825-4ad6-8994-011bb0d5ab2a",
+      "transaction_id": null
+    },
+    "type": "OPENPLATFORM"
+  },
+  "pos_id": null,
+  "processing_mode": "aggregator",
+  "refunds": [],
+  "release_info": null,
+  "shipping_amount": 0,
+  "sponsor_id": null,
+  "statement_descriptor": null,
+  "status": "pending",
+  "status_detail": "pending_waiting_transfer",
+  "store_id": null,
+  "tags": null,
+  "taxes_amount": 0,
+  "transaction_amount": 1,
+  "transaction_amount_refunded": 0,
+  "transaction_details": {
+    "acquirer_reference": null,
+    "bank_transfer_id": null,
+    "external_resource_url": null,
+    "financial_institution": null,
+    "installment_amount": 0,
+    "net_received_amount": 0,
+    "overpaid_amount": 0,
+    "payable_deferral_period": null,
+    "payment_method_reference_id": null,
+    "total_paid_amount": 1,
+    "transaction_id": null
+  },
+  "api_response": {
+    "status": 200,
+    "headers": {
+      "date": [
+        "Mon, 16 Jun 2025 01:41:45 GMT"
+      ],
+      "content-type": [
+        "application/json;charset=UTF-8"
+      ],
+      "transfer-encoding": [
+        "chunked"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "vary": [
+        "Accept-Encoding, Accept,Accept-Encoding"
+      ],
+      "cache-control": [
+        "max-age=0"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-request-id": [
+        "4cb0d83b-4008-4bc9-bdf4-74a2ba0588b3"
+      ],
+      "x-xss-protection": [
+        "1; mode=block"
+      ],
+      "strict-transport-security": [
+        "max-age=16070400; includeSubDomains; preload"
+      ],
+      "access-control-allow-origin": [
+        "*"
+      ],
+      "access-control-allow-headers": [
+        "Content-Type"
+      ],
+      "access-control-allow-methods": [
+        "PUT, GET, POST, DELETE, OPTIONS"
+      ],
+      "access-control-max-age": [
+        "86400"
+      ],
+      "timing-allow-origin": [
+        "*"
+      ],
+      "content-encoding": [
+        "gzip"
+      ]
+    }
+  }
+}
+Status do pagamento: pending
+Status detail: pending_waiting_transfer
+=== PAGAMENTO NÃO APROVADO ===
+Status: pending
+1:41:45 AM [express] POST /api/payments/webhook 200 in 114ms :: {"received":true}
+1:41:45 AM [express] POST /api/payments/create-pix 500 in 4674ms :: {"success":false,"message":"Erro…

@@ -66,14 +66,21 @@ const plans = [
 ];
 
 interface PaymentData {
-  paymentId: string;
-  preferenceId: string;
+  success: boolean;
+  payment: {
+    id: number;
+    externalReference: string;
+    transactionAmount: number;
+    currency: string;
+    plan: string;
+    durationDays: number;
+    status: string;
+    pixQrCode: string;
+    pixQrCodeBase64: string;
+    preferenceId: string;
+    createdAt: string;
+  };
   initPoint: string;
-  pixQrCode: string;
-  pixQrCodeBase64: string;
-  amount: number;
-  currency: string;
-  externalReference: string;
 }
 
 export default function Checkout() {
@@ -159,14 +166,129 @@ export default function Checkout() {
   };
 
   const copyPixCode = () => {
-    if (paymentData?.pixQrCode) {
-      navigator.clipboard.writeText(paymentData.pixQrCode);
+    if (paymentData?.payment?.pixQrCode) {
+      navigator.clipboard.writeText(paymentData.payment.pixQrCode);
       toast({
         title: "Código PIX copiado!",
         description: "Cole no seu app do banco para fazer o pagamento",
       });
     }
   };
+
+  if (step === 'pix' && paymentData) {
+    return (
+      <ProtectedRoute>
+        <div className="py-20 min-h-screen">
+          <div className="container mx-auto px-6 max-w-4xl">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-orbitron font-bold mb-4">
+                PAGAMENTO PIX
+              </h1>
+              <p className="text-gray-300">
+                Escaneie o QR Code ou copie o código PIX para pagar
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="text-primary" />
+                    QR Code PIX
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-center">
+                  {paymentData.payment?.pixQrCodeBase64 ? (
+                    <div className="bg-white p-4 rounded-lg inline-block">
+                      <img 
+                        src={`data:image/png;base64,${paymentData.payment.pixQrCodeBase64}`}
+                        alt="QR Code PIX"
+                        className="max-w-[250px] mx-auto"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-gray-800 p-8 rounded-lg">
+                      <QrCode className="w-32 h-32 mx-auto text-gray-600 mb-4" />
+                      <p className="text-gray-400">QR Code não disponível</p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-400">Valor a pagar:</p>
+                    <p className="text-2xl font-bold text-primary">
+                      R$ {(paymentData.payment?.transactionAmount / 100).toFixed(2)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Copy className="text-primary" />
+                    Código PIX
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-gray-900 p-4 rounded border break-all text-sm font-mono">
+                    {paymentData.payment?.pixQrCode || 'Código PIX não disponível'}
+                  </div>
+                  
+                  <Button
+                    className="w-full bg-primary text-black hover:bg-primary/90"
+                    onClick={copyPixCode}
+                    disabled={!paymentData.payment?.pixQrCode}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar Código PIX
+                  </Button>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Instruções:</h4>
+                    <ol className="text-sm space-y-2 text-gray-300">
+                      <li>1. Abra seu app bancário</li>
+                      <li>2. Escaneie o QR Code ou cole o código PIX</li>
+                      <li>3. Confirme o pagamento</li>
+                      <li>4. Aguarde a confirmação (até 5 minutos)</li>
+                      <li>5. Sua chave será enviada por email automaticamente</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="bg-yellow-900/20 border border-yellow-500/20 p-4 rounded">
+                    <p className="text-yellow-300 text-sm">
+                      <strong>Importante:</strong> Após o pagamento, você receberá sua chave de ativação por email. 
+                      Também pode verificar no painel do usuário.
+                    </p>
+                  </div>
+                  
+                  <div className="text-center space-y-2">
+                    <Link href="/dashboard">
+                      <Button variant="outline" className="w-full">
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Já Paguei - Ir para o Painel
+                      </Button>
+                    </Link>
+                    
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setStep('payment');
+                        setPaymentData(null);
+                      }}
+                    >
+                      ← Voltar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   if (step === 'payment' && selectedPlan) {
     return (
@@ -249,9 +371,19 @@ export default function Checkout() {
                     <Button
                       className="w-full bg-primary text-black hover:bg-primary/90 font-bold text-lg py-3"
                       onClick={() => handlePixPayment(selectedPlan)}
+                      disabled={isLoading}
                     >
-                      <ExternalLink className="w-5 h-5 mr-2" />
-                      PROCESSAR PAGAMENTO PIX
+                      {isLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="w-5 h-5 mr-2" />
+                          PROCESSAR PAGAMENTO PIX
+                        </>
+                      )}
                     </Button>
                   </div>
 
