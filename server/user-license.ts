@@ -34,8 +34,11 @@ export async function createUserLicense(
       createdAt: new Date().toISOString(),
     };
 
-    // Update user with new license
-    await storage.updateUser(userId, { licenses: newLicense });
+    // Update user with new license and status_license field
+    await storage.updateUser(userId, { 
+      licenses: newLicense,
+      status_license: "ativa" // Licença criada está ativa
+    });
 
     console.log(`✓ Nova licença criada para usuário ${userId}: ${licenseKey} (${plan}, ${durationDays} dias)`);
 
@@ -86,7 +89,10 @@ export async function activateUserLicense(
       lastHeartbeat: new Date().toISOString(),
     };
 
-    await storage.updateUser(userId, { licenses: activatedLicense });
+    await storage.updateUser(userId, { 
+      licenses: activatedLicense,
+      status_license: "ativa" // Sincronizar status da licença
+    });
 
     console.log(`✓ Licença ativada: ${licenseKey} para usuário ${userId} com HWID: ${hwid}`);
 
@@ -128,7 +134,10 @@ export async function getUserLicense(userId: number): Promise<UserLicense | null
         minutesRemaining: 0,
       };
 
-      await storage.updateUser(userId, { licenses: expiredLicense });
+      await storage.updateUser(userId, { 
+        licenses: expiredLicense,
+        status_license: "expirada" // Sincronizar status da licença expirada
+      });
       return expiredLicense;
     }
 

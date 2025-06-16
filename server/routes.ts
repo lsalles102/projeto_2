@@ -841,23 +841,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       console.log(`=== CARREGANDO DASHBOARD PARA USUÁRIO ${user.id} ===`);
       
+      // Get updated user data with status_license
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
       // Use new centralized license system
       const { getUserLicense } = await import('./user-license');
       const license = await getUserLicense(user.id);
       const downloads = await storage.getUserDownloads(user.id);
 
+      // Update status_license based on license state
+      let statusLicense = currentUser.status_license || "sem_licenca";
+      if (license) {
+        if (license.status === "active") {
+          statusLicense = "ativa";
+        } else if (license.status === "expired") {
+          statusLicense = "expirada";
+        } else {
+          statusLicense = "sem_licenca";
+        }
+        
+        // Update database if status changed
+        if (statusLicense !== currentUser.status_license) {
+          await storage.updateUser(user.id, { status_license: statusLicense });
+          console.log(`Status da licença atualizado para: ${statusLicense}`);
+        }
+      }
+
+      console.log(`Status da licença do usuário: ${statusLicense}`);
       if (license) {
         console.log(`Licença encontrada - Chave: ${license.key}`);
         console.log(`Status: ${license.status}, Plano: ${license.plan}`);
         console.log(`Expira em: ${license.expiresAt}`);
-        console.log(`Tempo atual: ${new Date().toISOString()}`);
-        console.log(`Expirada? ${new Date(license.expiresAt) < new Date()}`);
       } else {
         console.log(`Nenhuma licença encontrada para o usuário ${user.id}`);
       }
 
       res.json({
-        user: { ...user, password: undefined },
+        user: { 
+          ...currentUser, 
+          password: undefined,
+          status_license: statusLicense 
+        },
         license,
         downloads,
         stats: {
