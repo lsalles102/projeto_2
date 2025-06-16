@@ -803,21 +803,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`✅ Licença criada no banco - ID: ${newLicense.id}`);
           
-          // REGISTRAR PAGAMENTO NO BANCO COM VALOR EM CENTAVOS
-          const payment = await storage.createPayment({
-            userId: userId,
+          // ATUALIZAR OU CRIAR PAGAMENTO NO BANCO (EVITAR DUPLICATAS)
+          let payment = await storage.updatePaymentByExternalReference(paymentInfo.external_reference, {
             mercadoPagoId: paymentId,
-            externalReference: paymentInfo.external_reference,
             status: 'approved',
             transactionAmount: transactionAmountCents, // Valor em centavos
-            currency: 'BRL',
-            plan: plan,
-            durationDays: Math.round(durationDays * 1000) / 1000, // Arredondar para 3 casas decimais
-            payerEmail: paymentInfo.payer?.email || user.email,
-            payerFirstName: paymentInfo.payer?.first_name || user.firstName || '',
-            payerLastName: paymentInfo.payer?.last_name || user.lastName || '',
             paymentMethodId: paymentInfo.payment_method_id || 'pix',
           });
+          
+          // Se não encontrou pagamento existente, criar novo
+          if (!payment) {
+            payment = await storage.createPayment({
+              userId: userId,
+              mercadoPagoId: paymentId,
+              externalReference: paymentInfo.external_reference,
+              status: 'approved',
+              transactionAmount: transactionAmountCents, // Valor em centavos
+              currency: 'BRL',
+              plan: plan,
+              durationDays: Math.round(durationDays * 1000) / 1000, // Arredondar para 3 casas decimais
+              payerEmail: paymentInfo.payer?.email || user.email,
+              payerFirstName: paymentInfo.payer?.first_name || user.firstName || '',
+              payerLastName: paymentInfo.payer?.last_name || user.lastName || '',
+              paymentMethodId: paymentInfo.payment_method_id || 'pix',
+            });
+          }
           
           console.log(`✅ Pagamento registrado no banco - ID: ${payment.id}`);
           

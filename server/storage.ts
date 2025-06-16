@@ -51,6 +51,7 @@ export interface IStorage {
   getPaymentByPreferenceId(preferenceId: string): Promise<Payment | undefined>;
   getPayment(id: number): Promise<Payment | undefined>;
   updatePayment(id: number, updates: Partial<Payment>): Promise<Payment>;
+  updatePaymentByExternalReference(externalReference: string, updates: Partial<Payment>): Promise<Payment | null>;
   
   // System operations
   getSystemStats(): Promise<any>;
@@ -358,6 +359,21 @@ export class MemStorage implements IStorage {
     const paymentIndex = this.payments.findIndex(payment => payment.id === id);
     if (paymentIndex === -1) {
       throw new Error("Payment not found");
+    }
+    
+    this.payments[paymentIndex] = {
+      ...this.payments[paymentIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    return this.payments[paymentIndex];
+  }
+
+  async updatePaymentByExternalReference(externalReference: string, updates: Partial<Payment>): Promise<Payment | null> {
+    const paymentIndex = this.payments.findIndex(payment => payment.externalReference === externalReference);
+    if (paymentIndex === -1) {
+      return null;
     }
     
     this.payments[paymentIndex] = {
@@ -780,6 +796,19 @@ export class PostgresStorage implements IStorage {
     }
     
     return result[0];
+  }
+
+  async updatePaymentByExternalReference(externalReference: string, updates: Partial<Payment>): Promise<Payment | null> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.update(payments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(payments.externalReference, externalReference))
+      .returning();
+    
+    return result.length > 0 ? result[0] : null;
   }
 
   async getSystemStats(): Promise<any> {
