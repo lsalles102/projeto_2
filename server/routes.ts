@@ -142,10 +142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email já está em uso" });
       }
 
+      const bcrypt = await import("bcrypt");
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const user = await storage.createUser({
         email,
         username,
-        password: password,
+        password: hashedPassword,
         firstName,
         lastName,
       });
@@ -169,7 +172,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = loginSchema.parse(req.body);
 
       const user = await storage.getUserByEmail(email);
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
+      }
+
+      const bcrypt = await import("bcrypt");
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
 
