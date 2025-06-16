@@ -22,7 +22,8 @@ import {
   contactSchema,
   updateUserSchema,
   createPixPaymentSchema,
-  mercadoPagoWebhookSchema
+  mercadoPagoWebhookSchema,
+  activateKeySchema
 } from "@shared/schema";
 
 class SecurityLog {

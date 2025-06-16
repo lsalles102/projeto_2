@@ -247,6 +247,10 @@ export const adminResetHwidSchema = z.object({
   newHwid: z.string().optional(), // Se fornecido, força um HWID específico
 });
 
+export const activateKeySchema = z.object({
+  key: z.string().min(1, "Chave é obrigatória"),
+});
+
 // User License schema for the new centralized license system (no keys - automatic activation)
 export const userLicenseSchema = z.object({
   plan: z.enum(["test", "7days", "15days"]),
