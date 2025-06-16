@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const isAdmin: RequestHandler = (req, res, next) => {
     const user = req.user as any;
-    if (!user || !user.isAdmin) {
+    if (!user || !user.is_admin) {
       return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
     }
     next();
@@ -700,15 +700,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // ATIVAR LICENÇA E ATUALIZAR STATUS DO USUÁRIO
           const { createOrUpdateLicense } = await import('./license-utils');
           const { license, action, licenseKey: finalLicenseKey } = await createOrUpdateLicense(
-            userId,
+            user.id,
             plan,
-            durationDays
+            Number(durationDays)
           );
 
           // ATUALIZAR STATUS DA LICENÇA DO USUÁRIO
-          await storage.updateUser(userId, {
-            status_license: 'ativa',
-            expiresAt: license.expiresAt
+          await storage.updateUser(user.id, {
+            license_status: 'ativa',
+            license_expires_at: new Date(license.expiresAt)
           });
           
           console.log(`✅ Licença criada no banco - ID: ${license.id}`);
@@ -858,27 +858,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const license = await getUserLicense(user.id);
       const downloads = await storage.getUserDownloads(user.id);
 
-      // Update status_license based on license state
-      let statusLicense = currentUser.status_license || "sem_licenca";
+      // Update license_status based on license state
+      let licenseStatus = currentUser.license_status || "sem_licenca";
       if (license) {
-        if (license.status === "active") {
-          statusLicense = "ativa";
-        } else if (license.status === "expired") {
-          statusLicense = "expirada";
+        if (license.status === "ativa") {
+          licenseStatus = "ativa";
+        } else if (license.status === "expirada") {
+          licenseStatus = "expirada";
         } else {
-          statusLicense = "sem_licenca";
+          licenseStatus = "sem_licenca";
         }
         
         // Update database if status changed
-        if (statusLicense !== currentUser.status_license) {
-          await storage.updateUser(user.id, { status_license: statusLicense });
-          console.log(`Status da licença atualizado para: ${statusLicense}`);
+        if (licenseStatus !== currentUser.license_status) {
+          await storage.updateUser(user.id, { license_status: licenseStatus });
+          console.log(`Status da licença atualizado para: ${licenseStatus}`);
         }
       }
 
-      console.log(`Status da licença do usuário: ${statusLicense}`);
+      console.log(`Status da licença do usuário: ${licenseStatus}`);
       if (license) {
-        console.log(`Licença encontrada - Chave: ${license.key}`);
+        console.log(`Licença encontrada - Plano: ${license.plan}`);
         console.log(`Status: ${license.status}, Plano: ${license.plan}`);
         console.log(`Expira em: ${license.expiresAt}`);
       } else {
