@@ -196,7 +196,13 @@ export default function Payment() {
     },
     onSuccess: (data) => {
       console.log("Pagamento criado com sucesso:", data);
-      setPixData(data);
+      console.log("Estrutura dos dados:", JSON.stringify(data, null, 2));
+      // Extrair dados do pagamento da resposta
+      const paymentData = data.payment || data;
+      console.log("Dados do pagamento extraídos:", JSON.stringify(paymentData, null, 2));
+      console.log("QR Code Base64 disponível:", !!paymentData.pixQrCodeBase64);
+      console.log("QR Code texto disponível:", !!paymentData.pixQrCode);
+      setPixData(paymentData);
       setPaymentStatus("qrcode");
       toast({
         title: "Pagamento PIX criado",
@@ -224,13 +230,13 @@ export default function Payment() {
 
   // Polling para verificar pagamento
   useEffect(() => {
-    if (!pixData?.paymentId) return;
+    if (!pixData?.id) return;
 
     const interval = setInterval(async () => {
       try {
         // Check payment status using payment ID
         const response = await fetch(
-          `/api/payments/${pixData.paymentId}/status`,
+          `/api/payments/${pixData.id}/status`,
           {
             credentials: "include",
           },
@@ -254,7 +260,7 @@ export default function Payment() {
     }, 5000); // Verifica a cada 5 segundos
 
     return () => clearInterval(interval);
-  }, [pixData?.preferenceId, pixData?.externalReference, queryClient, toast]);
+  }, [pixData?.id, pixData?.externalReference, queryClient, toast]);
 
   const onSubmit = (data: PaymentFormData) => {
     console.log("Iniciando criação de pagamento:", data);
