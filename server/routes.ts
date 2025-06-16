@@ -1075,9 +1075,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para verificar status de licença do usuário
+  app.get('/api/user/license-status', isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      console.log(`Verificando status de licença para usuário: ${user.email} (ID: ${user.id})`);
+      
+      // Buscar usuário atualizado do banco
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      console.log(`Status atual da licença: ${currentUser.status_licenca}`);
+      console.log(`Data de expiração: ${currentUser.data_expiracao}`);
+      
+      // Verificar se a licença expirou
+      let statusAtual = currentUser.status_licenca || 'sem_licenca';
+      if (statusAtual === 'ativa' && currentUser.data_expiracao) {
+        const agora = new Date();
+        const expiracao = new Date(currentUser.data_expiracao);
+        
+        if (agora > expiracao) {
+          // Licença expirou, atualizar status
+          await storage.updateUser(user.id, { status_licenca: 'expirada' });
+          statusAtual = 'expirada';
+          console.log(`Licença expirada automaticamente para usuário ${user.email}`);
+        }
+      }
+      
+      res.json({
+        status_licenca: statusAtual,
+        data_expiracao: currentUser.data_expiracao,
+        hwid: currentUser.hwid,
+        email: currentUser.email,
+        pode_baixar: statusAtual === 'ativa',
+        pode_usar_loader: statusAtual === 'ativa'
+      });
+      
+    } catch (error) {
+      console.error("Erro ao verificar status de licença:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Rota administrativa para atualizar status de licença
+  app.post('/api/admin/update-license-status', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId, status_licenca, data_expiracao } = req.body;
+      
+      if (!userId || !status_licenca) {
+        return res.status(400).json({ message: "userId e status_licenca são obrigatórios" });
+      }
+      
+      if (!['ativa', 'expirada', 'sem_licenca'].includes(status_licenca)) {
+        return res.status(400).json({ 
+          message: "status_licenca deve ser: 'ativa', 'expirada' ou 'sem_licenca'" 
+        });
+      }
+      
+      const updateData: any = { status_licenca };
+      if (data_expiracao) {
+        updateData.data_expiracao = new Date(data_expiracao);
+      }
+      
+      await storage.updateUser(userId, updateData);
+      
+      console.log(`Admin atualizou status de licença do usuário ${userId} para: ${status_licenca}`);
+      
+      res.json({ 
+        message: "Status de licença atualizado com sucesso",
+        status_licenca,
+        data_expiracao: updateData.data_expiracao
+      });
+      
+    } catch (error) {
+      console.error("Erro ao atualizar status de licença:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   // Initialize systems
   console.log("🧹 Sistema de limpeza automática de licenças inicializado");
   console.log("🔒 Sistema de auditoria de segurança inicializado");
+  console.log("🔐 Sistema de controle de status de licença ativo");
 
   return {} as Server;
 }
