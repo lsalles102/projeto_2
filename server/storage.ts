@@ -30,6 +30,7 @@ export interface IStorage {
   
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
+  getPaymentById(id: number): Promise<Payment | undefined>;
   getPaymentByExternalReference(externalReference: string): Promise<Payment | undefined>;
   updatePaymentByExternalReference(externalReference: string, updates: Partial<Payment>): Promise<Payment>;
   
@@ -184,6 +185,18 @@ class DatabaseStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     }).returning();
+    
+    return result[0];
+  }
+
+  async getPaymentById(id: number): Promise<Payment | undefined> {
+    const { db } = await import("./db");
+    const { payments } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    const result = await db.select().from(payments)
+      .where(eq(payments.id, id))
+      .limit(1);
     
     return result[0];
   }

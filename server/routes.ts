@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         preferenceId: `test_pref_${Date.now()}`,
         externalReference: `test_${Date.now()}`,
         status: "approved",
-        transactionAmount: plan === "test" ? 100 : plan === "7days" ? 1500 : 2500,
+        transactionAmount: plan === "test" ? 100 : plan === "7days" ? 1990 : 3490,
         currency: "BRL",
         plan,
         durationDays: durationDays.toString(),
@@ -98,6 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             userId: user.id,
             userEmail: emailToUse,
+            paymentId: testPayment.id,
             licenseKey: result.licenseKey,
             plan,
             planName,
@@ -350,7 +351,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Update payment status
                 await storage.updatePaymentByExternalReference(
                   paymentInfo.external_reference,
-                  { status: "approved" }
+                  { 
+                    status: "approved",
+                    mercadoPagoId: paymentId 
+                  }
                 );
                 
                 console.log(`✅ Licença ativada para usuário ${user.email}`);
@@ -373,6 +377,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Webhook error:", error);
       res.status(200).json({ received: true, error: "Webhook processing failed" });
+    }
+  });
+
+  // Payment status endpoint - simplified approach
+  app.get("/api/payments/:paymentId/status", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { paymentId } = req.params;
+      
+      console.log(`Verificando status do pagamento ${paymentId} para usuário ${user.id}`);
+      
+      // Get all payments for this user and find the one requested
+      const allPayments = await storage.getAllPayments();
+      const payment = allPayments.find(p => p.id === parseInt(paymentId) && p.userId === user.id);
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+      
+      // Also check current user license status
+      const currentUser = await storage.getUser(user.id);
+      const hasActiveLicense = currentUser?.license_status === "ativa";
+      
+      console.log(`Status: ${payment.status}, Licença ativa: ${hasActiveLicense}`);
+      
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        plan: payment.plan,
+        transactionAmount: payment.transactionAmount,
+        currency: payment.currency,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+        hasActiveLicense
+      });
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      res.status(500).json({ message: "Erro interno" });
     }
   });
 
@@ -407,32 +449,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add webhook endpoint for MercadoPago
   app.post("/api/webhooks/mercadopago", async (req, res) => {
     await handlePaymentWebhook(req, res);
-  });
-
-  // Add license heartbeat endpoint for centralized system
-  app.post("/api/license/heartbeat", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const { hwid } = licenseHeartbeatSchema.parse(req.body);
-
-      const result = await licenseManager.processHeartbeat(user.id, hwid);
-
-      if (result.success) {
-        res.json({
-          valid: true,
-          remainingMinutes: result.remainingMinutes,
-          message: result.message
-        });
-      } else {
-        res.status(403).json({
-          valid: false,
-          message: result.message
-        });
-      }
-    } catch (error) {
-      console.error("Heartbeat error:", error);
-      res.status(500).json({ valid: false, message: "Erro interno" });
-    }
   });
 
   // Add license status endpoint
