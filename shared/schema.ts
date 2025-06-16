@@ -17,56 +17,48 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(), // Campo principal para senha
+  password: varchar("password").notNull(),
   is_admin: boolean("is_admin").default(false).notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   hwid: varchar("hwid"),
-  status_license: varchar("status_license").default("sem_licenca"), // "ativa", "expirada", "sem_licenca"
+  
+  // Sistema simplificado de licenças - integrado ao usuário
+  license_status: varchar("license_status").default("sem_licenca"), // "ativa", "expirada", "sem_licenca"
+  license_plan: varchar("license_plan"), // "test", "7days", "15days"
+  license_expires_at: timestamp("license_expires_at"),
+  license_activated_at: timestamp("license_activated_at"),
+  license_total_minutes: integer("license_total_minutes").default(0),
+  license_remaining_minutes: integer("license_remaining_minutes").default(0),
+  license_last_heartbeat: timestamp("license_last_heartbeat"),
+  
   // Campos mantidos para compatibilidade
   username: varchar("username"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
-  licenses: jsonb("licenses"), // Objeto JSON com informações da licença ativa do usuário
 });
 
-// Licenses table
-export const licenses = pgTable("licenses", {
+// Tabela para histórico de licenças (opcional, para auditoria)
+export const licenseHistory = pgTable("license_history", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
-  key: varchar("key").unique().notNull(),
-  plan: varchar("plan").notNull(), // basic, premium, vip
-  status: varchar("status").notNull().default("inactive"), // inactive, active, expired, revoked
-  hwid: varchar("hwid"), // Hardware ID vinculado à licença
-  daysRemaining: integer("days_remaining").default(0),
-  hoursRemaining: integer("hours_remaining").default(0),
-  minutesRemaining: integer("minutes_remaining").default(0),
-  totalMinutesRemaining: integer("total_minutes_remaining").default(0), // Para facilitar cálculos
-  expiresAt: timestamp("expires_at").notNull(),
-  activatedAt: timestamp("activated_at"),
-  lastHeartbeat: timestamp("last_heartbeat"), // Última vez que o loader verificou a licença
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Activation keys table (before they're used)
-export const activationKeys = pgTable("activation_keys", {
-  id: serial("id").primaryKey(),
-  key: varchar("key").unique().notNull(),
+  action: varchar("action").notNull(), // "activated", "expired", "extended", "revoked"
   plan: varchar("plan").notNull(),
-  durationDays: integer("duration_days").notNull().default(30), // Duração em dias da licença
-  isUsed: boolean("is_used").default(false),
-  usedBy: uuid("used_by").references(() => users.id),
-  usedAt: timestamp("used_at"),
-  createdAt: timestamp("created_at").defaultNow(),
+  minutes_added: integer("minutes_added").default(0),
+  previous_status: varchar("previous_status"),
+  new_status: varchar("new_status"),
+  payment_id: varchar("payment_id"), // Referência ao pagamento que ativou
+  admin_id: uuid("admin_id").references(() => users.id), // Se foi ação de admin
+  notes: text("notes"),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Download logs
 export const downloadLogs = pgTable("download_logs", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
-  licenseId: integer("license_id").references(() => licenses.id).notNull(),
   fileName: varchar("file_name").notNull(),
   downloadedAt: timestamp("downloaded_at").defaultNow(),
 });
@@ -85,7 +77,6 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export const hwidResetLogs = pgTable("hwid_reset_logs", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
-  licenseId: integer("license_id").references(() => licenses.id).notNull(),
   oldHwid: varchar("old_hwid"),
   newHwid: varchar("new_hwid"),
   resetType: varchar("reset_type").notNull(), // 'manual', 'support', 'auto'
@@ -129,16 +120,9 @@ export const createUserSchema = insertUserSchema.omit({
   username: true,
 });
 
-export const insertLicenseSchema = createInsertSchema(licenses).omit({
+export const insertLicenseHistorySchema = createInsertSchema(licenseHistory).omit({
   id: true,
-  createdAt: true,
-});
-
-export const insertActivationKeySchema = createInsertSchema(activationKeys).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  durationDays: z.number().min(1).default(30),
+  created_at: true,
 });
 
 export const loginSchema = z.object({
@@ -164,11 +148,9 @@ export const registerSchema = z.object({
     .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Sobrenome deve conter apenas letras"),
 });
 
-export const activateKeySchema = z.object({
-  key: z.string()
-    .min(1, "Chave de ativação é obrigatória")
-    .max(100, "Chave muito longa")
-    .regex(/^[A-Za-z0-9\-_]+$/, "Chave contém caracteres inválidos"),
+// Schema para heartbeat do sistema de licenças
+export const licenseHeartbeatSchema = z.object({
+  hwid: z.string().min(1, "HWID é obrigatório"),
 });
 
 export const licenseStatusSchema = z.object({
@@ -176,7 +158,6 @@ export const licenseStatusSchema = z.object({
 });
 
 export const heartbeatSchema = z.object({
-  licenseKey: z.string().min(1),
   hwid: z.string().min(1),
 });
 
@@ -256,19 +237,17 @@ export const updateLicenseSchema = z.object({
   minutesRemaining: z.number().min(0).max(59).optional(),
 });
 
-// HWID protection schemas
+// HWID protection schemas para o novo sistema
 export const updateHwidSchema = z.object({
-  licenseKey: z.string().min(1, "Chave de licença é obrigatória"),
   hwid: z.string().min(1, "HWID é obrigatório").max(255, "HWID muito longo"),
 });
 
 export const resetHwidSchema = z.object({
-  licenseKey: z.string().min(1, "Chave de licença é obrigatória"),
   reason: z.string().min(10, "Motivo deve ter pelo menos 10 caracteres").max(500, "Motivo muito longo"),
 });
 
 export const adminResetHwidSchema = z.object({
-  licenseId: z.number().min(1, "ID da licença é obrigatório"),
+  userId: z.string().min(1, "ID do usuário é obrigatório"),
   reason: z.string().min(10, "Motivo deve ter pelo menos 10 caracteres").max(500, "Motivo muito longo"),
   newHwid: z.string().optional(), // Se fornecido, força um HWID específico
 });
@@ -318,10 +297,8 @@ export const mercadoPagoWebhookSchema = z.object({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type License = typeof licenses.$inferSelect;
-export type InsertLicense = z.infer<typeof insertLicenseSchema>;
-export type ActivationKey = typeof activationKeys.$inferSelect;
-export type InsertActivationKey = z.infer<typeof insertActivationKeySchema>;
+export type LicenseHistory = typeof licenseHistory.$inferSelect;
+export type InsertLicenseHistory = z.infer<typeof insertLicenseHistorySchema>;
 export type DownloadLog = typeof downloadLogs.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;

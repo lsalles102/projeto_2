@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { licenses, users } from "@shared/schema";
+import { users, licenseHistory } from "@shared/schema";
 import { eq, lt, and } from "drizzle-orm";
 
 /**
