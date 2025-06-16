@@ -559,7 +559,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Webhook do Mercado Pago para processar pagamentos aprovados
+  // Novo webhook do Mercado Pago para ativação direta de licenças
   app.post("/api/payments/webhook", async (req, res) => {
+    const { handlePaymentWebhook } = await import('./payment-webhook');
+    await handlePaymentWebhook(req, res);
+  });
+
+  // Webhook antigo (comentado para referência)
+  app.post("/api/payments/webhook-old", async (req, res) => {
     try {
       console.log("=== WEBHOOK MERCADO PAGO RECEBIDO ===");
       console.log("Headers:", JSON.stringify(req.headers, null, 2));
