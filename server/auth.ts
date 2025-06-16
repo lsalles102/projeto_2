@@ -55,7 +55,7 @@ export function getSession() {
   return session(sessionConfig);
 }
 
-export async function setupAuth(app: Express) {
+export async function setupAuth(app: Express): Promise<any> {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -101,6 +101,8 @@ export async function setupAuth(app: Express) {
       done(error);
     }
   });
+  
+  return app;
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
