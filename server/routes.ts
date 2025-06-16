@@ -243,18 +243,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             userId: user.id,
             userEmail: emailToUse,
-            licenseKey,
+            licenseKey: result.licenseKey,
             plan,
             planName,
             paymentId: testPayment.id,
-            licenseAction: action,
+            licenseAction: result.action,
             emailSent: true
           }
         });
       } catch (emailError) {
         console.error("❌ ERRO CRÍTICO AO ENVIAR EMAIL:");
         console.error("Detalhes do erro:", emailError);
-        console.error("Chave que deveria ser enviada:", licenseKey);
+        console.error("Chave que deveria ser enviada:", result.licenseKey);
         console.error("Email que deveria receber:", emailToUse);
         
         res.json({
@@ -263,10 +263,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             userId: user.id,
             userEmail: emailToUse,
-            licenseKey,
+            licenseKey: result.licenseKey,
             plan,
             paymentId: testPayment.id,
-            licenseAction: action,
+            licenseAction: result.action,
             emailSent: false,
             emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
           }
