@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { getPaymentInfo, validateWebhookSignature } from "./mercado-pago";
-import { licenseService } from "./license-service";
+import { licenseManager } from "./license-manager";
 import { securityAudit } from "./security-audit";
 import { sendLicenseKeyEmail } from "./email";
 import { mercadoPagoWebhookSchema } from "@shared/schema";
@@ -39,6 +39,11 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
         console.log(`✅ PAGAMENTO APROVADO - Iniciando ativação de licença`);
 
         // Buscar pagamento na base de dados
+        if (!paymentInfo.external_reference) {
+          console.log(`❌ External reference não encontrada no pagamento`);
+          return res.status(200).json({ received: true, error: "External reference missing" });
+        }
+
         const payment = await storage.getPaymentByExternalReference(paymentInfo.external_reference);
         if (!payment) {
           console.log(`❌ Pagamento não encontrado na base de dados: ${paymentInfo.external_reference}`);
@@ -56,13 +61,13 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
         console.log(`💳 Plano adquirido: ${payment.plan}`);
 
         // Ativar licença diretamente na conta do usuário
-        const activationResult = await licenseService.activateLicenseForUser(
+        const activationResult = await licenseManager.activateLicense(
           user.id,
-          payment.plan,
-          paymentId
+          payment.plan as "test" | "7days" | "15days",
+          Number(payment.durationDays)
         );
 
-        if (activationResult.success) {
+        if (activationResult) {
           // Atualizar status do pagamento
           await storage.updatePaymentByExternalReference(paymentInfo.external_reference, {
             mercadoPagoId: paymentId,
