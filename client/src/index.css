@@ -10,30 +10,30 @@
   --card-foreground: hsl(0, 0%, 98%);
   --popover: hsl(0, 0%, 3%);
   --popover-foreground: hsl(0, 0%, 98%);
-  --primary: hsl(340, 100%, 60%);
+  --primary: hsl(0, 100%, 50%);
   --primary-foreground: hsl(0, 0%, 0%);
-  --secondary: hsl(280, 100%, 65%);
+  --secondary: hsl(270, 100%, 50%);
   --secondary-foreground: hsl(0, 0%, 98%);
   --muted: hsl(0, 0%, 10%);
   --muted-foreground: hsl(0, 0%, 64.9%);
-  --accent: hsl(280, 100%, 65%);
+  --accent: hsl(270, 100%, 50%);
   --accent-foreground: hsl(0, 0%, 0%);
-  --destructive: hsl(0, 100%, 60%);
+  --destructive: hsl(0, 100%, 50%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --border: hsl(0, 0%, 15%);
   --input: hsl(0, 0%, 8%);
-  --ring: hsl(340, 100%, 60%);
+  --ring: hsl(0, 100%, 50%);
   --radius: 0.5rem;
   
   /* Custom neon colors */
-  --neon-red: hsl(340, 100%, 60%);
-  --neon-purple: hsl(280, 100%, 65%);
-  --neon-pink: hsl(320, 100%, 70%);
-  --neon-cyan: hsl(180, 100%, 60%);
+  --neon-red: hsl(0, 100%, 50%);
+  --neon-purple: hsl(270, 100%, 50%);
+  --neon-cyan: hsl(180, 100%, 50%);
+  --neon-yellow: hsl(60, 100%, 50%);
   --dark-bg: hsl(0, 0%, 0%);
   --dark-surface: hsl(0, 0%, 5%);
   --glass: hsla(0, 0%, 100%, 0.05);
-  --glass-border: hsla(340, 100%, 60%, 0.3);
+  --glass-border: hsla(0, 100%, 50%, 0.3);
 }
 
 .dark {
@@ -43,19 +43,19 @@
   --card-foreground: hsl(0, 0%, 98%);
   --popover: hsl(0, 0%, 3%);
   --popover-foreground: hsl(0, 0%, 98%);
-  --primary: hsl(340, 100%, 60%);
+  --primary: hsl(0, 100%, 50%);
   --primary-foreground: hsl(0, 0%, 0%);
-  --secondary: hsl(280, 100%, 65%);
+  --secondary: hsl(270, 100%, 50%);
   --secondary-foreground: hsl(0, 0%, 98%);
   --muted: hsl(0, 0%, 10%);
   --muted-foreground: hsl(0, 0%, 64.9%);
-  --accent: hsl(280, 100%, 65%);
+  --accent: hsl(270, 100%, 50%);
   --accent-foreground: hsl(0, 0%, 0%);
-  --destructive: hsl(0, 100%, 60%);
+  --destructive: hsl(0, 100%, 50%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --border: hsl(0, 0%, 15%);
   --input: hsl(0, 0%, 8%);
-  --ring: hsl(340, 100%, 60%);
+  --ring: hsl(0, 100%, 50%);
 }
 
 @layer base {
@@ -191,20 +191,12 @@
     color: var(--neon-purple);
   }
   
-  .text-neon-pink {
-    color: var(--neon-pink);
-  }
-  
   .bg-neon-red {
     background-color: var(--neon-red);
   }
   
   .bg-neon-purple {
     background-color: var(--neon-purple);
-  }
-  
-  .bg-neon-pink {
-    background-color: var(--neon-pink);
   }
   
   .border-neon-red {
