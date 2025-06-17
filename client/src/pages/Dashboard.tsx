@@ -148,8 +148,7 @@ export default function Dashboard() {
     );
   }
 
-  const isLicenseActive = (license?.status === "ativa" || license?.license_status === "ativa") && 
-                          (license?.license_expires_at && new Date(license.license_expires_at) > new Date());
+  // Usar a variável já definida: isLicenseCurrentlyActive
 
   return (
     <div className="container mx-auto px-6 py-20 max-w-6xl">
@@ -166,7 +165,7 @@ export default function Dashboard() {
             <div className="text-right">
               <div className="text-sm text-gray-400">Status da Licença</div>
               <div className="flex items-center mt-1">
-                {isLicenseActive ? (
+                {isLicenseCurrentlyActive ? (
                   <>
                     <span className="w-3 h-3 bg-primary rounded-full mr-2 animate-pulse"></span>
                     <span className="text-primary font-semibold">ATIVA</span>
@@ -328,7 +327,7 @@ export default function Dashboard() {
                   </div>
                   <Button
                     onClick={() => downloadMutation.mutate()}
-                    disabled={!isLicenseActive || downloadMutation.isPending}
+                    disabled={!isLicenseCurrentlyActive || downloadMutation.isPending}
                     className="bg-primary text-black hover:bg-primary/90 neon-glow"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -354,7 +353,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
 
-                {!isLicenseActive && (
+                {!isLicenseCurrentlyActive && (
                   <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-lg p-4">
                     <p className="text-yellow-400 text-sm">
                       <Shield className="w-4 h-4 inline mr-2" />
