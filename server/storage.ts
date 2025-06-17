@@ -42,6 +42,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getAllPayments(): Promise<Payment[]>;
   getSystemStats(): Promise<any>;
+  deleteUser(id: string): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -292,6 +293,29 @@ class DatabaseStorage implements IStorage {
         .filter(p => p.createdAt && new Date(p.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
         .reduce((sum, p) => sum + (p.transactionAmount || 0), 0) / 100
     };
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    const { db } = await import("./db");
+    const { users, downloadLogs, passwordResetTokens, payments, hwidResetLogs } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    
+    // Delete related data first to maintain referential integrity
+    await db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+    await db.delete(payments).where(eq(payments.userId, id));
+    await db.delete(hwidResetLogs).where(eq(hwidResetLogs.userId, id));
+    
+    // Finally delete the user
+    const result = await db.delete(users).where(eq(users.id, id));
+    
+    // No PostgreSQL, o resultado do delete pode não ter rowCount
+    // Verificamos se o usuário existia antes de tentar deletar
+    const userExists = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (userExists.length === 0) {
+      // User was successfully deleted or didn't exist
+      console.log(`Usuário ${id} deletado com sucesso`);
+    }
   }
 }
 

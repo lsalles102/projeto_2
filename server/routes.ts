@@ -781,5 +781,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Middleware de verificação de admin
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user || !user.is_admin) {
+      return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
+    }
+    next();
+  };
+
+  // Admin dashboard data
+  app.get("/api/admin/dashboard", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      const users = await storage.getAllUsers();
+      const payments = await storage.getAllPayments();
+
+      res.json({
+        stats,
+        users: users.map(u => ({ 
+          ...u, 
+          password: undefined, // Remove senha da resposta
+          isAdmin: u.is_admin // Corrigir nome do campo
+        })),
+        payments,
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ message: "Erro ao carregar dashboard administrativo" });
+    }
+  });
+
+  // Admin - Atualizar usuário
+  app.patch("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const updates = updateUserSchema.parse(req.body);
+      
+      // Converter isAdmin para is_admin se necessário
+      const dbUpdates: any = { ...updates };
+      if ('isAdmin' in updates) {
+        dbUpdates.is_admin = updates.isAdmin;
+        delete dbUpdates.isAdmin;
+      }
+      
+      const updatedUser = await storage.updateUser(userId, dbUpdates);
+      
+      res.json({ 
+        ...updatedUser, 
+        password: undefined,
+        isAdmin: updatedUser.is_admin
+      });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Erro ao atualizar usuário" });
+    }
+  });
+
+  // Admin - Deletar usuário
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUser = req.user as any;
+      
+      if (userId === currentUser.id) {
+        return res.status(400).json({ message: "Não é possível deletar sua própria conta" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.json({ message: "Usuário deletado com sucesso" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Erro ao deletar usuário" });
+    }
+  });
+
+  // Admin - Atualizar licença de usuário
+  app.patch("/api/admin/users/:id/license", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { status, daysRemaining, hoursRemaining, minutesRemaining } = req.body;
+      
+      const updates: any = {};
+      
+      if (status) {
+        updates.license_status = status;
+      }
+      
+      if (daysRemaining !== undefined || hoursRemaining !== undefined || minutesRemaining !== undefined) {
+        const days = daysRemaining || 0;
+        const hours = hoursRemaining || 0; 
+        const minutes = minutesRemaining || 0;
+        const totalMinutes = (days * 24 * 60) + (hours * 60) + minutes;
+        
+        updates.license_remaining_minutes = totalMinutes;
+        updates.license_total_minutes = totalMinutes;
+        
+        if (totalMinutes > 0) {
+          const now = new Date();
+          updates.license_expires_at = new Date(now.getTime() + (totalMinutes * 60 * 1000));
+        }
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      res.json({ 
+        ...updatedUser, 
+        password: undefined,
+        isAdmin: updatedUser.is_admin
+      });
+    } catch (error) {
+      console.error("Update license error:", error);
+      res.status(500).json({ message: "Erro ao atualizar licença" });
+    }
+  });
+
   return server;
 }
