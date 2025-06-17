@@ -174,7 +174,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.json({
-          user: { ...user, password: undefined },
+          user: { 
+            ...user, 
+            password: undefined,
+            isAdmin: user.is_admin // Mapear is_admin para isAdmin para o frontend
+          },
           token
         });
       });
@@ -201,7 +205,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User profile
   app.get("/api/auth/user", isAuthenticated, async (req, res) => {
     const user = req.user as any;
-    res.json({ user: { ...user, password: undefined } });
+    res.json({ 
+      user: { 
+        ...user, 
+        password: undefined,
+        isAdmin: user.is_admin // Mapear is_admin para isAdmin para o frontend
+      } 
+    });
   });
 
   // Dashboard with license info
@@ -242,7 +252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       res.json({
-        user: { ...currentUser, password: undefined },
+        user: { 
+          ...currentUser, 
+          password: undefined,
+          isAdmin: currentUser.is_admin // Mapear is_admin para isAdmin para o frontend
+        },
         license,
         downloads,
         stats: {
