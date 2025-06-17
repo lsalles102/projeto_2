@@ -1,0 +1,259 @@
+import customtkinter as ctk
+import tkinter as tk
+from tkinter import messagebox
+import subprocess
+import os
+import winreg
+import hashlib
+import uuid
+import requests
+import webbrowser
+import json
+import shutil
+
+API_URL = "https://fovdark.shop"  # CORREÇÃO: removido "www."
+EXECUTAVEL_NOME = "svchost.exe"
+LOGIN_FILE = os.path.join(os.getenv("APPDATA"), "darkfov_login.json")
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
+
+
+def gerar_hwid():
+    raw = str(uuid.getnode()) + os.getenv("COMPUTERNAME", "") + os.getenv("USERNAME", "")
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def salvar_hwid_no_registro(hwid):
+    chave = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\\FovDark")
+    winreg.SetValueEx(chave, "HWID", 0, winreg.REG_SZ, hwid)
+    winreg.CloseKey(chave)
+
+
+def salvar_login_local(email, senha):
+    with open(LOGIN_FILE, "w") as f:
+        json.dump({"email": email, "senha": senha}, f)
+
+
+def carregar_login_local():
+    if os.path.exists(LOGIN_FILE):
+        with open(LOGIN_FILE, "r") as f:
+            dados = json.load(f)
+            return dados.get("email", ""), dados.get("senha", "")
+    return "", ""
+
+
+def remover_atalhos_autohotkey():
+    pasta_startmenu = os.path.expandvars(r'%APPDATA%\Microsoft\Windows\Start Menu\Programs\AutoHotkey')
+    if os.path.exists(pasta_startmenu):
+        try:
+            shutil.rmtree(pasta_startmenu, ignore_errors=True)
+        except Exception as e:
+            print(f"Erro ao remover atalhos do Start Menu: {e}")
+
+
+def verificar_autohotkey_instalado():
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\AutoHotkey") as chave:
+            install_dir, _ = winreg.QueryValueEx(chave, "InstallDir")
+            if os.path.exists(os.path.join(install_dir, "AutoHotkey.exe")):
+                return True
+    except FileNotFoundError:
+        pass
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\AutoHotkey") as chave:
+            install_dir, _ = winreg.QueryValueEx(chave, "InstallDir")
+            if os.path.exists(os.path.join(install_dir, "AutoHotkey.exe")):
+                return True
+    except FileNotFoundError:
+        pass
+
+    return False
+
+
+def instalar_autohotkey_silencioso():
+    try:
+        url_instalador = "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/Dependencias.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9EZXBlbmRlbmNpYXMuZXhlIiwiaWF0IjoxNzQ5ODY3MDUyLCJleHAiOjE3ODE0MDMwNTJ9.81mM4INF_HS1Kt_E9lxRjrsIAl6fQI6HL0dReYt0SRA"
+        temp_dir = os.path.join(os.getenv("APPDATA"), "darkfov_temp")
+        os.makedirs(temp_dir, exist_ok=True)
+        instalador_path = os.path.join(temp_dir, "ahk-install.exe")
+
+        if not os.path.exists(instalador_path):
+            res = requests.get(url_instalador)
+            if res.status_code != 200:
+                messagebox.showerror("Erro", "Falha ao baixar o instalador do AutoHotkey.")
+                return False
+            with open(instalador_path, "wb") as f:
+                f.write(res.content)
+
+        subprocess.run([instalador_path, "/S", "/NoDesktopIcon", "/NoStartMenu", "/NoQuickLaunch"], shell=True)
+        remover_atalhos_autohotkey()
+        return True
+    except Exception as e:
+        messagebox.showerror("Erro", f"Falha na instalação do AutoHotkey: {e}")
+        return False
+
+
+def baixar_executavel_temporario():
+    try:
+        if not verificar_autohotkey_instalado():
+            if not instalar_autohotkey_silencioso():
+                return
+
+        url = "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/auto_recoil.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9hdXRvX3JlY29pbC5leGUiLCJpYXQiOjE3NDk4NjcwNjksImV4cCI6MTc4MTQwMzA2OX0.o4tfCzmYWjL863yd9s-WvfNt9PNKRQRFvvjlZDoNhuE"
+        res = requests.get(url)
+        if res.status_code != 200:
+            messagebox.showerror("Erro", "Falha ao baixar o executável.")
+            return
+
+        temp_dir = os.path.join(os.getenv("APPDATA"), "Microsoft Edge", "Temp")
+        os.makedirs(temp_dir, exist_ok=True)
+        exe_path = os.path.join(temp_dir, EXECUTAVEL_NOME)
+
+        with open(exe_path, "wb") as f:
+            f.write(res.content)
+
+        subprocess.call(['attrib', '+H', exe_path])
+        subprocess.Popen(exe_path, shell=True)
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar: {e}")
+
+
+def abrir_site_renovacao():
+    url_renovacao = "https://fovdark.shop/comprar"  # CORREÇÃO: removido "www."
+    webbrowser.open(url_renovacao)
+
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("FovDark Loader")
+        self.geometry("350x420")
+        self.overrideredirect(True)
+
+        # Topbar personalizada
+        topbar = ctk.CTkFrame(self, fg_color="#0a0a0f")
+        topbar.pack(fill="x", side="top")
+        topbar.bind("<B1-Motion>", self.mover_janela)
+        topbar.bind("<Button-1>", self.pegar_posicao)
+
+        btn_close = ctk.CTkButton(topbar, text="✕", width=30, command=self.destroy, fg_color="transparent")
+        btn_close.pack(side="right", padx=2)
+
+        btn_min = ctk.CTkButton(topbar, text="v", width=30, command=self.minimizar_janela, fg_color="transparent")
+        btn_min.pack(side="right", padx=2)
+
+        btn_front = ctk.CTkButton(topbar, text="^", width=30, command=self.trazer_para_frente, fg_color="transparent")
+        btn_front.pack(side="right", padx=2)
+
+        # Conteúdo principal
+        frame = ctk.CTkFrame(self, corner_radius=10)
+        frame.pack(padx=20, pady=20, fill="both", expand=True)
+
+        ctk.CTkLabel(frame, text="FovDark", text_color="#00fff7", font=("Orbitron", 24)).pack(pady=10)
+
+        self.entry_email = ctk.CTkEntry(frame, placeholder_text="Email")
+        self.entry_email.pack(pady=10)
+
+        self.entry_senha = ctk.CTkEntry(frame, placeholder_text="Senha", show="*")
+        self.entry_senha.pack(pady=10)
+
+        self.var_salvar_login = tk.BooleanVar()
+        self.check_salvar = ctk.CTkCheckBox(frame, text="Lembrar login", variable=self.var_salvar_login)
+        self.check_salvar.pack(pady=5)
+
+        self.btn_login = ctk.CTkButton(frame, text="Entrar", command=self.login)
+        self.btn_login.pack(pady=10)
+
+        self.btn_executar = ctk.CTkButton(frame, text="Executar Script", command=baixar_executavel_temporario)
+        self.btn_renovar = ctk.CTkButton(frame, text="Renovar Licença", command=abrir_site_renovacao)
+
+        ctk.CTkLabel(self, text="© 2025 FovDark", font=("Orbitron", 10)).pack(side="bottom", pady=5)
+
+        email_salvo, senha_salva = carregar_login_local()
+        self.entry_email.insert(0, email_salvo)
+        self.entry_senha.insert(0, senha_salva)
+
+    def pegar_posicao(self, event):
+        self._x = event.x
+        self._y = event.y
+
+    def mover_janela(self, event):
+        x = event.x_root - self._x
+        y = event.y_root - self._y
+        self.geometry(f"+{x}+{y}")
+
+    def minimizar_janela(self):
+        self.overrideredirect(False)
+        self.iconify()
+        self.after(200, lambda: self.overrideredirect(True))
+
+    def trazer_para_frente(self):
+        self.lift()
+        self.attributes('-topmost', True)
+        self.after(500, lambda: self.attributes('-topmost', False))
+        self.focus_force()
+
+    def login(self):
+        email = self.entry_email.get().strip()
+        senha = self.entry_senha.get().strip()
+
+        if not email or not senha:
+            messagebox.showerror("Erro", "Preencha email e senha.")
+            return
+
+        try:
+            # CORREÇÃO: Endpoint correto e formato JSON
+            r = requests.post(f"{API_URL}/api/auth/login", json={"email": email, "password": senha}, 
+                            headers={"Content-Type": "application/json"})
+            if r.status_code != 200:
+                messagebox.showerror("Erro", "Credenciais inválidas.")
+                return
+
+            # CORREÇÃO: Campo correto do token
+            token = r.json()["token"]
+            headers = {"Authorization": f"Bearer {token}"}
+            hwid_atual = gerar_hwid()
+
+            r2 = requests.get(f"{API_URL}/api/license/check", headers=headers)
+            if r2.status_code != 200:
+                messagebox.showerror("Erro", f"Erro ao checar licença.\nStatus: {r2.status_code}\nResposta: {r2.text}")
+                return
+
+            dados_licenca = r2.json()
+            if not dados_licenca.get("valid", False):
+                messagebox.showerror("Erro", "Licença expirada ou inválida.\nRenove para continuar.")
+                return
+
+            self.btn_renovar.pack(pady=5)
+
+            # CORREÇÃO: Endpoint e formato JSON corretos
+            res_hwid = requests.post(f"{API_URL}/api/hwid/save", json={"hwid": hwid_atual}, headers=headers)
+            if res_hwid.status_code != 200:
+                messagebox.showerror("Erro", "🚨 Acesso Não Autorizado.\n"
+                                             "Detectamos uma tentativa de uso com Pc não autorizado.\n\n"
+                                             "Isso pode indicar tentativa de compartilhamento de conta ou uso indevido.\n"
+                                             "Seu acesso poderá ser bloqueado após múltiplas tentativas.")
+                return
+
+            salvar_hwid_no_registro(hwid_atual)
+
+            dias = dados_licenca.get("days_remaining", "??")
+            messagebox.showinfo("Sucesso", f"Licença ativa! Dias restantes: {dias}")
+            self.btn_executar.pack(pady=10)
+
+            if self.var_salvar_login.get():
+                salvar_login_local(email, senha)
+            else:
+                if os.path.exists(LOGIN_FILE):
+                    os.remove(LOGIN_FILE)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro de conexão: {e}")
+
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
