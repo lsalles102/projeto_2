@@ -44,8 +44,18 @@ export function useLicenseTimer(initialMinutes: number = 0, isActive: boolean = 
             setTotalSeconds(serverSeconds);
           }
         }
+      } else if (response.status === 401 || response.status === 403) {
+        // Usuário não autenticado ou sem permissão - parar heartbeat
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
       }
     } catch (error) {
+      // Silenciar erros de rede para evitar spam no console
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return; // Erro de conectividade - ignora
+      }
       console.error('Erro ao enviar heartbeat:', error);
     }
   };
