@@ -596,5 +596,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint público para o loader verificar status da licença (sem autenticação)
+  app.post("/api/loader/license-status", rateLimit(30, 60 * 1000), async (req, res) => {
+    try {
+      const { hwid } = req.body;
+
+      if (!hwid) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: "HWID é obrigatório" 
+        });
+      }
+
+      // Buscar usuário pelo HWID
+      const allUsers = await storage.getAllUsers();
+      const user = allUsers.find(u => u.hwid === hwid);
+
+      if (!user) {
+        return res.json({ 
+          valid: false, 
+          message: "HWID não registrado" 
+        });
+      }
+
+      const now = new Date();
+      const isLicenseActive = user.license_status === "ativa" && 
+                             user.license_expires_at && 
+                             new Date(user.license_expires_at) > now;
+
+      if (!isLicenseActive) {
+        return res.json({ 
+          valid: false, 
+          message: user.license_status === "expirada" ? "Licença expirada" : "Licença inativa",
+          status: user.license_status || "sem_licenca"
+        });
+      }
+
+      // Calcular tempo restante
+      const expiresAt = user.license_expires_at ? new Date(user.license_expires_at) : new Date();
+      const remainingMs = expiresAt.getTime() - now.getTime();
+      const totalMinutesRemaining = Math.max(0, Math.floor(remainingMs / (1000 * 60)));
+      const daysRemaining = Math.floor(totalMinutesRemaining / (24 * 60));
+      const hoursRemaining = Math.floor((totalMinutesRemaining % (24 * 60)) / 60);
+      const minutesRemaining = totalMinutesRemaining % 60;
+
+      res.json({
+        valid: true,
+        message: "Licença ativa",
+        status: user.license_status,
+        plan: user.license_plan,
+        timeRemaining: {
+          days: daysRemaining,
+          hours: hoursRemaining,
+          minutes: minutesRemaining,
+          totalMinutes: totalMinutesRemaining
+        },
+        expiresAt: user.license_expires_at,
+        userEmail: user.email // Para identificação
+      });
+
+    } catch (error) {
+      console.error("[LOADER] Erro ao verificar status da licença:", error);
+      res.status(500).json({ 
+        valid: false, 
+        message: "Erro interno do servidor" 
+      });
+    }
+  });
+
+  // Endpoint público para o loader enviar heartbeat (sem autenticação)
+  app.post("/api/loader/heartbeat", rateLimit(60, 60 * 1000), async (req, res) => {
+    try {
+      const { hwid } = req.body;
+
+      if (!hwid) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: "HWID é obrigatório" 
+        });
+      }
+
+      // Buscar usuário pelo HWID
+      const allUsers = await storage.getAllUsers();
+      const user = allUsers.find(u => u.hwid === hwid);
+
+      if (!user) {
+        return res.json({ 
+          valid: false, 
+          message: "HWID não registrado" 
+        });
+      }
+
+      // Processar heartbeat usando o sistema existente
+      const { processHeartbeat } = await import('./license-simple');
+      const result = await processHeartbeat(user.id, hwid);
+
+      if (result.success) {
+        const updatedUser = await storage.getUser(user.id);
+        res.json({
+          valid: true,
+          remainingMinutes: result.remainingMinutes,
+          message: result.message,
+          timeRemaining: {
+            totalMinutes: updatedUser?.license_remaining_minutes || 0,
+            days: Math.floor((updatedUser?.license_remaining_minutes || 0) / (24 * 60)),
+            hours: Math.floor(((updatedUser?.license_remaining_minutes || 0) % (24 * 60)) / 60),
+            minutes: (updatedUser?.license_remaining_minutes || 0) % 60
+          }
+        });
+      } else {
+        res.json({
+          valid: false,
+          message: result.message
+        });
+      }
+
+    } catch (error) {
+      console.error("[LOADER] Erro no heartbeat:", error);
+      res.status(500).json({ 
+        valid: false, 
+        message: "Erro interno do servidor" 
+      });
+    }
+  });
+
+  // Endpoint de teste para simular licença ativa (apenas para desenvolvimento)
+  app.post("/api/test/create-test-license", rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      const { hwid, email, plan = "test", durationMinutes = 30 } = req.body;
+
+      if (!hwid || !email) {
+        return res.status(400).json({ 
+          message: "HWID e email são obrigatórios" 
+        });
+      }
+
+      // Buscar ou criar usuário
+      let user = (await storage.getAllUsers()).find(u => u.email === email);
+      
+      if (!user) {
+        // Criar usuário de teste
+        const newUser = await storage.createUser({
+          email,
+          password: "test123", // Hash será aplicado automaticamente
+          firstName: "Test",
+          lastName: "User",
+          username: email.split('@')[0]
+        });
+        user = newUser;
+      }
+
+      // Ativar licença
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + (durationMinutes * 60 * 1000));
+
+      await storage.updateUser(user.id, {
+        hwid,
+        license_status: "ativa",
+        license_plan: plan,
+        license_expires_at: expiresAt,
+        license_remaining_minutes: durationMinutes,
+        license_total_minutes: durationMinutes,
+        license_activated_at: now
+      });
+
+      res.json({
+        success: true,
+        message: "Licença de teste criada com sucesso",
+        user: {
+          email: user.email,
+          hwid,
+          license_status: "ativa",
+          license_plan: plan,
+          license_expires_at: expiresAt,
+          license_remaining_minutes: durationMinutes
+        }
+      });
+
+    } catch (error) {
+      console.error("[TEST] Erro ao criar licença de teste:", error);
+      res.status(500).json({ 
+        message: "Erro interno do servidor" 
+      });
+    }
+  });
+
   return server;
 }
