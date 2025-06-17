@@ -265,6 +265,15 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 17, 2025. Added comprehensive admin routes for user management and license control
 - June 17, 2025. Verified admin panel access working correctly for lsalles102@gmail.com
 - June 17, 2025. Completed final migration from Replit Agent to standard Replit environment
+- June 17, 2025. Fixed loader communication issues - corrected API URLs, endpoints, and authentication
+- June 17, 2025. Created corrected loader file with proper https://fovdark.shop integration
+- June 17, 2025. Verified API endpoints working correctly with production domain
+- June 17, 2025. Enhanced server logging for loader debugging and troubleshooting
+- June 17, 2025. Migration from Replit Agent to standard Replit environment completed successfully
+- June 17, 2025. Fixed loader communication issues - corrected API URLs and endpoints for https://fovdark.shop/
+- June 17, 2025. Enhanced API logging for loader debugging and troubleshooting
+- June 17, 2025. Created corrected loader file with proper authentication flow and error handling
+- June 17, 2025. Verified API endpoints working correctly with production domain
 
 ## User Preferences
 
