@@ -127,7 +127,8 @@ export async function checkUserLicenseStatus(userId: string) {
 }
 
 /**
- * Processa heartbeat e decrementa tempo da licença
+ * Processa heartbeat - apenas verifica e sincroniza, não decrementa
+ * O tempo é decrementado automaticamente pelo license-monitor
  */
 export async function processHeartbeat(userId: string, hwid?: string): Promise<{ success: boolean; message: string; remainingMinutes?: number }> {
   const user = await storage.getUser(userId);
@@ -151,6 +152,15 @@ export async function processHeartbeat(userId: string, hwid?: string): Promise<{
     return { success: false, message: "Licença expirada" };
   }
   
+  // Verificar se os minutos acabaram
+  if ((user.license_remaining_minutes || 0) <= 0) {
+    await storage.updateUser(userId, {
+      license_status: "expirada",
+      license_remaining_minutes: 0
+    });
+    return { success: false, message: "Licença expirada (tempo esgotado)", remainingMinutes: 0 };
+  }
+  
   // Verificar HWID se fornecido
   if (hwid) {
     if (user.hwid && user.hwid !== hwid) {
@@ -163,25 +173,15 @@ export async function processHeartbeat(userId: string, hwid?: string): Promise<{
     }
   }
   
-  // Decrementar 1 minuto
-  const newRemainingMinutes = Math.max(0, (user.license_remaining_minutes || 0) - 1);
-  
+  // Apenas atualizar último heartbeat, não decrementar
+  // O tempo é decrementado automaticamente pelo license-monitor
   await storage.updateUser(userId, {
-    license_remaining_minutes: newRemainingMinutes,
     license_last_heartbeat: now
   });
-  
-  // Se chegou a 0, marcar como expirada
-  if (newRemainingMinutes === 0) {
-    await storage.updateUser(userId, {
-      license_status: "expirada"
-    });
-    return { success: false, message: "Licença expirada (tempo esgotado)", remainingMinutes: 0 };
-  }
   
   return { 
     success: true, 
     message: "Heartbeat processado", 
-    remainingMinutes: newRemainingMinutes 
+    remainingMinutes: user.license_remaining_minutes || 0
   };
 }
