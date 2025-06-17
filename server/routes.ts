@@ -701,27 +701,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Processar heartbeat usando o sistema existente
-      const { processHeartbeat } = await import('./license-simple');
-      const result = await processHeartbeat(user.id, hwid);
+      try {
+        // Processar heartbeat usando o sistema existente
+        const { processHeartbeat } = await import('./license-simple');
+        const result = await processHeartbeat(user.id, hwid);
 
-      if (result.success) {
-        const updatedUser = await storage.getUser(user.id);
-        res.json({
-          valid: true,
-          remainingMinutes: result.remainingMinutes,
-          message: result.message,
-          timeRemaining: {
-            totalMinutes: updatedUser?.license_remaining_minutes || 0,
-            days: Math.floor((updatedUser?.license_remaining_minutes || 0) / (24 * 60)),
-            hours: Math.floor(((updatedUser?.license_remaining_minutes || 0) % (24 * 60)) / 60),
-            minutes: (updatedUser?.license_remaining_minutes || 0) % 60
-          }
-        });
-      } else {
+        if (result.success) {
+          const updatedUser = await storage.getUser(user.id);
+          res.json({
+            valid: true,
+            remainingMinutes: result.remainingMinutes,
+            message: result.message,
+            timeRemaining: {
+              totalMinutes: updatedUser?.license_remaining_minutes || 0,
+              days: Math.floor((updatedUser?.license_remaining_minutes || 0) / (24 * 60)),
+              hours: Math.floor(((updatedUser?.license_remaining_minutes || 0) % (24 * 60)) / 60),
+              minutes: (updatedUser?.license_remaining_minutes || 0) % 60
+            }
+          });
+        } else {
+          res.json({
+            valid: false,
+            message: result.message
+          });
+        }
+      } catch (heartbeatError) {
+        console.error("[LOADER] Erro no processamento do heartbeat:", heartbeatError);
         res.json({
           valid: false,
-          message: result.message
+          message: "Erro ao processar heartbeat"
         });
       }
 
