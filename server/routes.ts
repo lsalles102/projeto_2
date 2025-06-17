@@ -51,15 +51,15 @@ const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = await setupAuth(app);
 
-  // Test payment simulation endpoint
+  // Test payment simulation endpoint - MELHORADO
   app.post("/api/test/simulate-payment", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
       const { plan = "test", userEmail } = req.body;
 
-      console.log(`=== SIMULAÇÃO DE PAGAMENTO INICIADA ===`);
-      console.log(`Usuário: ${user.id} - ${user.email}`);
-      console.log(`Plano solicitado: ${plan}`);
+      console.log(`🧪 === SIMULAÇÃO DE PAGAMENTO INICIADA ===`);
+      console.log(`👤 Usuário: ${user.id} - ${user.email}`);
+      console.log(`📦 Plano solicitado: ${plan}`);
 
       const durationDays = plan === "test" ? 0.021 : plan === "7days" ? 7 : 15;
       const emailToUse = userEmail || user.email;
@@ -81,49 +81,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pixQrCodeBase64: "test_qr_base64",
       });
 
+      console.log(`💳 Pagamento de teste criado: ID ${testPayment.id}`);
+
       // Use simplified license system
       const { activateLicenseForUser } = await import('./license-simple');
       const result = await activateLicenseForUser(user.id, plan, durationDays);
 
-      // Send email
-      try {
-        const planName = plan === "test" ? "Teste (30 minutos)" : 
-                         plan === "7days" ? "7 Dias" : "15 Dias";
-        
-        await sendLicenseKeyEmail(emailToUse, result.licenseKey, planName);
-        
-        res.json({
-          success: true,
-          message: "Pagamento simulado, licença gerada e email enviado com sucesso",
-          data: {
-            userId: user.id,
-            userEmail: emailToUse,
-            paymentId: testPayment.id,
-            licenseKey: result.licenseKey,
-            plan,
-            planName,
-            licenseAction: result.action,
-            emailSent: true
+      console.log(`🔓 Resultado da ativação:`, result);
+
+      // Verify license was activated by checking user again
+      const updatedUser = await storage.getUser(user.id);
+      console.log(`✅ Verificação pós-ativação:`);
+      console.log(`Status: ${updatedUser?.license_status}`);
+      console.log(`Plano: ${updatedUser?.license_plan}`);
+      console.log(`Expira em: ${updatedUser?.license_expires_at}`);
+
+      res.json({
+        success: true,
+        message: "Pagamento simulado e licença ativada com sucesso",
+        data: {
+          userId: user.id,
+          userEmail: emailToUse,
+          paymentId: testPayment.id,
+          licenseKey: result.licenseKey,
+          plan,
+          licenseAction: result.action,
+          userStatus: {
+            license_status: updatedUser?.license_status,
+            license_plan: updatedUser?.license_plan,
+            license_expires_at: updatedUser?.license_expires_at,
+            license_remaining_minutes: updatedUser?.license_remaining_minutes
           }
-        });
-      } catch (emailError) {
-        res.json({
-          success: true,
-          message: "Licença gerada mas houve erro no envio do email",
-          data: {
-            userId: user.id,
-            userEmail: emailToUse,
-            licenseKey: result.licenseKey,
-            plan,
-            paymentId: testPayment.id,
-            licenseAction: result.action,
-            emailSent: false,
-            emailError: emailError instanceof Error ? emailError.message : "Erro desconhecido"
-          }
-        });
-      }
+        }
+      });
     } catch (error) {
-      console.error("Erro na simulação de pagamento:", error);
+      console.error("❌ Erro na simulação de pagamento:", error);
       res.status(500).json({ 
         success: false,
         message: "Erro interno na simulação",
@@ -224,19 +216,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const downloads = await storage.getUserDownloads(user.id);
 
-      // Create license object from user data
-      let license = null;
-      if (currentUser.license_status === "ativa") {
-        license = {
-          status: currentUser.license_status,
-          plan: currentUser.license_plan,
-          expiresAt: currentUser.license_expires_at?.toISOString(),
-          activatedAt: currentUser.license_activated_at?.toISOString(),
-          totalMinutes: currentUser.license_total_minutes,
-          remainingMinutes: currentUser.license_remaining_minutes,
-          lastHeartbeat: currentUser.license_last_heartbeat?.toISOString()
-        };
-      }
+      // Create license object from user data - CORRIGIDO
+      console.log(`📊 Dashboard - Status da licença do usuário ${user.id}:`);
+      console.log(`license_status: ${currentUser.license_status}`);
+      console.log(`license_plan: ${currentUser.license_plan}`);
+      console.log(`license_expires_at: ${currentUser.license_expires_at}`);
+      console.log(`license_remaining_minutes: ${currentUser.license_remaining_minutes}`);
+
+      let license = {
+        status: currentUser.license_status || "sem_licenca",
+        license_status: currentUser.license_status || "sem_licenca", 
+        plan: currentUser.license_plan,
+        license_plan: currentUser.license_plan,
+        expiresAt: currentUser.license_expires_at?.toISOString(),
+        license_expires_at: currentUser.license_expires_at?.toISOString(),
+        activatedAt: currentUser.license_activated_at?.toISOString(),
+        license_activated_at: currentUser.license_activated_at?.toISOString(),
+        totalMinutes: currentUser.license_total_minutes || 0,
+        license_total_minutes: currentUser.license_total_minutes || 0,
+        remainingMinutes: currentUser.license_remaining_minutes || 0,
+        license_remaining_minutes: currentUser.license_remaining_minutes || 0,
+        lastHeartbeat: currentUser.license_last_heartbeat?.toISOString(),
+        license_last_heartbeat: currentUser.license_last_heartbeat?.toISOString(),
+        hwid: currentUser.hwid
+      };
 
       res.json({
         user: { ...currentUser, password: undefined },
@@ -473,15 +476,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/license/status", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const status = await licenseManager.checkLicenseStatus(user.id);
+      const currentUser = await storage.getUser(user.id);
       
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      const isActive = currentUser.license_status === "ativa" && 
+                      currentUser.license_expires_at && 
+                      new Date(currentUser.license_expires_at) > new Date();
+
       res.json({
-        license: status,
-        isActive: status.isActive
+        license: {
+          status: currentUser.license_status,
+          plan: currentUser.license_plan,
+          expiresAt: currentUser.license_expires_at,
+          remainingMinutes: currentUser.license_remaining_minutes,
+          isActive
+        },
+        isActive
       });
     } catch (error) {
       console.error("License status error:", error);
       res.status(500).json({ message: "Erro interno" });
+    }
+  });
+
+  // Simple license activation test endpoint
+  app.post("/api/test/activate-license", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      console.log(`🧪 Teste de ativação de licença para usuário: ${user.id}`);
+
+      const { activateLicenseForUser } = await import('./license-simple');
+      const result = await activateLicenseForUser(user.id, "test", 0.021);
+
+      // Verificar se foi ativada
+      const updatedUser = await storage.getUser(user.id);
+      
+      res.json({
+        success: true,
+        message: "Licença de teste ativada",
+        licenseKey: result.licenseKey,
+        userStatus: {
+          license_status: updatedUser?.license_status,
+          license_plan: updatedUser?.license_plan,
+          license_expires_at: updatedUser?.license_expires_at,
+          license_remaining_minutes: updatedUser?.license_remaining_minutes
+        }
+      });
+    } catch (error) {
+      console.error("Erro ao ativar licença de teste:", error);
+      res.status(500).json({ message: "Erro interno" });
+    }
+  });
+
+  // Download endpoint corrigido para o novo sistema de licenças
+  app.get("/api/download/cheat", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      console.log(`📁 Download solicitado pelo usuário: ${user.id} - ${user.email}`);
+      
+      // Verificar licença usando o novo sistema integrado
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      console.log(`🔍 Verificando licença:`);
+      console.log(`Status: ${currentUser.license_status}`);
+      console.log(`Plano: ${currentUser.license_plan}`);
+      console.log(`Expira em: ${currentUser.license_expires_at}`);
+      console.log(`Minutos restantes: ${currentUser.license_remaining_minutes}`);
+
+      // Verificar se a licença está ativa
+      const isLicenseActive = currentUser.license_status === "ativa" && 
+                             currentUser.license_expires_at && 
+                             new Date(currentUser.license_expires_at) > new Date() &&
+                             (currentUser.license_remaining_minutes || 0) > 0;
+
+      if (!isLicenseActive) {
+        console.log(`❌ Licença inativa ou expirada`);
+        return res.status(403).json({ 
+          message: "Licença ativa necessária para download",
+          details: {
+            status: currentUser.license_status,
+            expired: currentUser.license_expires_at ? new Date(currentUser.license_expires_at) <= new Date() : true,
+            remainingMinutes: currentUser.license_remaining_minutes
+          }
+        });
+      }
+
+      console.log(`✅ Licença válida - autorizando download`);
+
+      // Log do download
+      await storage.logDownload(user.id, "FovDarkloader.exe");
+
+      // URL de download segura (configurável via variável de ambiente)
+      const downloadUrl = process.env.DOWNLOAD_URL || 
+        "https://tkghgqliyjtovttpuael.supabase.co/storage/v1/object/sign/arquivos/FovDarkloader.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYzBjODc1ZS05NThmLTQyMGMtYjY3OS1lNDkxYTdmNmNhZWMiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcnF1aXZvcy9Gb3ZEYXJrbG9hZGVyLmV4ZSIsImlhdCI6MTc0OTkyMDMzNCwiZXhwIjoxNzgxNDU2MzM0fQ.C0hNoVrwxINjd_bve57G0bYCD7HdRBuQrm62ICq3o5g";
+      
+      res.json({
+        message: "Download autorizado",
+        fileName: "FovDarkloader.exe",
+        downloadUrl: downloadUrl,
+        version: "2.4.1",
+        size: "26.5 MB",
+        license: {
+          plan: currentUser.license_plan,
+          remainingMinutes: currentUser.license_remaining_minutes,
+          expiresAt: currentUser.license_expires_at
+        }
+      });
+
+      console.log(`📥 Download autorizado para ${user.email}`);
+    } catch (error) {
+      console.error("❌ Erro no download:", error);
+      res.status(500).json({ message: "Falha no download" });
     }
   });
 

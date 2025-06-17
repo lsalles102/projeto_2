@@ -138,7 +138,8 @@ export default function Dashboard() {
     );
   }
 
-  const isLicenseActive = license?.status === "ativa" && license?.license_expires_at && new Date(license.license_expires_at) > new Date();
+  const isLicenseActive = (license?.status === "ativa" || license?.license_status === "ativa") && 
+                          (license?.license_expires_at && new Date(license.license_expires_at) > new Date());
 
   return (
     <div className="container mx-auto px-6 py-20 max-w-6xl">
