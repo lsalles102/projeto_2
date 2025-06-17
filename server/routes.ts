@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Login route
+  // Login route (JSON format)
   app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000), async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
@@ -187,6 +187,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("Login error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Login route for loader (form data format)
+  app.post("/api/login", rateLimit(10, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const email = req.body.email;
+      const password = req.body.password;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
+      }
+
+      const token = generateToken(user.id);
+      
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Erro no login" });
+        }
+
+        res.json({
+          access_token: token,
+          user: { 
+            ...user, 
+            password: undefined,
+            isAdmin: user.is_admin 
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Loader login error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
@@ -477,6 +515,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Heartbeat error:", error);
       res.status(500).json({ valid: false, message: "Erro interno" });
+    }
+  });
+
+  // Endpoint para verificar licença (usado pelo loader)
+  app.get("/api/license/check", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const currentUser = await storage.getUser(user.id);
+      
+      if (!currentUser) {
+        return res.status(404).json({ valid: false, message: "Usuário não encontrado" });
+      }
+
+      const now = new Date();
+      const isActive = currentUser.license_status === "ativa" && 
+                      currentUser.license_expires_at && 
+                      new Date(currentUser.license_expires_at) > now;
+
+      if (!isActive) {
+        return res.json({
+          valid: false,
+          message: currentUser.license_status === "expirada" ? "Licença expirada" : "Licença inativa"
+        });
+      }
+
+      // Calcular dias restantes
+      const expiresAt = currentUser.license_expires_at || new Date();
+      const msRemaining = new Date(expiresAt).getTime() - now.getTime();
+      const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+
+      res.json({
+        valid: true,
+        message: "Licença ativa",
+        days_remaining: daysRemaining,
+        plan: currentUser.license_plan,
+        expires_at: currentUser.license_expires_at
+      });
+
+    } catch (error) {
+      console.error("License check error:", error);
+      res.status(500).json({ valid: false, message: "Erro interno" });
+    }
+  });
+
+  // Endpoint para salvar HWID (usado pelo loader)
+  app.post("/api/hwid/save", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { hwid } = req.body;
+
+      if (!hwid) {
+        return res.status(400).json({ message: "HWID é obrigatório" });
+      }
+
+      // Verificar se o usuário tem licença ativa
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser || currentUser.license_status !== "ativa") {
+        return res.status(403).json({ message: "Licença inativa" });
+      }
+
+      // Verificar se já tem HWID registrado e é diferente
+      if (currentUser.hwid && currentUser.hwid !== hwid) {
+        return res.status(403).json({ 
+          message: "HWID não autorizado. Entre em contato com o suporte para resetar." 
+        });
+      }
+
+      // Salvar/atualizar HWID
+      await storage.updateUser(user.id, { hwid });
+
+      res.json({ message: "HWID salvo com sucesso" });
+
+    } catch (error) {
+      console.error("HWID save error:", error);
+      res.status(500).json({ message: "Erro interno" });
     }
   });
 
