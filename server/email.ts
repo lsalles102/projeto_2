@@ -51,7 +51,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
             <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Sistema de Licenças</p>
           </div>
           
-          <div style="background: linear-gradient(135deg, #ff0000 0%, #8b00ff 100%); padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #8b00ff 0%, #ff1493 100%); padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
             <h2 style="color: white; margin: 0 0 15px 0; font-size: 24px;">Redefinição de Senha</h2>
             <p style="color: white; margin: 0; font-size: 16px; opacity: 0.9;">Solicitação de nova senha recebida</p>
           </div>
@@ -62,7 +62,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background: linear-gradient(135deg, #ff0000 0%, #8b00ff 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);">
+              <a href="${resetUrl}" style="background: linear-gradient(135deg, #8b00ff 0%, #ff1493 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(139, 0, 255, 0.4);">
                 🔑 Redefinir Senha
               </a>
             </div>
@@ -220,22 +220,22 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000000; color: #ffffff; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ff0000; margin: 0; text-shadow: 0 0 10px #ff0000;">FovDark</h1>
+          <h1 style="color: #8b00ff; margin: 0; text-shadow: 0 0 10px #8b00ff;">FovDark</h1>
           <p style="color: #888; margin: 5px 0;">Sistema de Licenças</p>
         </div>
         
-        <h2 style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">Licença Ativada com Sucesso!</h2>
+        <h2 style="color: #8b00ff; text-shadow: 0 0 10px #8b00ff;">Licença Ativada com Sucesso!</h2>
         <p>Parabéns! Seu pagamento foi confirmado e sua licença já está ativa em sua conta.</p>
         
-        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff0000;">
-          <h3 style="color: #8b00ff; margin-top: 0; text-shadow: 0 0 10px #8b00ff;">Detalhes da Licença:</h3>
+        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
+          <h3 style="color: #ff1493; margin-top: 0; text-shadow: 0 0 10px #ff1493;">Detalhes da Licença:</h3>
           <p><strong>Plano:</strong> ${planName}</p>
           <p><strong>Tempo de Licença:</strong> ${licenseDuration}</p>
-          <p><strong>Status:</strong> <span style="color: #ff0000; text-shadow: 0 0 5px #ff0000;">ATIVA</span></p>
+          <p><strong>Status:</strong> <span style="color: #8b00ff; text-shadow: 0 0 5px #8b00ff;">ATIVA</span></p>
         </div>
         
-        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
-          <h3 style="color: #8b00ff; margin-top: 0; text-shadow: 0 0 10px #8b00ff;">Como Acessar e Fazer Download:</h3>
+        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff1493;">
+          <h3 style="color: #ff1493; margin-top: 0; text-shadow: 0 0 10px #ff1493;">Como Acessar e Fazer Download:</h3>
           <ol style="color: #cccccc; line-height: 1.6;">
             <li><strong>Faça login em sua conta no FovDark</strong><br>
                 <span style="color: #888; font-size: 14px;">Acesse o site e entre com suas credenciais</span></li>
@@ -248,8 +248,8 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
           </ol>
         </div>
         
-        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff0000;">
-          <h3 style="color: #ff0000; margin-top: 0; text-shadow: 0 0 10px #ff0000;">Informações Importantes:</h3>
+        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
+          <h3 style="color: #8b00ff; margin-top: 0; text-shadow: 0 0 10px #8b00ff;">Informações Importantes:</h3>
           <ul style="color: #cccccc; line-height: 1.6;">
             <li>Sua licença está vinculada à sua conta e será ativada automaticamente</li>
             <li>O tempo de licença começa a contar a partir da primeira utilização</li>
@@ -258,8 +258,8 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
           </ul>
         </div>
         
-        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
-          <h3 style="color: #8b00ff; margin-top: 0; text-shadow: 0 0 10px #8b00ff;">Suporte</h3>
+        <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff1493;">
+          <h3 style="color: #ff1493; margin-top: 0; text-shadow: 0 0 10px #ff1493;">Suporte</h3>
           <p style="color: #cccccc; margin: 0;">
             Se você tiver alguma dúvida ou problema, entre em contato conosco através do site.
             Nossa equipe está pronta para ajudar!

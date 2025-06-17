@@ -10,30 +10,30 @@
   --card-foreground: hsl(0, 0%, 98%);
   --popover: hsl(0, 0%, 3%);
   --popover-foreground: hsl(0, 0%, 98%);
-  --primary: hsl(0, 100%, 50%);
+  --primary: hsl(270, 100%, 50%);
   --primary-foreground: hsl(0, 0%, 0%);
-  --secondary: hsl(270, 100%, 50%);
+  --secondary: hsl(285, 100%, 55%);
   --secondary-foreground: hsl(0, 0%, 98%);
   --muted: hsl(0, 0%, 10%);
   --muted-foreground: hsl(0, 0%, 64.9%);
-  --accent: hsl(270, 100%, 50%);
+  --accent: hsl(300, 100%, 60%);
   --accent-foreground: hsl(0, 0%, 0%);
   --destructive: hsl(0, 100%, 50%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --border: hsl(0, 0%, 15%);
   --input: hsl(0, 0%, 8%);
-  --ring: hsl(0, 100%, 50%);
+  --ring: hsl(270, 100%, 50%);
   --radius: 0.5rem;
   
   /* Custom neon colors */
   --neon-red: hsl(0, 100%, 50%);
   --neon-purple: hsl(270, 100%, 50%);
-  --neon-cyan: hsl(180, 100%, 50%);
-  --neon-yellow: hsl(60, 100%, 50%);
+  --neon-magenta: hsl(300, 100%, 60%);
+  --neon-violet: hsl(285, 100%, 55%);
   --dark-bg: hsl(0, 0%, 0%);
   --dark-surface: hsl(0, 0%, 5%);
   --glass: hsla(0, 0%, 100%, 0.05);
-  --glass-border: hsla(0, 100%, 50%, 0.3);
+  --glass-border: hsla(270, 100%, 50%, 0.3);
 }
 
 .dark {
@@ -43,19 +43,19 @@
   --card-foreground: hsl(0, 0%, 98%);
   --popover: hsl(0, 0%, 3%);
   --popover-foreground: hsl(0, 0%, 98%);
-  --primary: hsl(0, 100%, 50%);
+  --primary: hsl(270, 100%, 50%);
   --primary-foreground: hsl(0, 0%, 0%);
-  --secondary: hsl(270, 100%, 50%);
+  --secondary: hsl(285, 100%, 55%);
   --secondary-foreground: hsl(0, 0%, 98%);
   --muted: hsl(0, 0%, 10%);
   --muted-foreground: hsl(0, 0%, 64.9%);
-  --accent: hsl(270, 100%, 50%);
+  --accent: hsl(300, 100%, 60%);
   --accent-foreground: hsl(0, 0%, 0%);
   --destructive: hsl(0, 100%, 50%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --border: hsl(0, 0%, 15%);
   --input: hsl(0, 0%, 8%);
-  --ring: hsl(0, 100%, 50%);
+  --ring: hsl(270, 100%, 50%);
 }
 
 @layer base {
@@ -85,12 +85,12 @@
   }
   
   .neon-glow {
-    box-shadow: 0 0 20px var(--neon-red);
+    box-shadow: 0 0 20px var(--neon-purple);
     transition: all 0.3s ease;
   }
   
   .neon-glow:hover {
-    box-shadow: 0 0 30px var(--neon-red), 0 0 40px var(--neon-red);
+    box-shadow: 0 0 30px var(--neon-purple), 0 0 40px var(--neon-purple);
     transform: translateY(-2px);
   }
   
@@ -104,12 +104,26 @@
     transform: translateY(-2px);
   }
   
+  .neon-glow-magenta {
+    box-shadow: 0 0 20px var(--neon-magenta);
+    transition: all 0.3s ease;
+  }
+  
+  .neon-glow-magenta:hover {
+    box-shadow: 0 0 30px var(--neon-magenta), 0 0 40px var(--neon-magenta);
+    transform: translateY(-2px);
+  }
+  
   .text-glow {
-    text-shadow: 0 0 10px var(--neon-red);
+    text-shadow: 0 0 10px var(--neon-purple);
   }
   
   .text-glow-purple {
     text-shadow: 0 0 10px var(--neon-purple);
+  }
+  
+  .text-glow-magenta {
+    text-shadow: 0 0 10px var(--neon-magenta);
   }
   
   .bg-gradient-gaming {
@@ -161,13 +175,18 @@
   }
   
   @keyframes glow {
-    from { box-shadow: 0 0 20px var(--neon-red); }
-    to { box-shadow: 0 0 30px var(--neon-red), 0 0 40px var(--neon-red); }
+    from { box-shadow: 0 0 20px var(--neon-purple); }
+    to { box-shadow: 0 0 30px var(--neon-purple), 0 0 40px var(--neon-purple); }
   }
   
   @keyframes glowPurple {
     from { box-shadow: 0 0 20px var(--neon-purple); }
     to { box-shadow: 0 0 30px var(--neon-purple), 0 0 40px var(--neon-purple); }
+  }
+  
+  @keyframes glowMagenta {
+    from { box-shadow: 0 0 20px var(--neon-magenta); }
+    to { box-shadow: 0 0 30px var(--neon-magenta), 0 0 40px var(--neon-magenta); }
   }
   
   @keyframes slideIn {
@@ -191,12 +210,28 @@
     color: var(--neon-purple);
   }
   
+  .text-neon-magenta {
+    color: var(--neon-magenta);
+  }
+  
+  .text-neon-violet {
+    color: var(--neon-violet);
+  }
+  
   .bg-neon-red {
     background-color: var(--neon-red);
   }
   
   .bg-neon-purple {
     background-color: var(--neon-purple);
+  }
+  
+  .bg-neon-magenta {
+    background-color: var(--neon-magenta);
+  }
+  
+  .bg-neon-violet {
+    background-color: var(--neon-violet);
   }
   
   .border-neon-red {
@@ -207,8 +242,16 @@
     border-color: var(--neon-purple);
   }
   
+  .border-neon-magenta {
+    border-color: var(--neon-magenta);
+  }
+  
   .animate-glow-purple {
     animation: glowPurple 2s ease-in-out infinite alternate;
+  }
+  
+  .animate-glow-magenta {
+    animation: glowMagenta 2s ease-in-out infinite alternate;
   }
   
   .bg-glass {
