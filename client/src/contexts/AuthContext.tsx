@@ -51,13 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           credentials: 'include',
         });
         if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
+          const data = await response.json();
+          // The server returns { user: userData }, so we need to extract the user
+          setUser(data.user || data);
         } else {
           // Clear any stored user data on failed auth
           setUser(null);
         }
       } catch (error) {
+        console.error('Auth check error:', error);
         setUser(null);
       } finally {
         setLoading(false);
