@@ -522,9 +522,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/license/check", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
+      console.log(`🔍 [LOADER] Verificando licença para usuário: ${user.id} (${user.email})`);
+      
       const currentUser = await storage.getUser(user.id);
       
       if (!currentUser) {
+        console.log(`❌ [LOADER] Usuário não encontrado: ${user.id}`);
         return res.status(404).json({ valid: false, message: "Usuário não encontrado" });
       }
 
@@ -532,6 +535,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isActive = currentUser.license_status === "ativa" && 
                       currentUser.license_expires_at && 
                       new Date(currentUser.license_expires_at) > now;
+
+      console.log(`📊 [LOADER] Status da licença: ${currentUser.license_status}`);
+      console.log(`📅 [LOADER] Expira em: ${currentUser.license_expires_at}`);
+      console.log(`✅ [LOADER] Licença ativa: ${isActive}`);
 
       if (!isActive) {
         return res.json({
@@ -545,6 +552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const msRemaining = new Date(expiresAt).getTime() - now.getTime();
       const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
 
+      console.log(`⏱️ [LOADER] Dias restantes: ${daysRemaining}`);
+
       res.json({
         valid: true,
         message: "Licença ativa",
@@ -554,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      console.error("License check error:", error);
+      console.error("❌ [LOADER] Erro ao verificar licença:", error);
       res.status(500).json({ valid: false, message: "Erro interno" });
     }
   });
@@ -565,6 +574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const { hwid } = req.body;
 
+      console.log(`🔒 [LOADER] Tentativa de salvar HWID para usuário: ${user.id} (${user.email})`);
+      console.log(`💻 [LOADER] HWID recebido: ${hwid}`);
+
       if (!hwid) {
         return res.status(400).json({ message: "HWID é obrigatório" });
       }
@@ -572,11 +584,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar se o usuário tem licença ativa
       const currentUser = await storage.getUser(user.id);
       if (!currentUser || currentUser.license_status !== "ativa") {
+        console.log(`❌ [LOADER] Licença inativa para usuário ${user.id}: ${currentUser?.license_status}`);
         return res.status(403).json({ message: "Licença inativa" });
       }
 
       // Verificar se já tem HWID registrado e é diferente
       if (currentUser.hwid && currentUser.hwid !== hwid) {
+        console.log(`🚫 [LOADER] HWID não autorizado. Registrado: ${currentUser.hwid}, Tentativa: ${hwid}`);
         return res.status(403).json({ 
           message: "HWID não autorizado. Entre em contato com o suporte para resetar." 
         });
@@ -584,11 +598,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Salvar/atualizar HWID
       await storage.updateUser(user.id, { hwid });
+      console.log(`✅ [LOADER] HWID salvo com sucesso para usuário ${user.id}`);
 
       res.json({ message: "HWID salvo com sucesso" });
 
     } catch (error) {
-      console.error("HWID save error:", error);
+      console.error("❌ [LOADER] Erro ao salvar HWID:", error);
       res.status(500).json({ message: "Erro interno" });
     }
   });
