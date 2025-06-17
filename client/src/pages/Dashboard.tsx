@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
+import { useLicenseTimer } from "@/hooks/useLicenseTimer";
 import { Link } from "wouter";
 import { 
   Download, 
@@ -43,6 +44,15 @@ export default function Dashboard() {
   const license = (data as any)?.license;
   const downloads = (data as any)?.downloads || [];
   const stats = (data as any)?.stats || {};
+
+  // Timer em tempo real para a licença
+  const isLicenseCurrentlyActive = (license?.status === "ativa" || license?.license_status === "ativa") && 
+                                   (license?.license_expires_at && new Date(license.license_expires_at) > new Date());
+  
+  const licenseTimer = useLicenseTimer(
+    license?.license_remaining_minutes || 0,
+    isLicenseCurrentlyActive
+  );
 
   // Download cheat mutation
   const downloadMutation = useMutation({
@@ -197,10 +207,21 @@ export default function Dashboard() {
                   <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">Tempo Restante</div>
                     <div className="text-lg font-mono">
-                      {Math.floor((license.license_remaining_minutes || 0) / 1440)}d {Math.floor(((license.license_remaining_minutes || 0) % 1440) / 60)}h {(license.license_remaining_minutes || 0) % 60}m
+                      {licenseTimer.days > 0 && (
+                        <span className="text-primary">{licenseTimer.days}d </span>
+                      )}
+                      {(licenseTimer.days > 0 || licenseTimer.hours > 0) && (
+                        <span className="text-primary">{licenseTimer.hours}h </span>
+                      )}
+                      <span className="text-primary">{licenseTimer.minutes}m </span>
+                      <span className="text-accent">{licenseTimer.seconds}s</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Expira: {license.license_expires_at ? new Date(license.license_expires_at).toLocaleDateString("pt-BR") : "N/A"}
+                      {licenseTimer.isActive ? (
+                        <span className="text-green-400">⏱️ Atualizando em tempo real</span>
+                      ) : (
+                        <span>Expira: {license.license_expires_at ? new Date(license.license_expires_at).toLocaleDateString("pt-BR") : "N/A"}</span>
+                      )}
                     </div>
                   </div>
                   
