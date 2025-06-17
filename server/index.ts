@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { licenseService } from "./license-service";
+import { licenseMonitor } from "./license-monitor";
 import path from "path";
 import fs from "fs";
 
@@ -173,6 +174,9 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Iniciar monitoramento automático de licenças
+  licenseMonitor.start();
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.

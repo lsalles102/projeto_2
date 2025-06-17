@@ -51,7 +51,8 @@ export default function Dashboard() {
   
   const licenseTimer = useLicenseTimer(
     license?.license_remaining_minutes || 0,
-    isLicenseCurrentlyActive
+    isLicenseCurrentlyActive,
+    license?.hwid
   );
 
   // Download cheat mutation
