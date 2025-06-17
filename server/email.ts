@@ -119,29 +119,11 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(cleanEmail);
 }
 
-// Função para buscar email alternativo no banco de dados
+// Função para buscar email alternativo no banco de dados (não mais necessária com o novo sistema)
 async function findUserEmailFromDatabase(licenseKey: string): Promise<string | null> {
   try {
-    // Importar storage dinamicamente para evitar dependência circular
-    const { storage } = await import('./storage');
-    
-    // Buscar licença pela chave
-    const license = await storage.getLicenseByKey(licenseKey);
-    if (!license) {
-      console.log(`[EMAIL] Licença não encontrada para chave: ${licenseKey}`);
-      return null;
-    }
-    
-    // Buscar usuário pela licença
-    const user = await storage.getUser(license.userId);
-    if (!user || !user.email) {
-      console.log(`[EMAIL] Usuário não encontrado ou sem email para licença: ${licenseKey}`);
-      return null;
-    }
-    
-    console.log(`[EMAIL] Email encontrado no banco: ${user.email}`);
-    return user.email;
-    
+    console.log(`[EMAIL] Sistema simplificado - não é mais necessário buscar por chave de licença`);
+    return null;
   } catch (error) {
     console.error(`[EMAIL] Erro ao buscar email no banco:`, error);
     return null;
@@ -171,17 +153,11 @@ export async function sendLicenseKeyEmailRobust(email: string, licenseKey: strin
 }
 
 export async function sendLicenseKeyEmail(email: string, licenseKey: string, planName: string) {
-  console.log(`[EMAIL] Iniciando envio de email de licença`);
+  console.log(`[EMAIL] Iniciando envio de email de confirmação de licença`);
   console.log(`[EMAIL] Email recebido: "${email}"`);
-  console.log(`[EMAIL] Chave de licença: "${licenseKey}"`);
   console.log(`[EMAIL] Plano: "${planName}"`);
   
   // 1. VALIDAR PARÂMETROS OBRIGATÓRIOS
-  if (!licenseKey || licenseKey.trim() === '') {
-    console.error(`[EMAIL] ❌ ERRO: Chave de licença está vazia`);
-    throw new Error('Chave de licença não pode estar vazia');
-  }
-  
   if (!planName || planName.trim() === '') {
     console.error(`[EMAIL] ❌ ERRO: Nome do plano está vazio`);
     throw new Error('Nome do plano não pode estar vazio');
@@ -193,23 +169,14 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   // Tentar usar o email fornecido primeiro
   if (email && isValidEmail(email)) {
     finalEmail = email.trim().replace(/['"]+/g, '').replace(/\s+/g, '');
-    console.log(`[EMAIL] ✅ Email do Mercado Pago válido: "${finalEmail}"`);
+    console.log(`[EMAIL] ✅ Email válido: "${finalEmail}"`);
   } else {
-    console.log(`[EMAIL] ⚠️ Email do Mercado Pago inválido ou mascarado: "${email}"`);
-    
-    // Tentar buscar email alternativo no banco de dados
-    const dbEmail = await findUserEmailFromDatabase(licenseKey);
-    if (dbEmail && isValidEmail(dbEmail)) {
-      finalEmail = dbEmail;
-      console.log(`[EMAIL] ✅ Email encontrado no banco de dados: "${finalEmail}"`);
-    } else {
-      console.log(`[EMAIL] ❌ Email do banco também inválido ou não encontrado`);
-    }
+    console.log(`[EMAIL] ⚠️ Email inválido ou mascarado: "${email}"`);
   }
   
   // 3. VERIFICAR SE TEMOS UM EMAIL VÁLIDO
   if (!finalEmail) {
-    const errorMsg = `Não foi possível encontrar um email válido para envio. Email MP: "${email}", Chave: "${licenseKey}"`;
+    const errorMsg = `Não foi possível encontrar um email válido para envio. Email: "${email}"`;
     console.error(`[EMAIL] ❌ ERRO CRÍTICO: ${errorMsg}`);
     
     // Registrar falha mas não quebrar o fluxo
@@ -217,56 +184,95 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
     throw new Error(errorMsg);
   }
   
+  // Determinar duração da licença baseada no plano
+  let licenseDuration = '';
+  let licenseMinutes = 0;
+  
+  switch (planName.toLowerCase()) {
+    case 'teste (30 minutos)':
+    case 'test':
+      licenseDuration = '30 minutos';
+      licenseMinutes = 30;
+      break;
+    case '7 dias':
+    case '7days':
+      licenseDuration = '7 dias';
+      licenseMinutes = 7 * 24 * 60;
+      break;
+    case '15 dias':
+    case '15days':
+      licenseDuration = '15 dias';
+      licenseMinutes = 15 * 24 * 60;
+      break;
+    default:
+      licenseDuration = planName;
+      licenseMinutes = 0;
+  }
+  
   // 4. PREPARAR E ENVIAR EMAIL
   const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_USER || 'contato@suportefovdark.shop';
+  const fromEmail = process.env.SMTP_FROM || 'contato@suportefovdark.shop';
   
   const mailOptions = {
     from: `"FovDark" <${fromEmail}>`,
     to: finalEmail,
-    subject: 'Sua Chave de Licença FovDark - Ativação Confirmada',
+    subject: 'Licença FovDark Ativada - Pagamento Confirmado',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #00ff88; margin: 0;">FovDark</h1>
-          <p style="color: #888; margin: 5px 0;">Software Licensing Platform</p>
+          <p style="color: #888; margin: 5px 0;">Sistema de Licenças</p>
         </div>
         
-        <h2 style="color: #00ff88;">Pagamento Confirmado!</h2>
-        <p>Parabéns! Seu pagamento foi processado com sucesso.</p>
+        <h2 style="color: #00ff88;">Licença Ativada com Sucesso!</h2>
+        <p>Parabéns! Seu pagamento foi confirmado e sua licença já está ativa em sua conta.</p>
         
         <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #00ff88; margin-top: 0;">Detalhes da Compra:</h3>
+          <h3 style="color: #00ff88; margin-top: 0;">Detalhes da Licença:</h3>
           <p><strong>Plano:</strong> ${planName}</p>
-          <p><strong>Sua Chave de Licença:</strong></p>
-          <div style="background-color: #000; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 18px; letter-spacing: 2px; text-align: center; color: #00ff88; border: 2px solid #00ff88;">
-            <strong>${licenseKey}</strong>
-          </div>
+          <p><strong>Tempo de Licença:</strong> ${licenseDuration}</p>
+          <p><strong>Status:</strong> <span style="color: #00ff88;">ATIVA</span></p>
         </div>
         
         <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #00ff88; margin-top: 0;">Como Ativar:</h3>
-          <ol style="color: #cccccc;">
-            <li>Faça login em sua conta no FovDark</li>
-            <li>Vá para o Dashboard</li>
-            <li>Insira sua chave de licença no campo "Ativar Licença"</li>
-            <li>Clique em "Ativar" para começar a usar</li>
+          <h3 style="color: #00ff88; margin-top: 0;">Como Acessar e Fazer Download:</h3>
+          <ol style="color: #cccccc; line-height: 1.6;">
+            <li><strong>Faça login em sua conta no FovDark</strong><br>
+                <span style="color: #888; font-size: 14px;">Acesse o site e entre com suas credenciais</span></li>
+            <li><strong>Vá para o Dashboard</strong><br>
+                <span style="color: #888; font-size: 14px;">Você verá sua licença ativa e o tempo restante</span></li>
+            <li><strong>Baixe o software</strong><br>
+                <span style="color: #888; font-size: 14px;">Use o botão de download disponível no dashboard</span></li>
+            <li><strong>Execute o programa</strong><br>
+                <span style="color: #888; font-size: 14px;">O software detectará automaticamente sua licença ativa</span></li>
           </ol>
         </div>
         
         <div style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #ff6b6b; margin-top: 0;">⚠️ Importante:</h3>
-          <ul style="color: #cccccc;">
-            <li>Guarde esta chave em local seguro</li>
-            <li>Não compartilhe sua chave com terceiros</li>
-            <li>A chave será vinculada ao seu hardware após ativação</li>
+          <h3 style="color: #ff6b6b; margin-top: 0;">Informações Importantes:</h3>
+          <ul style="color: #cccccc; line-height: 1.6;">
+            <li>Sua licença está vinculada à sua conta e será ativada automaticamente</li>
+            <li>O tempo de licença começa a contar a partir da primeira utilização</li>
+            <li>Você pode verificar o tempo restante a qualquer momento no dashboard</li>
+            <li>Não é necessário inserir chaves de ativação - tudo é automático</li>
           </ul>
+        </div>
+        
+        <div style="background-color: #0f3460; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00ff88;">
+          <h3 style="color: #00ff88; margin-top: 0;">Suporte</h3>
+          <p style="color: #cccccc; margin: 0;">
+            Se você tiver alguma dúvida ou problema, entre em contato conosco através do site.
+            Nossa equipe está pronta para ajudar!
+          </p>
         </div>
         
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
           <p style="color: #888; font-size: 14px;">
-            Se você tiver dúvidas, entre em contato conosco.<br>
-            Obrigado por escolher FovDark!
+            Obrigado por escolher FovDark!<br>
+            Aproveite sua licença e tenha uma ótima experiência.
+          </p>
+          <p style="color: #666; font-size: 12px; margin-top: 10px;">
+            Este é um email automático, não responda.
           </p>
         </div>
       </div>
