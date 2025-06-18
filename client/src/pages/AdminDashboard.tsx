@@ -90,7 +90,7 @@ export default function AdminDashboard() {
   // Mutations
   const updateUserMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserFormData }) => 
-      apiRequest(`/api/admin/users/${id}`, { method: "PATCH", body: data }),
+      apiRequest("PATCH", `/api/admin/users/${id}`, data),
     onSuccess: () => {
       toast({ title: "Sucesso", description: "Usuário atualizado!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
 
   const updateLicenseMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateLicenseFormData }) => 
-      apiRequest(`/api/admin/licenses/${id}`, { method: "PATCH", body: data }),
+      apiRequest("PATCH", `/api/admin/licenses/${id}`, data),
     onSuccess: () => {
       toast({ title: "Sucesso", description: "Licença atualizada!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/admin/users/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/users/${id}`),
     onSuccess: () => {
       toast({ title: "Sucesso", description: "Usuário deletado!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
