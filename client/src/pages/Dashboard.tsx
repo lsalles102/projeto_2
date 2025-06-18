@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { useLicenseTimer } from "@/hooks/useLicenseTimer";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Download, 
   Shield, 
@@ -27,6 +27,7 @@ import {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Fetch dashboard data with optimized caching
   const { data, isLoading, error } = useQuery({
@@ -105,11 +106,11 @@ export default function Dashboard() {
       title: "Renovação de Licença",
       description: "Redirecionando para a página de preços...",
     });
-    window.open("/pricing", "_blank");
+    setLocation("/pricing");
   };
 
   const handleSettings = () => {
-    window.location.href = "/settings";
+    setLocation("/settings");
   };
 
   const handleSupport = () => {
@@ -117,7 +118,7 @@ export default function Dashboard() {
       title: "Suporte",
       description: "Redirecionando para o suporte...",
     });
-    window.open("/support", "_blank");
+    setLocation("/support");
   };
 
   const handleViewManual = () => {
