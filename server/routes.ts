@@ -1127,62 +1127,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/reset-password", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
     try {
+      console.log(`[RESET PASSWORD] Dados recebidos:`, req.body);
+      
       const { token, password, confirmPassword } = resetPasswordSchema.parse(req.body);
+      console.log(`[RESET PASSWORD] Token: ${token}, Password length: ${password?.length}`);
       
       // Verify reset token
+      console.log(`[RESET PASSWORD] Verificando token no banco...`);
       const resetToken = await storage.getPasswordResetToken(token);
+      console.log(`[RESET PASSWORD] Token encontrado:`, !!resetToken);
+      
       if (!resetToken) {
+        console.log(`[RESET PASSWORD] Token não encontrado ou expirado`);
         return res.status(400).json({ message: "Token inválido ou expirado" });
       }
+      
+      console.log(`[RESET PASSWORD] Token válido, expira em:`, resetToken.expiresAt);
+      console.log(`[RESET PASSWORD] Token usado:`, resetToken.used);
 
       // Get user
+      console.log(`[RESET PASSWORD] Buscando usuário com ID: ${resetToken.userId}`);
       const user = await storage.getUser(resetToken.userId);
+      console.log(`[RESET PASSWORD] Usuário encontrado:`, !!user);
+      
       if (!user) {
+        console.log(`[RESET PASSWORD] Usuário não encontrado para o token`);
         return res.status(400).json({ message: "Usuário não encontrado" });
       }
 
       // Update user password (plain text as per current system)
+      console.log(`[RESET PASSWORD] Atualizando senha do usuário: ${user.email}`);
       await storage.updateUser(user.id, { password: password });
 
       // Mark token as used
+      console.log(`[RESET PASSWORD] Marcando token como usado`);
       await storage.markPasswordResetTokenAsUsed(token);
 
       // Clean up expired tokens
+      console.log(`[RESET PASSWORD] Limpando tokens expirados`);
       await storage.deleteExpiredPasswordResetTokens();
 
       console.log(`[RESET PASSWORD] Password reset successful for user: ${user.email}`);
       res.json({ message: "Senha redefinida com sucesso" });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error(`[RESET PASSWORD] Erro de validação:`, error.errors);
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
-      console.error("Reset password error:", error);
+      console.error("[RESET PASSWORD] Erro geral:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Endpoint de teste para criar token de reset válido
+  app.post("/api/debug/create-reset-token", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Gerar token de reset
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      // Salvar token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // URL de reset
+      const baseUrl = 'https://fovdark.shop';
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+      console.log(`[TEST PASSWORD RESET] Token gerado: ${resetToken}`);
+      console.log(`[TEST PASSWORD RESET] URL de reset: ${resetUrl}`);
+
+      res.json({
+        success: true,
+        message: "Token de reset gerado com sucesso",
+        resetToken,
+        resetUrl,
+        expiresAt
+      });
+
+    } catch (error) {
+      console.error("[TEST PASSWORD RESET] Erro:", error);
+      res.status(500).json({ message: "Erro interno" });
     }
   });
 
   // Debug endpoint para verificar tokens de reset
   app.get("/api/debug/reset-tokens", async (req, res) => {
     try {
-      const allUsers = await storage.getAllUsers();
-      const tokens = [];
+      const { db } = await import("./db");
+      const { passwordResetTokens, users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
       
-      // Buscar todos os tokens de reset no banco
-      for (const user of allUsers) {
-        try {
-          // Este é um hack para acessar os tokens via storage - apenas para debug
-          const userTokens = await storage.getPasswordResetToken('dummy');
-        } catch (e) {
-          // Ignorar erro, apenas para debug
-        }
-      }
+      const tokens = await db.select({
+        id: passwordResetTokens.id,
+        token: passwordResetTokens.token,
+        used: passwordResetTokens.used,
+        expiresAt: passwordResetTokens.expiresAt,
+        createdAt: passwordResetTokens.createdAt,
+        userEmail: users.email
+      })
+      .from(passwordResetTokens)
+      .leftJoin(users, eq(passwordResetTokens.userId, users.id));
       
-      res.json({ 
-        message: "Debug endpoint - check server logs for token validation",
-        totalUsers: allUsers.length
-      });
+      res.json({ tokens });
     } catch (error) {
-      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error("[DEBUG] Erro ao buscar tokens:", error);
+      res.status(500).json({ message: "Erro interno" });
     }
   });
 

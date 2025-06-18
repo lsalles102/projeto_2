@@ -185,10 +185,20 @@ class DatabaseStorage implements IStorage {
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     const { db } = await import("./db");
     const { passwordResetTokens } = await import("@shared/schema");
-    const { lt } = await import("drizzle-orm");
+    const { or, lt, eq } = await import("drizzle-orm");
     
-    await db.delete(passwordResetTokens)
-      .where(lt(passwordResetTokens.expiresAt, new Date()));
+    try {
+      const result = await db.delete(passwordResetTokens)
+        .where(or(
+          lt(passwordResetTokens.expiresAt, new Date()),
+          eq(passwordResetTokens.used, true)
+        ))
+        .returning();
+      
+      console.log(`[CLEANUP] Removidos ${result.length} tokens de reset expirados/usados`);
+    } catch (error) {
+      console.error("[CLEANUP] Erro ao limpar tokens de reset:", error);
+    }
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
