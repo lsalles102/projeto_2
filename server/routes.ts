@@ -1062,5 +1062,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password reset routes
+  app.post("/api/auth/forgot-password", rateLimit(3, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      console.log(`[FORGOT PASSWORD] Processing request for: ${email}`);
+      
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      console.log(`[FORGOT PASSWORD] User found: ${!!user}`);
+      
+      if (!user) {
+        console.log(`[FORGOT PASSWORD] User not found, returning standard message`);
+        return res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+      }
+
+      // Generate reset token
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store reset token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // Create reset URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : process.env.NODE_ENV === 'production' 
+          ? 'https://fovdark.shop'
+          : 'http://localhost:5000';
+      
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+      // Send reset email
+      try {
+        await sendPasswordResetEmail(email, resetToken);
+        console.log(`Password reset email sent to: ${email}`);
+        console.log(`Reset URL: ${resetUrl}`);
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // Still return success to not reveal if email exists
+      }
+
+      res.json({ message: "Se o email existir em nosso sistema, você receberá instruções de redefinição." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Email inválido", errors: error.errors });
+      }
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { token, password, confirmPassword } = resetPasswordSchema.parse(req.body);
+      
+      // Verify reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Token inválido ou expirado" });
+      }
+
+      // Get user
+      const user = await storage.getUser(resetToken.userId);
+      if (!user) {
+        return res.status(400).json({ message: "Usuário não encontrado" });
+      }
+
+      // Update user password (plain text as per current system)
+      await storage.updateUser(user.id, { password: password });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(token);
+
+      // Clean up expired tokens
+      await storage.deleteExpiredPasswordResetTokens();
+
+      console.log(`[RESET PASSWORD] Password reset successful for user: ${user.email}`);
+      res.json({ message: "Senha redefinida com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Change password route
+  app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+      // Get current user
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      if (currentUser.password !== currentPassword) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Update password
+      await storage.updateUser(user.id, { password: newPassword });
+
+      console.log(`[CHANGE PASSWORD] Password changed for user: ${currentUser.email}`);
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   return server;
 }
