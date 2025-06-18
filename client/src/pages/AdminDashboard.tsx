@@ -69,10 +69,7 @@ export default function AdminDashboard() {
   // Update download URL mutation
   const updateDownloadUrlMutation = useMutation({
     mutationFn: () => 
-      apiRequest("/api/admin/settings/download-url", { 
-        method: "POST", 
-        body: { downloadUrl } 
-      }),
+      apiRequest("POST", "/api/admin/settings/download-url", { downloadUrl }),
     onSuccess: () => {
       toast({ title: "Sucesso", description: "Link de download atualizado!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
