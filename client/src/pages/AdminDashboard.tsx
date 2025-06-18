@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     if (currentDownloadUrl && !downloadUrl) {
       setDownloadUrl(currentDownloadUrl);
     }
-  }, [currentDownloadUrl, downloadUrl]);
+  }, [currentDownloadUrl]);
 
   // Update user form
   const updateUserForm = useForm<UpdateUserFormData>({
