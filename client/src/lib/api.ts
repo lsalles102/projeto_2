@@ -169,6 +169,13 @@ export const licenseApi = {
   },
 };
 
+// Dashboard API calls
+export const dashboardApi = {
+  async getData() {
+    return fetchApi('/api/dashboard');
+  },
+};
+
 // Payment API calls
 export const paymentApi = {
   async createPixPayment(data: {

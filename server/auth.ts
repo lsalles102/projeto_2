@@ -109,12 +109,7 @@ export async function setupAuth(app: Express): Promise<any> {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
-    // Primeiro, verificar autenticação via sessão do Passport
-    if (req.isAuthenticated() && req.user) {
-      return next();
-    }
-
-    // Se não autenticado via sessão, verificar token JWT no header
+    // Verificar token JWT no header primeiro (para compatibilidade com frontend)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
@@ -128,6 +123,11 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
           return next();
         }
       }
+    }
+
+    // Fallback para autenticação via sessão do Passport
+    if (req.isAuthenticated() && req.user) {
+      return next();
     }
 
     res.status(401).json({ message: "Não autorizado" });
