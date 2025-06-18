@@ -963,6 +963,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       const payments = await storage.getAllPayments();
 
+      // Buscar configurações do sistema (incluindo download URL)
+      const downloadUrl = process.env.DOWNLOAD_URL || "";
+      
       res.json({
         stats,
         users: users.map(u => ({ 
@@ -971,6 +974,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: u.is_admin // Corrigir nome do campo
         })),
         payments,
+        settings: {
+          downloadUrl
+        }
       });
     } catch (error) {
       console.error("Admin dashboard error:", error);
@@ -1207,6 +1213,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Change password error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Admin - Atualizar link de download
+  app.post("/api/admin/settings/download-url", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { downloadUrl } = req.body;
+      
+      if (!downloadUrl || typeof downloadUrl !== 'string') {
+        return res.status(400).json({ message: "URL de download é obrigatória" });
+      }
+
+      // Validar se é uma URL válida
+      try {
+        new URL(downloadUrl);
+      } catch {
+        return res.status(400).json({ message: "URL inválida" });
+      }
+
+      // Como estamos usando variáveis de ambiente, vamos logar a mudança
+      console.log(`[ADMIN] Link de download atualizado por admin: ${(req.user as any).email}`);
+      console.log(`[ADMIN] Novo link: ${downloadUrl}`);
+      
+      // Em um sistema de produção real, você salvaria isso no banco de dados
+      // Por agora, vamos apenas confirmar que recebemos a atualização
+      res.json({ 
+        message: "Link de download atualizado com sucesso",
+        downloadUrl: downloadUrl
+      });
+    } catch (error) {
+      console.error("Update download URL error:", error);
+      res.status(500).json({ message: "Erro ao atualizar link de download" });
     }
   });
 

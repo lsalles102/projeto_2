@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +46,13 @@ export default function AdminDashboard() {
   const users = (adminData as any)?.users || [];
   const licenses = (adminData as any)?.licenses || [];
   const currentDownloadUrl = (adminData as any)?.settings?.downloadUrl || "";
+
+  // Set initial download URL when data loads
+  useEffect(() => {
+    if (currentDownloadUrl && !downloadUrl) {
+      setDownloadUrl(currentDownloadUrl);
+    }
+  }, [currentDownloadUrl, downloadUrl]);
 
   // Update user form
   const updateUserForm = useForm<UpdateUserFormData>({
