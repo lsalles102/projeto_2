@@ -17,7 +17,7 @@ const client = postgres(finalUrl!, {
   max: isProduction ? 20 : 10,
   idle_timeout: isProduction ? 30 : 20,
   connect_timeout: isProduction ? 30 : 10,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: finalUrl.includes('supabase') || isProduction ? { rejectUnauthorized: false } : false,
   prepare: false, // Disable prepared statements for better compatibility
 });
 

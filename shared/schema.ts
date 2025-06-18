@@ -2,19 +2,19 @@ import { pgTable, text, varchar, timestamp, jsonb, index, serial, boolean, integ
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for authentication
+// Session storage table for authentication (using auth schema for Supabase compatibility)
 export const sessions = pgTable(
-  "custom_sessions",
+  "sessions",
   {
     sid: varchar("sid").primaryKey(),
     sess: jsonb("sess").notNull(),
     expire: timestamp("expire").notNull(),
   },
-  (table) => [index("IDX_custom_sessions_expire").on(table.expire)],
+  (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users table
-export const users = pgTable("custom_users", {
+// Users table (extending Supabase auth.users)
+export const users = pgTable("app_users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email").unique().notNull(),
   password: varchar("password").notNull(),

@@ -29,15 +29,17 @@ export function getSession() {
   // Configurar store PostgreSQL para sessões
   const PgSession = ConnectPgSimple(session);
   
+  const isProduction = process.env.NODE_ENV === 'production';
   const sessionConfig: session.SessionOptions = {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Always false in development to work with localhost
-      sameSite: 'lax', // Changed from strict to lax for better compatibility
+      secure: isProduction, // Secure cookies in production
+      sameSite: isProduction ? 'none' : 'lax', // Allow cross-site cookies in production
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
+      domain: isProduction ? '.fovdark.shop' : undefined, // Set domain for production
     },
   };
 
@@ -45,7 +47,7 @@ export function getSession() {
   if (process.env.DATABASE_URL) {
     sessionConfig.store = new PgSession({
       conString: process.env.DATABASE_URL,
-      tableName: 'custom_sessions',
+      tableName: 'sessions',
       createTableIfMissing: true,
     });
   } else {

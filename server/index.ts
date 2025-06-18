@@ -128,8 +128,26 @@ function serveStatic(app: express.Express) {
   });
 }
 
-// Security headers middleware
+// CORS e Security headers middleware
 app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://fovdark.shop',
+    'https://www.fovdark.shop',
+    'http://localhost:5000',
+    'http://localhost:3000'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin as string)) {
+    res.setHeader('Access-Control-Allow-Origin', origin as string);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -138,6 +156,12 @@ app.use((req, res, next) => {
   
   // Remove potentially revealing headers
   res.removeHeader('X-Powered-By');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   
   next();
 });
