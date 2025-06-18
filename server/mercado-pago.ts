@@ -16,8 +16,8 @@ const payment = new Payment(client);
 // Preços dos planos em centavos (BRL)
 export const PLAN_PRICES = {
   'test': 100, // R$ 1,00 em centavos (valor mínimo do Mercado Pago)
-  '7days': 1990, // R$ 19,90 em centavos
-  '15days': 3490, // R$ 34,90 em centavos
+  '7days': 1490, // R$ 14,90 em centavos
+  '15days': 2990, // R$ 29,90 em centavos
 } as const;
 
 export interface CreatePixPaymentData {
