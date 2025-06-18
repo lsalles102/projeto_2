@@ -17,7 +17,10 @@ export async function apiRequest(
     
     const res = await fetch(url, {
       method,
-      headers: data ? { "Content-Type": "application/json" } : {},
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
     });
@@ -25,9 +28,15 @@ export async function apiRequest(
     console.log(`[API] Status da resposta: ${res.status}`);
     
     if (!res.ok) {
-      const errorText = await res.text();
+      let errorText = "";
+      try {
+        const errorData = await res.json();
+        errorText = errorData.message || JSON.stringify(errorData);
+      } catch {
+        errorText = await res.text() || res.statusText;
+      }
       console.error(`[API] Erro ${res.status}:`, errorText);
-      throw new Error(`${res.status}: ${errorText || res.statusText}`);
+      throw new Error(errorText);
     }
     
     const responseData = await res.json();

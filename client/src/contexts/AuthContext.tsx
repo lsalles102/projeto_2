@@ -86,7 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       console.log('AuthContext: Tentando fazer login com:', { email });
+      
       const data = await apiRequest('POST', '/api/auth/login', {
         email,
         password,
@@ -97,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && data.user) {
         console.log('AuthContext: Usuário logado com sucesso:', data.user.email);
         setUser(data.user);
-        setLoading(false);
         return data;
       } else {
         console.error('AuthContext: Resposta do login não contém usuário válido');
@@ -105,11 +106,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error: any) {
       console.error('AuthContext: Erro no login:', error);
-      console.error('AuthContext: Tipo do erro:', typeof error);
-      console.error('AuthContext: Mensagem do erro:', error?.message);
       setUser(null);
+      // Parse error message properly
+      const errorMessage = error?.message || 'Erro no login';
+      if (errorMessage.includes('Credenciais inválidas')) {
+        throw new Error('Email ou senha incorretos');
+      }
+      throw new Error(errorMessage);
+    } finally {
       setLoading(false);
-      throw new Error(error?.message || 'Erro no login');
     }
   };
 
