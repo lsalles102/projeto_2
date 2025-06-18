@@ -1251,7 +1251,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Change password route
+  // Change password route - FIXED ENDPOINT
+  app.patch("/api/auth/password", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword, confirmPassword } = changePasswordSchema.parse(req.body);
+
+      console.log(`[CHANGE PASSWORD] Request for user: ${user.email}`);
+
+      // Get current user from database
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password (plain text comparison as per current system)
+      if (currentUser.password !== currentPassword) {
+        console.log(`[CHANGE PASSWORD] Current password mismatch for user: ${user.email}`);
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Update password
+      await storage.updateUser(user.id, { password: newPassword });
+      
+      console.log(`[CHANGE PASSWORD] Password updated successfully for user: ${user.email}`);
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("[CHANGE PASSWORD] Error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // Legacy change password route for compatibility
   app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
     try {
       console.log(`[CHANGE PASSWORD] Request received from user:`, req.user ? (req.user as any).id : 'Not authenticated');
