@@ -1189,30 +1189,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Change password route
   app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
     try {
+      console.log(`[CHANGE PASSWORD] Request received from user:`, req.user ? req.user.id : 'Not authenticated');
+      console.log(`[CHANGE PASSWORD] Request body keys:`, Object.keys(req.body));
+      
       const user = req.user as any;
       const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
       // Get current user
       const currentUser = await storage.getUser(user.id);
       if (!currentUser) {
+        console.log(`[CHANGE PASSWORD] User not found: ${user.id}`);
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
+      console.log(`[CHANGE PASSWORD] Current user found: ${currentUser.email}`);
+      console.log(`[CHANGE PASSWORD] Comparing passwords - Current in DB: ${currentUser.password.substring(0, 5)}...`);
+
       // Verify current password (plain text comparison)
       if (currentUser.password !== currentPassword) {
+        console.log(`[CHANGE PASSWORD] Password mismatch for user: ${currentUser.email}`);
         return res.status(400).json({ message: "Senha atual incorreta" });
       }
 
       // Update password (plain text)
       await storage.updateUser(user.id, { password: newPassword });
 
-      console.log(`[CHANGE PASSWORD] Password changed for user: ${currentUser.email}`);
+      console.log(`[CHANGE PASSWORD] Password changed successfully for user: ${currentUser.email}`);
       res.json({ message: "Senha alterada com sucesso" });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log(`[CHANGE PASSWORD] Validation error:`, error.errors);
         return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
-      console.error("Change password error:", error);
+      console.error("[CHANGE PASSWORD] Unexpected error:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
