@@ -1154,6 +1154,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint para verificar tokens de reset
+  app.get("/api/debug/reset-tokens", async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const tokens = [];
+      
+      // Buscar todos os tokens de reset no banco
+      for (const user of allUsers) {
+        try {
+          // Este é um hack para acessar os tokens via storage - apenas para debug
+          const userTokens = await storage.getPasswordResetToken('dummy');
+        } catch (e) {
+          // Ignorar erro, apenas para debug
+        }
+      }
+      
+      res.json({ 
+        message: "Debug endpoint - check server logs for token validation",
+        totalUsers: allUsers.length
+      });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Change password route
   app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
     try {

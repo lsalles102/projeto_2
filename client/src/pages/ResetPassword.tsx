@@ -25,10 +25,38 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.split('?')[1]);
-    const tokenParam = urlParams.get('token');
+    let tokenParam = null;
+    
+    // Método 1: Usar URL API
+    try {
+      const url = new URL(window.location.href);
+      tokenParam = url.searchParams.get('token');
+    } catch (e) {
+      console.warn('URL API failed, trying alternative method');
+    }
+    
+    // Método 2: Extração manual da query string (fallback)
+    if (!tokenParam) {
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      tokenParam = urlParams.get('token');
+    }
+    
+    // Método 3: Regex fallback para casos extremos
+    if (!tokenParam) {
+      const match = window.location.href.match(/[?&]token=([^&]+)/);
+      if (match) {
+        tokenParam = match[1];
+      }
+    }
+    
+    console.log('URL:', window.location.href);
+    console.log('Token extraído:', tokenParam);
+    
     if (tokenParam) {
       setToken(tokenParam);
+    } else {
+      console.error('Nenhum token encontrado na URL');
     }
   }, [location]);
 
@@ -82,6 +110,13 @@ export default function ResetPassword() {
             <CardDescription>
               O link de redefinição de senha é inválido ou expirou.
             </CardDescription>
+            <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+              <strong>Debug Info:</strong><br/>
+              URL: {window.location.href}<br/>
+              Search: {window.location.search}<br/>
+              Hash: {window.location.hash}<br/>
+              Token: {token || 'null'}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
