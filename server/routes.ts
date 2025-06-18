@@ -1210,5 +1210,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form endpoint
+  app.post("/api/contact", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const contactData = contactSchema.parse(req.body);
+      
+      console.log(`[CONTACT] Nova mensagem de contato de: ${contactData.email}`);
+      console.log(`[CONTACT] Assunto: ${contactData.subject}`);
+      
+      // Enviar email usando o sistema existente
+      const { sendContactEmail } = await import('./email');
+      
+      const emailResult = await sendContactEmail(
+        contactData.email,
+        contactData.name,
+        contactData.subject,
+        contactData.message
+      );
+      
+      if (emailResult.success) {
+        console.log(`[CONTACT] Email enviado com sucesso para: ${contactData.email}`);
+        res.json({ 
+          message: "Mensagem enviada com sucesso! Você receberá uma confirmação por email.",
+          success: true 
+        });
+      } else {
+        console.error(`[CONTACT] Erro ao enviar email:`, emailResult.error);
+        res.status(500).json({ 
+          message: "Erro ao enviar email. Tente novamente ou use nosso Discord.",
+          error: true 
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   return server;
 }

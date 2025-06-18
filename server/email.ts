@@ -306,6 +306,97 @@ export async function sendLicenseKeyEmail(email: string, licenseKey: string, pla
   }
 }
 
+export async function sendContactEmail(
+  email: string, 
+  name: string, 
+  subject: string, 
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const transporter = createTransporter();
+    const fromEmail = process.env.SMTP_FROM || 'contato@suportefovdark.shop';
+    const supportEmail = process.env.SUPPORT_EMAIL || 'contato@suportefovdark.shop';
+
+    // Email para o suporte
+    const supportMailOptions = {
+      from: `"FovDark Contact" <${fromEmail}>`,
+      to: supportEmail,
+      subject: `[SUPORTE] ${subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000000; color: #ffffff; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #8b00ff; margin: 0; text-shadow: 0 0 10px #8b00ff;">FovDark</h1>
+            <p style="color: #888; margin: 5px 0;">Nova Mensagem de Suporte</p>
+          </div>
+          
+          <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
+            <h3 style="color: #8b00ff; margin-top: 0;">Detalhes do Contato:</h3>
+            <p><strong>Nome:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Assunto:</strong> ${subject}</p>
+            <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+          </div>
+          
+          <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff1493;">
+            <h3 style="color: #ff1493; margin-top: 0;">Mensagem:</h3>
+            <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
+          </div>
+        </div>
+      `,
+    };
+
+    // Email de confirmação para o usuário
+    const userMailOptions = {
+      from: `"FovDark Support" <${fromEmail}>`,
+      to: email,
+      subject: 'Mensagem recebida - FovDark Support',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000000; color: #ffffff; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #8b00ff; margin: 0; text-shadow: 0 0 10px #8b00ff;">FovDark</h1>
+            <p style="color: #888; margin: 5px 0;">Confirmação de Recebimento</p>
+          </div>
+          
+          <h2 style="color: #8b00ff; text-shadow: 0 0 10px #8b00ff;">Obrigado por entrar em contato!</h2>
+          <p>Olá ${name},</p>
+          <p>Recebemos sua mensagem sobre: <strong>${subject}</strong></p>
+          
+          <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #8b00ff;">
+            <p>Nossa equipe de suporte analisará sua solicitação e responderá em breve.</p>
+            <p><strong>Tempo médio de resposta:</strong> 24-48 horas</p>
+          </div>
+          
+          <div style="background-color: #111111; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ff1493;">
+            <h3 style="color: #ff1493; margin-top: 0;">Para suporte mais rápido:</h3>
+            <p>Você também pode entrar em contato conosco através do nosso Discord para suporte em tempo real.</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
+            <p style="color: #888; font-size: 14px;">
+              Atenciosamente,<br>
+              Equipe FovDark
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    // Enviar ambos os emails
+    await Promise.all([
+      transporter.sendMail(supportMailOptions),
+      transporter.sendMail(userMailOptions)
+    ]);
+
+    console.log(`[CONTACT] Emails enviados com sucesso para: ${email}`);
+    return { success: true };
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('[CONTACT] Erro ao enviar email de contato:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
 export async function testEmailConnection() {
   try {
     const transporter = createTransporter();
