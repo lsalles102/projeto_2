@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { apiRequest } from '@/lib/queryClient';
+import { authApi } from '@/lib/api';
 
 interface User {
-  id: number;
+  id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  is_admin?: boolean;
   isAdmin?: boolean;
 }
 
@@ -47,17 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/user', {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // The server returns { user: userData }, so we need to extract the user
-          setUser(data.user || data);
-        } else {
-          // Clear any stored user data on failed auth
-          setUser(null);
-        }
+        const data = await authApi.getUser();
+        setUser(data.user || data);
       } catch (error) {
         console.error('Auth check error:', error);
         setUser(null);
@@ -70,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const data = await apiRequest('POST', '/api/auth/register', {
+    const data = await authApi.register({
       email,
       password,
       firstName,
@@ -89,10 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('AuthContext: Tentando fazer login com:', { email });
       
-      const data = await apiRequest('POST', '/api/auth/login', {
-        email,
-        password,
-      });
+      const data = await authApi.login(email, password);
       
       console.log('AuthContext: Resposta do login:', data);
       

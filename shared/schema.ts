@@ -13,8 +13,8 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users table (extending Supabase auth.users)
-export const users = pgTable("app_users", {
+// Users table (using Supabase auth.users structure)
+export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email").unique().notNull(),
   password: varchar("password").notNull(),
