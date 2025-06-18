@@ -127,12 +127,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Registration route
   app.post("/api/auth/register", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
     try {
-      const { email, username, password, firstName, lastName } = registerSchema.parse(req.body);
+      const { email, password, firstName, lastName } = registerSchema.parse(req.body);
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "Email já está em uso" });
       }
+
+      // Generate username from email and firstName
+      const username = `${firstName.toLowerCase()}_${email.split('@')[0]}`;
 
       const user = await storage.createUser({
         email,
@@ -142,9 +145,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
       });
 
-      res.status(201).json({ 
-        user: { ...user, password: undefined },
-        message: "Usuário criado com sucesso" 
+      // Auto-login after registration
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Auto-login error:", err);
+          return res.status(201).json({ 
+            user: { ...user, password: undefined },
+            message: "Usuário criado com sucesso" 
+          });
+        }
+
+        const token = generateToken(user.id);
+        res.status(201).json({ 
+          user: { ...user, password: undefined },
+          token,
+          message: "Usuário criado e logado com sucesso" 
+        });
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

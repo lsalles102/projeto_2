@@ -114,11 +114,11 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  username: z.string().optional(),
 });
 
-export const createUserSchema = insertUserSchema.omit({
-  username: true,
-});
+export const createUserSchema = insertUserSchema;
 
 export const insertLicenseHistorySchema = createInsertSchema(licenseHistory).omit({
   id: true,
@@ -132,7 +132,6 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: z.string().email("Email inválido").max(254, "Email muito longo"),
-  username: z.string().min(1, "Username é obrigatório").max(50, "Username muito longo"),
   password: z.string()
     .min(8, "Senha deve ter pelo menos 8 caracteres")
     .max(128, "Senha muito longa")
