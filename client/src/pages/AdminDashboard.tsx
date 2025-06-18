@@ -35,6 +35,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedLicense, setSelectedLicense] = useState<any>(null);
+  const [downloadUrl, setDownloadUrl] = useState("");
 
   // Fetch admin dashboard data
   const { data: adminData, isLoading } = useQuery({
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
   const stats = (adminData as any)?.stats || {};
   const users = (adminData as any)?.users || [];
   const licenses = (adminData as any)?.licenses || [];
+  const currentDownloadUrl = (adminData as any)?.settings?.downloadUrl || "";
 
   // Update user form
   const updateUserForm = useForm<UpdateUserFormData>({
@@ -55,6 +57,27 @@ export default function AdminDashboard() {
   const updateLicenseForm = useForm<UpdateLicenseFormData>({
     resolver: zodResolver(updateLicenseSchema),
     defaultValues: {},
+  });
+
+  // Update download URL mutation
+  const updateDownloadUrlMutation = useMutation({
+    mutationFn: () => 
+      apiRequest("/api/admin/settings/download-url", { 
+        method: "POST", 
+        body: { downloadUrl } 
+      }),
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Link de download atualizado!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+      setDownloadUrl("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar link de download",
+        variant: "destructive",
+      });
+    },
   });
 
   // Mutations
@@ -200,10 +223,11 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="licenses">Licenças</TabsTrigger>
           <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+          <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -436,6 +460,78 @@ export default function AdminDashboard() {
                   <div className="bg-muted rounded-lg p-4">
                     <div className="text-sm text-gray-400 mb-1">Licenças Ativas</div>
                     <div className="text-2xl font-bold text-primary">{stats.activeLicenses || 0}</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <Card className="bg-card/50 backdrop-blur-sm border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-primary">Configurações do Sistema</CardTitle>
+              <CardDescription className="text-gray-400">
+                Gerencie as configurações globais do sistema FovDark
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Download Link Configuration */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Link de Download</h3>
+                  <div className="bg-muted rounded-lg p-4">
+                    <Label htmlFor="downloadUrl" className="text-gray-300">
+                      URL do Arquivo de Download
+                    </Label>
+                    <div className="flex gap-3 mt-2">
+                      <Input
+                        id="downloadUrl"
+                        placeholder="https://exemplo.com/arquivo.exe"
+                        className="flex-1 bg-background/50 border-primary/20 text-white"
+                        value={downloadUrl}
+                        onChange={(e) => setDownloadUrl(e.target.value)}
+                      />
+                      <Button
+                        onClick={() => updateDownloadUrlMutation.mutate()}
+                        disabled={updateDownloadUrlMutation.isPending || !downloadUrl.trim()}
+                        className="bg-primary text-black hover:bg-primary/90"
+                      >
+                        {updateDownloadUrlMutation.isPending ? "Atualizando..." : "Atualizar"}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-400 mt-2">
+                      Este link será usado para todos os downloads de usuários com licenças ativas.
+                    </p>
+                  </div>
+                  
+                  {/* Current Download URL Display */}
+                  <div className="bg-background/30 rounded-lg p-4">
+                    <Label className="text-gray-300">Link Atual:</Label>
+                    <p className="text-sm text-white mt-1 break-all">
+                      {currentDownloadUrl || "Não configurado"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* System Status */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Status do Sistema</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <h4 className="text-green-400 font-semibold">Sistema de Licenças</h4>
+                      <p className="text-sm text-gray-300 mt-1">
+                        Monitoramento automático ativo
+                      </p>
+                    </div>
+                    
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                      <h4 className="text-blue-400 font-semibold">Pagamentos PIX</h4>
+                      <p className="text-sm text-gray-300 mt-1">
+                        Webhook configurado e funcional
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
