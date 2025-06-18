@@ -283,6 +283,7 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 18, 2025. Implemented API endpoint /api/admin/settings/download-url for download URL management
 - June 18, 2025. Enhanced admin dashboard with system settings and download link update functionality
 - June 18, 2025. Successfully migrated from Replit Agent to standard Replit environment
+- June 18, 2025. Fixed password change functionality in dashboard - corrected bcrypt usage to plain text comparison per user preference
 
 ## User Preferences
 

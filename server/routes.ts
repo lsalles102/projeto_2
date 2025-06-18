@@ -1198,17 +1198,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
-      // Verify current password using bcrypt
-      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
-      if (!isCurrentPasswordValid) {
+      // Verify current password (plain text comparison)
+      if (currentUser.password !== currentPassword) {
         return res.status(400).json({ message: "Senha atual incorreta" });
       }
 
-      // Hash new password
-      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-
-      // Update password
-      await storage.updateUser(user.id, { password: hashedNewPassword });
+      // Update password (plain text)
+      await storage.updateUser(user.id, { password: newPassword });
 
       console.log(`[CHANGE PASSWORD] Password changed for user: ${currentUser.email}`);
       res.json({ message: "Senha alterada com sucesso" });
