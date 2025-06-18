@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: false }));
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't crash the process, just log it
+  // Log but don't crash - these are often from async operations
 });
 
 process.on('uncaughtException', (error) => {

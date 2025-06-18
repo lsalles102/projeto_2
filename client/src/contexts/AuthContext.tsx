@@ -93,12 +93,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data.user) {
         setUser(data.user);
-        // Force a state update to trigger re-renders
         setLoading(false);
       }
       
       return data;
     } catch (error) {
+      console.error('Login error in context:', error);
       setUser(null);
       setLoading(false);
       throw error;

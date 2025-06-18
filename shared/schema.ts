@@ -133,18 +133,14 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   email: z.string().email("Email inválido").max(254, "Email muito longo"),
   password: z.string()
-    .min(8, "Senha deve ter pelo menos 8 caracteres")
-    .max(128, "Senha muito longa")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
-      "Senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
+    .min(3, "Senha deve ter pelo menos 3 caracteres")
+    .max(128, "Senha muito longa"),
   firstName: z.string()
     .min(1, "Nome é obrigatório")
-    .max(50, "Nome muito longo")
-    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Nome deve conter apenas letras"),
+    .max(50, "Nome muito longo"),
   lastName: z.string()
     .min(1, "Sobrenome é obrigatório")
-    .max(50, "Sobrenome muito longo")
-    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Sobrenome deve conter apenas letras"),
+    .max(50, "Sobrenome muito longo"),
 });
 
 // Schema para heartbeat do sistema de licenças
@@ -167,11 +163,9 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
   password: z.string()
-    .min(8, "Senha deve ter pelo menos 8 caracteres")
-    .max(128, "Senha muito longa")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
-      "Senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
-  confirmPassword: z.string().min(8),
+    .min(3, "Senha deve ter pelo menos 3 caracteres")
+    .max(128, "Senha muito longa"),
+  confirmPassword: z.string().min(3),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
