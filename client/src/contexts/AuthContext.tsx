@@ -92,31 +92,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Usuário logado com sucesso:', data.user.email);
         setUser(data.user);
         return data;
-      } else {
-        console.error('AuthContext: Resposta do login não contém usuário válido');
-        throw new Error('Resposta de login inválida');
+      } else if (data) {
+        console.log('AuthContext: Dados recebidos mas sem user:', data);
+        throw new Error('Dados de login inválidos');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('AuthContext: Erro no login:', error);
       setUser(null);
-      // Parse error message properly
-      const errorMessage = error?.message || 'Erro no login';
-      if (errorMessage.includes('Credenciais inválidas')) {
-        throw new Error('Email ou senha incorretos');
-      }
-      throw new Error(errorMessage);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const signOut = async () => {
-    await apiRequest('POST', '/api/auth/logout', {});
-    setUser(null);
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const resetPassword = async (email: string) => {
-    return await apiRequest('POST', '/api/auth/forgot-password', { email });
+    return await authApi.forgotPassword(email);
   };
 
   const value = {
