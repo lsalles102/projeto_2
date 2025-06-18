@@ -36,10 +36,10 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isProduction, // Secure cookies in production
-      sameSite: isProduction ? 'none' : 'lax', // Allow cross-site cookies in production
+      secure: false, // Disable secure for compatibility
+      sameSite: 'lax', // Use lax for better compatibility
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
-      domain: isProduction ? '.fovdark.shop' : undefined, // Set domain for production
+      // Remove domain restriction for compatibility
     },
   };
 

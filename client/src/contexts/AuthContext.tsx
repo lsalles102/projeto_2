@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authApi } from '@/lib/api';
+import { authApi, setAuthToken, getAuthToken } from '@/lib/api';
 
 interface User {
   id: string;
@@ -51,11 +51,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if user is already authenticated
     const checkAuth = async () => {
       try {
+        // First, check if we have a stored token
+        const token = getAuthToken();
+        if (token) {
+          setAuthToken(token);
+        }
+        
         const data = await authApi.getUser();
         setUser(data.user || data);
       } catch (error) {
         console.error('Auth check error:', error);
         setUser(null);
+        setAuthToken(null); // Clear invalid token
       } finally {
         setLoading(false);
       }
@@ -91,6 +98,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && data.user) {
         console.log('AuthContext: Usuário logado com sucesso:', data.user.email);
         setUser(data.user);
+        
+        // Store token if provided
+        if (data.token) {
+          setAuthToken(data.token);
+        }
+        
         return data;
       } else if (data) {
         console.log('AuthContext: Dados recebidos mas sem user:', data);
@@ -99,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('AuthContext: Erro no login:', error);
       setUser(null);
+      setAuthToken(null);
       throw error;
     } finally {
       setLoading(false);
@@ -112,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Erro no logout:', error);
     } finally {
       setUser(null);
+      setAuthToken(null);
     }
   };
 

@@ -3,6 +3,25 @@ import { queryClient } from './queryClient';
 
 const API_BASE = '';
 
+// Token storage
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('authToken', token);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem('authToken');
+  }
+  return authToken;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -20,9 +39,14 @@ export async function fetchApi<T = any>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   
+  const token = getAuthToken();
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
+
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   const config: RequestInit = {
     ...options,
