@@ -30,7 +30,7 @@ const plans = [
   {
     id: "7days",
     name: "7 DIAS",
-    price: "R$ 19,90",
+    price: "R$ 14,90",
     duration: "7 dias",
     durationDays: 7,
     icon: <Star className="text-orange-500 text-4xl" />,
@@ -47,7 +47,7 @@ const plans = [
   {
     id: "15days", 
     name: "15 DIAS",
-    price: "R$ 34,90",
+    price: "R$ 29,90",
     duration: "15 dias",
     durationDays: 15,
     icon: <Crown className="text-yellow-400 text-4xl" />,

@@ -28,7 +28,7 @@ export default function Pricing() {
     },
     {
       name: "7 DIAS",
-      price: "R$ 19,90",
+      price: "R$ 14,90",
       duration: "7 dias",
       icon: <Star className="text-orange-500 text-4xl" />,
       features: [
@@ -45,7 +45,7 @@ export default function Pricing() {
     },
     {
       name: "15 DIAS",
-      price: "R$ 34,90",
+      price: "R$ 29,90",
       duration: "15 dias",
       icon: <Crown className="text-yellow-400 text-4xl" />,
       popular: true,
