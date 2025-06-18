@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, CheckCircle, AlertCircle } from "lucide-react";
 import { resetPasswordSchema } from "@shared/schema";
 import { PasswordValidator, getPasswordStrength, isPasswordValid } from "@/components/PasswordValidator";
-import { apiRequest } from "@/lib/queryClient";
+import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { z } from "zod";
 
@@ -77,7 +77,7 @@ export default function ResetPassword() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (data: ResetPasswordFormData) => 
-      apiRequest("/api/auth/reset-password", { method: "POST", body: data }),
+      authApi.resetPassword(data.token, data.password, data.confirmPassword),
     onSuccess: () => {
       setIsSuccess(true);
       toast({

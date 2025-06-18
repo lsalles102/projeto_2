@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, ArrowLeft } from "lucide-react";
 import { forgotPasswordSchema } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { z } from "zod";
 
@@ -29,7 +29,7 @@ export default function ForgotPassword() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: (data: ForgotPasswordFormData) => 
-      apiRequest("/api/auth/forgot-password", { method: "POST", body: data }),
+      authApi.forgotPassword(data.email),
     onSuccess: () => {
       setIsSubmitted(true);
       toast({

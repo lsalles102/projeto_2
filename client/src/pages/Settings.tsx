@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { authApi, userApi } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 import { PasswordValidator, getPasswordStrength, isPasswordValid } from "@/components/PasswordValidator";
 import { Link } from "wouter";
 import { 
@@ -60,7 +61,7 @@ export default function Settings() {
 
   // Change password mutation
   const changePasswordMutation = useMutation({
-    mutationFn: (data: ChangePasswordData) => apiRequest("/api/users/change-password", data),
+    mutationFn: (data: ChangePasswordData) => authApi.changePassword(data.currentPassword, data.newPassword, data.confirmPassword),
     onSuccess: () => {
       toast({
         title: "Senha alterada",
