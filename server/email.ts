@@ -28,12 +28,8 @@ const createTransporter = () => {
 export async function sendPasswordResetEmail(email: string, resetToken: string) {
   const transporter = createTransporter();
   
-  // SEMPRE usar fovdark.shop em produção, Replit URL em desenvolvimento
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://fovdark.shop'
-    : process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : 'http://localhost:5000';
+  // SEMPRE usar fovdark.shop para todos os ambientes (produção e desenvolvimento)
+  const baseUrl = 'https://fovdark.shop';
   
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
   
