@@ -37,12 +37,11 @@ export async function testUserRegistration() {
     console.log("=== TESTANDO REGISTRO DE USUÁRIO ===");
     
     const testEmail = `test${Date.now()}@example.com`;
-    const hashedPassword = await bcrypt.hash("123456", 10);
     
     const user = await storage.createUser({
       email: testEmail,
       username: `test${Date.now()}`,
-      password: hashedPassword,
+      password: "123456",
       firstName: "Teste",
       lastName: "Usuario"
     });
