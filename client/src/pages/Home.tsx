@@ -9,7 +9,6 @@ import {
   Users,
   Clock,
   TrendingUp,
-  Play,
 } from "lucide-react";
 
 export default function Home() {
@@ -73,19 +72,36 @@ export default function Home() {
               Aimbot indetectável. Domine todas as partidas com precisão
               perfeita.
             </h2>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center mb-8">
               <Link href="/pricing">
                 <Button className="px-8 py-4 bg-primary text-black rounded-lg neon-glow font-bold text-lg hover:scale-105 transition-all duration-300">
                   <i className="fas fa-shopping-cart mr-2"></i>COMPRAR AGORA
                 </Button>
               </Link>
-              <Button
-                variant="ghost"
-                className="px-8 py-4 bg-card/50 backdrop-blur-sm rounded-lg font-bold text-lg hover:bg-glass-border transition-all duration-300"
-              >
-                <Play className="w-5 h-5 mr-2" />
-                VER DEMO
-              </Button>
+            </div>
+
+            {/* Video Demo Card */}
+            <div className="mt-12 max-w-4xl mx-auto">
+              <Card className="bg-card/50 backdrop-blur-sm border-primary/20 overflow-hidden">
+                <CardContent className="p-6">
+                  <h3 className="text-2xl font-orbitron font-bold text-center mb-6 text-primary">
+                    🎮 DEMONSTRAÇÃO DO CHEAT EM AÇÃO
+                  </h3>
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-black/50">
+                    <iframe
+                      src="https://www.canva.com/design/DAGqoRxxcRk/lIm_TyWZsFLglfT7kJE9-w/watch?embed"
+                      className="w-full h-full"
+                      frameBorder="0"
+                      allow="autoplay; fullscreen"
+                      allowFullScreen
+                      title="FovDark Cheat Demo"
+                    ></iframe>
+                  </div>
+                  <p className="text-center text-gray-300 mt-4 text-sm">
+                    Veja o FovDark em ação no BloodStrike com aimbot preciso e recursos avançados
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
