@@ -284,6 +284,13 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 18, 2025. Enhanced admin dashboard with system settings and download link update functionality
 - June 18, 2025. Successfully migrated from Replit Agent to standard Replit environment
 - June 18, 2025. Fixed password change functionality in dashboard - corrected bcrypt usage to plain text comparison per user preference
+- June 18, 2025. Completed migration from Replit Agent to standard Replit environment with all systems operational
+- June 18, 2025. Fixed password reset system - corrected database constraints and email URLs for production
+- June 18, 2025. Simplified password validation schema to allow basic passwords (minimum 3 characters)
+- June 18, 2025. Corrected foreign key constraint in password_reset_tokens table to reference app_users instead of users
+- June 18, 2025. Updated email system to always use https://fovdark.shop/ for password reset links
+- June 18, 2025. Fixed apiRequest function in frontend to use correct parameter order for API calls
+- June 18, 2025. Verified complete functionality: authentication, password reset, password change, payments, licensing
 
 ## User Preferences
 

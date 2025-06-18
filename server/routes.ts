@@ -1109,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await sendPasswordResetEmail(email, resetToken);
         console.log(`Password reset email sent to: ${email}`);
-        console.log(`Reset URL: ${resetUrl}`);
+        console.log(`Reset URL: https://fovdark.shop/reset-password?token=${resetToken}`);
       } catch (emailError) {
         console.error('Email sending error:', emailError);
         // Still return success to not reveal if email exists
