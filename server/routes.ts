@@ -2,6 +2,7 @@ import { Express, Request, Response, RequestHandler } from "express";
 import { Server } from "http";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import bcrypt from "bcrypt";
 
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
@@ -1197,13 +1198,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
-      // Verify current password
-      if (currentUser.password !== currentPassword) {
+      // Verify current password using bcrypt
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
+      if (!isCurrentPasswordValid) {
         return res.status(400).json({ message: "Senha atual incorreta" });
       }
 
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
       // Update password
-      await storage.updateUser(user.id, { password: newPassword });
+      await storage.updateUser(user.id, { password: hashedNewPassword });
 
       console.log(`[CHANGE PASSWORD] Password changed for user: ${currentUser.email}`);
       res.json({ message: "Senha alterada com sucesso" });
