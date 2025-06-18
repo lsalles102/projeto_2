@@ -153,7 +153,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  const PORT = process.env.PORT || 5000;
+  const PORT = parseInt(process.env.PORT || "5000", 10);
   app.listen(PORT, "0.0.0.0", () => {
     log(`Production server running on port ${PORT}`);
   });
