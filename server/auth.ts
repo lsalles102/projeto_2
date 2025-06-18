@@ -45,7 +45,7 @@ export function getSession() {
   if (process.env.DATABASE_URL) {
     sessionConfig.store = new PgSession({
       conString: process.env.DATABASE_URL,
-      tableName: 'sessions',
+      tableName: 'custom_sessions',
       createTableIfMissing: true,
     });
   } else {
