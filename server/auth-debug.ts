@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import bcrypt from "bcrypt";
+// bcrypt removed - using plain text passwords
 
 // Função para criar usuário admin de teste
 export async function createTestAdmin() {
@@ -14,14 +14,13 @@ export async function createTestAdmin() {
     }
     
     // Criar admin
-    const hashedPassword = await bcrypt.hash("admin123", 10);
     const adminUser = await storage.createUser({
       email: "lsalles102@gmail.com",
       username: "admin",
-      password: hashedPassword,
+      password: "SenhaCorrigida@123",
       firstName: "Admin",
       lastName: "FovDark",
-      isAdmin: true
+      is_admin: true
     });
     
     console.log("✅ Admin criado com sucesso:", adminUser.email);
