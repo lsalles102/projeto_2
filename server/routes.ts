@@ -1096,11 +1096,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
       });
 
-      // Create reset URL
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : process.env.NODE_ENV === 'production' 
-          ? 'https://fovdark.shop'
+      // Create reset URL - SEMPRE usar fovdark.shop em produção
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://fovdark.shop'
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : 'http://localhost:5000';
       
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
@@ -1255,6 +1255,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update download URL error:", error);
       res.status(500).json({ message: "Erro ao atualizar link de download" });
+    }
+  });
+
+  // Endpoint de teste para validar sistema de senha
+  app.post("/api/test/password-reset", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+
+      console.log(`[TEST PASSWORD RESET] Iniciando teste para: ${email}`);
+      
+      // Verificar se usuário existe
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Gerar token de reset
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      // Salvar token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // URL de reset
+      const baseUrl = 'https://fovdark.shop';
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+      console.log(`[TEST PASSWORD RESET] Token gerado: ${resetToken}`);
+      console.log(`[TEST PASSWORD RESET] URL de reset: ${resetUrl}`);
+
+      res.json({
+        success: true,
+        message: "Token de reset gerado com sucesso",
+        resetToken,
+        resetUrl,
+        expiresAt
+      });
+
+    } catch (error) {
+      console.error("[TEST PASSWORD RESET] Erro:", error);
+      res.status(500).json({ message: "Erro interno" });
     }
   });
 

@@ -174,11 +174,9 @@ export const resetPasswordSchema = z.object({
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Senha atual é obrigatória"),
   newPassword: z.string()
-    .min(8, "Nova senha deve ter pelo menos 8 caracteres")
-    .max(128, "Nova senha muito longa")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, 
-      "Nova senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 caractere especial (@$!%*?&)"),
-  confirmPassword: z.string().min(8, "Confirmação de senha é obrigatória"),
+    .min(3, "Nova senha deve ter pelo menos 3 caracteres")
+    .max(128, "Nova senha muito longa"),
+  confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],

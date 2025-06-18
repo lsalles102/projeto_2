@@ -28,9 +28,14 @@ const createTransporter = () => {
 export async function sendPasswordResetEmail(email: string, resetToken: string) {
   const transporter = createTransporter();
   
-  // Use getBaseUrl from config for correct URL construction
-  const { getBaseUrl } = await import('./config');
-  const resetUrl = `${getBaseUrl()}/reset-password?token=${resetToken}`;
+  // SEMPRE usar fovdark.shop em produção, Replit URL em desenvolvimento
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://fovdark.shop'
+    : process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : 'http://localhost:5000';
+  
+  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
   
   const mailOptions = {
     from: process.env.SMTP_FROM || 'contato@suportefovdark.shop',
