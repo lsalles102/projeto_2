@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,20 +37,22 @@ export default function Support() {
   });
 
   const contactMutation = useMutation({
-    mutationFn: (data: ContactFormData) => 
+    mutationFn: (data: ContactFormData) =>
       apiRequest("POST", "/api/contact", data),
     onSuccess: () => {
       setIsSuccess(true);
       form.reset();
       toast({
         title: "Mensagem enviada",
-        description: "Sua mensagem foi enviada com sucesso! Você receberá uma confirmação por email.",
+        description:
+          "Sua mensagem foi enviada com sucesso! Você receberá uma confirmação por email.",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao enviar mensagem. Tente novamente.",
+        description:
+          error.message || "Erro ao enviar mensagem. Tente novamente.",
         variant: "destructive",
       });
     },
@@ -59,9 +67,7 @@ export default function Support() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 neon-text">
-            Suporte FovDark
-          </h1>
+          <h1 className="text-4xl font-bold mb-4 neon-text">Suporte FovDark</h1>
           <p className="text-gray-400 text-lg">
             Entre em contato conosco para qualquer dúvida ou problema
           </p>
@@ -89,7 +95,10 @@ export default function Support() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome *</Label>
@@ -97,10 +106,14 @@ export default function Support() {
                       id="name"
                       placeholder="Seu nome"
                       {...form.register("name")}
-                      className={form.formState.errors.name ? "border-red-500" : ""}
+                      className={
+                        form.formState.errors.name ? "border-red-500" : ""
+                      }
                     />
                     {form.formState.errors.name && (
-                      <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.name.message}
+                      </p>
                     )}
                   </div>
 
@@ -111,10 +124,14 @@ export default function Support() {
                       type="email"
                       placeholder="seu@email.com"
                       {...form.register("email")}
-                      className={form.formState.errors.email ? "border-red-500" : ""}
+                      className={
+                        form.formState.errors.email ? "border-red-500" : ""
+                      }
                     />
                     {form.formState.errors.email && (
-                      <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.email.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -125,10 +142,14 @@ export default function Support() {
                     id="subject"
                     placeholder="Assunto da sua mensagem"
                     {...form.register("subject")}
-                    className={form.formState.errors.subject ? "border-red-500" : ""}
+                    className={
+                      form.formState.errors.subject ? "border-red-500" : ""
+                    }
                   />
                   {form.formState.errors.subject && (
-                    <p className="text-sm text-red-500">{form.formState.errors.subject.message}</p>
+                    <p className="text-sm text-red-500">
+                      {form.formState.errors.subject.message}
+                    </p>
                   )}
                 </div>
 
@@ -139,10 +160,14 @@ export default function Support() {
                     placeholder="Descreva sua dúvida ou problema em detalhes..."
                     rows={5}
                     {...form.register("message")}
-                    className={form.formState.errors.message ? "border-red-500" : ""}
+                    className={
+                      form.formState.errors.message ? "border-red-500" : ""
+                    }
                   />
                   {form.formState.errors.message && (
-                    <p className="text-sm text-red-500">{form.formState.errors.message.message}</p>
+                    <p className="text-sm text-red-500">
+                      {form.formState.errors.message.message}
+                    </p>
                   )}
                 </div>
 
@@ -174,8 +199,10 @@ export default function Support() {
                 <MessageCircle className="text-indigo-500 text-4xl mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Discord</h3>
                 <p className="text-gray-400 mb-4">Suporte em tempo real</p>
-                <Button 
-                  onClick={() => window.open('https://discord.gg/nh6y9k6KVd', '_blank')}
+                <Button
+                  onClick={() =>
+                    window.open("https://discord.gg/nh6y9k6KVd", "_blank")
+                  }
                   className="bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300"
                 >
                   Entrar no Discord
@@ -187,9 +214,13 @@ export default function Support() {
               <CardContent className="p-6">
                 <Mail className="text-primary text-4xl mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Email</h3>
-                <p className="text-gray-400 mb-4">contato@suportefovdark.shop</p>
-                <Button 
-                  onClick={() => window.open('mailto:contato@suportefovdark.shop', '_blank')}
+                <p className="text-gray-400 mb-4">
+                  contato@suportefovdark.shop
+                </p>
+                <Button
+                  onClick={() =>
+                    window.open("mailto:contato@suportefovdark.shop", "_blank")
+                  }
                   className="bg-primary text-black hover:scale-105 transition-all duration-300"
                 >
                   Enviar Email
@@ -206,19 +237,27 @@ export default function Support() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-bold text-primary mb-2">Como ativar minha licença?</h4>
+                  <h4 className="font-bold text-primary mb-2">
+                    Como ativar minha licença?
+                  </h4>
                   <p className="text-gray-400 text-sm">
-                    Acesse seu dashboard e insira a chave de ativação que você recebeu.
+                    Acesse seu dashboard e a ativação que você comprou estará
+                    disponivel automaticamente.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-bold text-primary mb-2">Problemas de download?</h4>
+                  <h4 className="font-bold text-primary mb-2">
+                    Problemas de download?
+                  </h4>
                   <p className="text-gray-400 text-sm">
-                    Verifique se sua licença está ativa e entre em contato se persistir.
+                    Verifique se sua licença está ativa e entre em contato se
+                    persistir.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-bold text-primary mb-2">Tempo de resposta</h4>
+                  <h4 className="font-bold text-primary mb-2">
+                    Tempo de resposta
+                  </h4>
                   <p className="text-gray-400 text-sm">
                     Respondemos em até 24-48 horas via email ou Discord.
                   </p>

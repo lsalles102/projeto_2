@@ -1251,6 +1251,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact form endpoint
   app.post("/api/contact", rateLimit(5, 15 * 60 * 1000), async (req, res) => {
     try {
+      console.log(`[CONTACT] Dados recebidos:`, JSON.stringify(req.body, null, 2));
+      
+      // Validar se o body está presente e não está vazio
+      if (!req.body || Object.keys(req.body).length === 0) {
+        console.error(`[CONTACT] Body vazio ou inválido`);
+        return res.status(400).json({ 
+          message: "Dados não fornecidos",
+          error: true 
+        });
+      }
+
       const contactData = contactSchema.parse(req.body);
       
       console.log(`[CONTACT] Nova mensagem de contato de: ${contactData.email}`);
@@ -1281,6 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error(`[CONTACT] Erro de validação:`, error.errors);
         return res.status(400).json({ 
           message: "Dados inválidos", 
           errors: error.errors 
