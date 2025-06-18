@@ -152,10 +152,14 @@ class DatabaseStorage implements IStorage {
   async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
     const { db } = await import("./db");
     const { passwordResetTokens } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
+    const { eq, and, gt } = await import("drizzle-orm");
     
     const result = await db.select().from(passwordResetTokens)
-      .where(eq(passwordResetTokens.token, token))
+      .where(and(
+        eq(passwordResetTokens.token, token),
+        eq(passwordResetTokens.used, false),
+        gt(passwordResetTokens.expiresAt, new Date())
+      ))
       .limit(1);
     
     return result[0];
