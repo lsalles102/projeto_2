@@ -1189,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Change password route
   app.post("/api/users/change-password", isAuthenticated, async (req, res) => {
     try {
-      console.log(`[CHANGE PASSWORD] Request received from user:`, req.user ? req.user.id : 'Not authenticated');
+      console.log(`[CHANGE PASSWORD] Request received from user:`, req.user ? (req.user as any).id : 'Not authenticated');
       console.log(`[CHANGE PASSWORD] Request body keys:`, Object.keys(req.body));
       
       const user = req.user as any;

@@ -8,9 +8,9 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
   url: string,
   data?: unknown,
+  method: string = "POST"
 ): Promise<any> {
   console.log(`[API] Fazendo requisição ${method} para ${url}`, data);
   
