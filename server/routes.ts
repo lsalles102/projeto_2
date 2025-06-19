@@ -951,9 +951,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware de verificação de admin
   const isAdmin: RequestHandler = (req, res, next) => {
     const user = req.user as any;
-    if (!user || !user.is_admin) {
+    console.log(`[ADMIN CHECK] User:`, user ? { id: user.id, email: user.email, is_admin: user.is_admin, isAdmin: user.isAdmin } : 'null');
+    
+    if (!user) {
+      console.log(`[ADMIN CHECK] Usuário não autenticado`);
+      return res.status(403).json({ message: "Acesso negado. Usuário não autenticado." });
+    }
+    
+    // Verificar ambos os campos possíveis (is_admin e isAdmin)
+    const isUserAdmin = user.is_admin === true || user.isAdmin === true;
+    
+    if (!isUserAdmin) {
+      console.log(`[ADMIN CHECK] Usuário ${user.email} não é admin. is_admin: ${user.is_admin}, isAdmin: ${user.isAdmin}`);
       return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
     }
+    
+    console.log(`[ADMIN CHECK] Admin verificado: ${user.email}`);
     next();
   };
 

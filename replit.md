@@ -303,7 +303,9 @@ FovDark is a comprehensive software licensing platform designed specifically for
 - June 18, 2025. Password recovery system verified: forgot-password and reset-password endpoints working
 - June 18, 2025. Password change system verified: change-password endpoint working for authenticated users
 - June 18, 2025. Email system operational: password reset emails sent successfully with valid tokens
-- June 18, 2025. Current admin credentials: lsalles102@gmail.com / SenhaAlterada456 (tested and confirmed)
+- June 19, 2025. Current admin credentials: lsalles102@gmail.com / SenhaRecuperada456@ (tested and confirmed)
+- June 19, 2025. Fixed admin panel download URL configuration - authorization working correctly
+- June 19, 2025. Admin can successfully update download URLs via /api/admin/settings/download-url endpoint
 - June 18, 2025. Successfully migrated from Replit Agent to standard Replit environment - all systems operational
 - June 18, 2025. Backend authentication verified working - login/register APIs responding correctly
 - June 18, 2025. Database connection to Supabase confirmed functional with 16 users in system
