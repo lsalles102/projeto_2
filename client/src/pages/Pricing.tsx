@@ -163,7 +163,7 @@ export default function Pricing() {
             <div className="bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg p-6 border border-primary/30">
               <div className="mb-4 flex justify-center">
                 <img 
-                  src="/attached_assets/10875824-1024x1024_1750292028838.jpg" 
+                  src="/attached_assets/10875822_1750292197182.jpg" 
                   alt="PIX Logo" 
                   className="w-16 h-16 object-contain"
                 />
