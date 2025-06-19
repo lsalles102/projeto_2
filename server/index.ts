@@ -128,6 +128,9 @@ function serveStatic(app: express.Express) {
   });
 }
 
+// Serve attached assets first (before any middleware)
+app.use('/attached_assets', express.static(path.resolve('.', 'attached_assets')));
+
 // CORS e Security headers middleware
 app.use((req, res, next) => {
   const allowedOrigins = [

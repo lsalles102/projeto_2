@@ -161,7 +161,13 @@ export default function Pricing() {
           </h3>
           <div className="flex justify-center items-center">
             <div className="bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg p-6 border border-primary/30">
-              <div className="text-6xl text-primary mb-4">📱</div>
+              <div className="mb-4 flex justify-center">
+                <img 
+                  src="/attached_assets/10875824-1024x1024_1750292028838.jpg" 
+                  alt="PIX Logo" 
+                  className="w-16 h-16 object-contain"
+                />
+              </div>
               <h4 className="text-2xl font-bold text-primary mb-2">PIX</h4>
               <p className="text-gray-300">Pagamento instantâneo e seguro</p>
             </div>
