@@ -104,9 +104,9 @@ export default function Dashboard() {
   const handleRenewLicense = () => {
     toast({
       title: "Renovação de Licença",
-      description: "Redirecionando para a página de preços...",
+      description: "Redirecionando para pagamento PIX...",
     });
-    setLocation("/pricing");
+    setLocation("/payment");
   };
 
   const handleSettings = () => {
