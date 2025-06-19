@@ -162,11 +162,22 @@ export default function Pricing() {
           <div className="flex justify-center items-center">
             <div className="bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg p-6 border border-primary/30">
               <div className="mb-4 flex justify-center">
-                <img 
-                  src="/attached_assets/10875822_1750292197182.jpg" 
-                  alt="PIX Logo" 
-                  className="w-16 h-16 object-contain"
-                />
+                <div className="w-16 h-16 flex items-center justify-center">
+                  <svg 
+                    width="48" 
+                    height="48" 
+                    viewBox="0 0 64 64" 
+                    className="text-primary"
+                    fill="currentColor"
+                  >
+                    <g transform="rotate(45 32 32)">
+                      <rect x="8" y="8" width="20" height="20" rx="4" ry="4"/>
+                      <rect x="36" y="8" width="20" height="20" rx="4" ry="4"/>
+                      <rect x="8" y="36" width="20" height="20" rx="4" ry="4"/>
+                      <rect x="36" y="36" width="20" height="20" rx="4" ry="4"/>
+                    </g>
+                  </svg>
+                </div>
               </div>
               <h4 className="text-2xl font-bold text-primary mb-2">PIX</h4>
               <p className="text-gray-300">Pagamento instantâneo e seguro</p>
