@@ -102,11 +102,20 @@ export default function Dashboard() {
 
   // Quick action handlers
   const handleRenewLicense = () => {
-    toast({
-      title: "Renovação de Licença",
-      description: "Redirecionando para pagamento PIX...",
-    });
-    setLocation("/payment");
+    try {
+      toast({
+        title: "Renovação de Licença",
+        description: "Redirecionando para seleção de planos...",
+      });
+      setLocation("/plans");
+    } catch (error) {
+      console.error("Erro ao navegar para planos:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao navegar para planos. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSettings = () => {
@@ -247,12 +256,29 @@ export default function Dashboard() {
                 <div className="text-center py-8">
                   <p className="text-gray-400 mb-4">Você ainda não possui uma licença ativa.</p>
                   <div className="flex gap-4 justify-center">
-                    <Link href="/payment">
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Download className="w-4 h-4 mr-2" />
-                        Comprar Licença PIX
-                      </Button>
-                    </Link>
+                    <Button 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        try {
+                          console.log("Clicando em Comprar Licença PIX");
+                          toast({
+                            title: "Redirecionando",
+                            description: "Aguarde, direcionando para seleção de planos...",
+                          });
+                          setLocation("/plans");
+                        } catch (error) {
+                          console.error("Erro ao navegar:", error);
+                          toast({
+                            title: "Erro",
+                            description: "Erro ao navegar. Tente novamente.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Comprar Licença PIX
+                    </Button>
                   </div>
                   <div className="mt-4 text-sm text-gray-500">
                     Sua licença será ativada automaticamente após a confirmação do pagamento

@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Auth check error:', error);
         setUser(null);
         setAuthToken(null); // Clear invalid token
+        // Don't throw error - just continue with unauthenticated state
       } finally {
         setLoading(false);
       }

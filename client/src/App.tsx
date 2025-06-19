@@ -5,8 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { setupGlobalErrorHandling } from "@/lib/errorHandler";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,6 +21,7 @@ const Register = lazy(() => import("@/pages/Register"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
+const Plans = lazy(() => import("@/pages/Plans"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
 const Payment = lazy(() => import("@/pages/Payment"));
 const PaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
@@ -60,6 +62,7 @@ function Router() {
             <Route path="/forgot-password" component={ForgotPassword} />
             <Route path="/reset-password" component={ResetPassword} />
             <Route path="/pricing" component={Pricing} />
+            <Route path="/plans" component={Plans} />
             <Route path="/checkout" component={Checkout} />
             <Route path="/payment">
               <ProtectedRoute>
@@ -102,6 +105,10 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    setupGlobalErrorHandling();
+  }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
