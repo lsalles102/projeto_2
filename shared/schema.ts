@@ -85,6 +85,17 @@ export const hwidResetLogs = pgTable("hwid_reset_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// System settings table for storing configuration
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key").unique().notNull(), // 'download_url', 'maintenance_mode', etc.
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedBy: uuid("updated_by").references(() => users.id), // Admin que fez a alteração
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Mercado Pago payments table
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
@@ -185,6 +196,22 @@ export const changePasswordSchema = z.object({
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
   id: true,
   createdAt: true,
+});
+
+// System settings schemas
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSystemSettingSchema = z.object({
+  value: z.string().min(1, "Valor é obrigatório"),
+  description: z.string().optional(),
+});
+
+export const downloadUrlSettingSchema = z.object({
+  downloadUrl: z.string().url("URL inválida").min(1, "URL é obrigatória"),
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({

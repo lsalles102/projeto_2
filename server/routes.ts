@@ -977,8 +977,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       const payments = await storage.getAllPayments();
 
-      // Buscar configurações do sistema (incluindo download URL)
-      const downloadUrl = process.env.DOWNLOAD_URL || "";
+      // Buscar configurações do sistema do Supabase
+      const downloadUrlSetting = await storage.getSystemSetting('download_url');
+      const downloadUrl = downloadUrlSetting?.value || "";
+      
+      console.log(`[ADMIN DASHBOARD] Download URL do Supabase: ${downloadUrl}`);
       
       res.json({
         stats,
@@ -1338,7 +1341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin - Atualizar link de download
+  // Admin - Atualizar link de download (AGORA SALVA NO SUPABASE)
   app.post("/api/admin/settings/download-url", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { downloadUrl } = req.body;
@@ -1354,14 +1357,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "URL inválida" });
       }
 
-      // Como estamos usando variáveis de ambiente, vamos logar a mudança
-      console.log(`[ADMIN] Link de download atualizado por admin: ${(req.user as any).email}`);
+      const user = req.user as any;
+      console.log(`[ADMIN] Salvando link de download no Supabase por admin: ${user.email}`);
       console.log(`[ADMIN] Novo link: ${downloadUrl}`);
       
-      // Em um sistema de produção real, você salvaria isso no banco de dados
-      // Por agora, vamos apenas confirmar que recebemos a atualização
+      // Salvar diretamente no Supabase usando SQL
+      const { db } = await import("./db");
+      const { systemSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      await db.update(systemSettings)
+        .set({
+          value: downloadUrl,
+          updatedBy: user.id,
+          updatedAt: new Date()
+        })
+        .where(eq(systemSettings.key, 'download_url'));
+      
+      console.log(`[ADMIN] Link salvo com sucesso no Supabase!`);
+      
       res.json({ 
-        message: "Link de download atualizado com sucesso",
+        message: "Link de download atualizado com sucesso no Supabase",
         downloadUrl: downloadUrl
       });
     } catch (error) {

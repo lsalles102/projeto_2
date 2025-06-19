@@ -10,6 +10,16 @@ import {
   type InsertHwidResetLog
 } from "@shared/schema";
 
+export interface SystemSetting {
+  id: number;
+  key: string;
+  value: string;
+  description?: string;
+  updatedBy?: string;
+  updatedAt: Date;
+  createdAt: Date;
+}
+
 export interface IStorage {
   // User operations (with integrated license system)
   getUser(id: string): Promise<User | undefined>;
@@ -43,6 +53,11 @@ export interface IStorage {
   getAllPayments(): Promise<Payment[]>;
   getSystemStats(): Promise<any>;
   deleteUser(id: string): Promise<void>;
+  
+  // System settings operations
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  setSystemSetting(key: string, value: string, updatedBy?: string, description?: string): Promise<SystemSetting>;
+  getAllSystemSettings(): Promise<SystemSetting[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -344,6 +359,106 @@ class DatabaseStorage implements IStorage {
     if (userExists.length === 0) {
       // User was successfully deleted or didn't exist
       console.log(`Usuário ${id} deletado com sucesso`);
+    }
+  }
+
+  // System settings operations
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    try {
+      const { db } = await import("./db");
+      const { systemSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const result = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      const row = result[0];
+      return {
+        id: row.id,
+        key: row.key,
+        value: row.value,
+        description: row.description || undefined,
+        updatedBy: row.updatedBy || undefined,
+        updatedAt: row.updatedAt,
+        createdAt: row.createdAt
+      };
+    } catch (error) {
+      console.error(`Erro ao buscar configuração ${key}:`, error);
+      return undefined;
+    }
+  }
+
+  async setSystemSetting(key: string, value: string, updatedBy?: string, description?: string): Promise<SystemSetting> {
+    try {
+      const { db } = await import("./db");
+      const { systemSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Verificar se a configuração já existe
+      const existing = await this.getSystemSetting(key);
+      
+      let result;
+      if (existing) {
+        // Atualizar configuração existente
+        result = await db.update(systemSettings)
+          .set({
+            value: value,
+            description: description || existing.description,
+            updatedBy: updatedBy,
+            updatedAt: new Date()
+          })
+          .where(eq(systemSettings.key, key))
+          .returning();
+      } else {
+        // Criar nova configuração
+        result = await db.insert(systemSettings)
+          .values({
+            key: key,
+            value: value,
+            description: description,
+            updatedBy: updatedBy
+          })
+          .returning();
+      }
+      
+      const row = result[0];
+      return {
+        id: row.id,
+        key: row.key,
+        value: row.value,
+        description: row.description || undefined,
+        updatedBy: row.updatedBy || undefined,
+        updatedAt: row.updatedAt,
+        createdAt: row.createdAt
+      };
+    } catch (error) {
+      console.error(`Erro ao definir configuração ${key}:`, error);
+      throw error;
+    }
+  }
+
+  async getAllSystemSettings(): Promise<SystemSetting[]> {
+    try {
+      const { db } = await import("./db");
+      const { systemSettings } = await import("@shared/schema");
+      
+      const result = await db.select().from(systemSettings).orderBy(systemSettings.key);
+      
+      return result.map((row) => ({
+        id: row.id,
+        key: row.key,
+        value: row.value,
+        description: row.description || undefined,
+        updatedBy: row.updatedBy || undefined,
+        updatedAt: row.updatedAt,
+        createdAt: row.createdAt
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar todas as configurações:", error);
+      return [];
     }
   }
 }
