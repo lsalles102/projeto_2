@@ -103,7 +103,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Erro ao criar administrador",
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Fix admin user endpoint
+  app.post("/api/test/fix-admin", async (req, res) => {
+    try {
+      console.log("=== CORRIGINDO USUÁRIO ADMIN ===");
+      
+      const adminUser = await storage.getUserByEmail("admin@fovdark.com");
+      if (!adminUser) {
+        return res.status(404).json({
+          success: false,
+          message: "Usuário admin não encontrado"
+        });
+      }
+      
+      // Update user to be admin
+      const updatedUser = await storage.updateUser(adminUser.id, {
+        is_admin: true
+      });
+      
+      console.log("✅ Admin corrigido:", updatedUser.email);
+      
+      res.json({
+        success: true,
+        message: "Usuário administrador corrigido com sucesso",
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          is_admin: updatedUser.is_admin
+        }
+      });
+    } catch (error) {
+      console.error("❌ Erro ao corrigir admin:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao corrigir administrador",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Create test user for testing delete functionality
+  app.post("/api/test/create-test-user", async (req, res) => {
+    try {
+      const testUser = await storage.createUser({
+        email: `test${Date.now()}@example.com`,
+        username: `test${Date.now()}`,
+        password: "123456",
+        firstName: "Test",
+        lastName: "User",
+        is_admin: false
+      });
+      
+      res.json({
+        success: true,
+        message: "Usuário de teste criado",
+        user: {
+          id: testUser.id,
+          email: testUser.email,
+          firstName: testUser.firstName,
+          lastName: testUser.lastName
+        }
+      });
+    } catch (error) {
+      console.error("❌ Erro ao criar usuário de teste:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao criar usuário de teste",
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
