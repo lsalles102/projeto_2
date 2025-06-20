@@ -341,24 +341,50 @@ class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     const { db } = await import("./db");
-    const { users, downloadLogs, passwordResetTokens, payments, hwidResetLogs } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
+    const { users, downloadLogs, passwordResetTokens, payments, hwidResetLogs, licenseHistory, systemSettings } = await import("@shared/schema");
+    const { eq, or } = await import("drizzle-orm");
     
-    // Delete related data first to maintain referential integrity
-    await db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
-    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
-    await db.delete(payments).where(eq(payments.userId, id));
-    await db.delete(hwidResetLogs).where(eq(hwidResetLogs.userId, id));
-    
-    // Finally delete the user
-    const result = await db.delete(users).where(eq(users.id, id));
-    
-    // No PostgreSQL, o resultado do delete pode não ter rowCount
-    // Verificamos se o usuário existia antes de tentar deletar
-    const userExists = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    if (userExists.length === 0) {
-      // User was successfully deleted or didn't exist
+    try {
+      console.log(`Iniciando exclusão do usuário ${id}...`);
+      
+      // Delete related data first to maintain referential integrity
+      console.log('Removendo download logs...');
+      await db.delete(downloadLogs).where(eq(downloadLogs.userId, id));
+      
+      console.log('Removendo password reset tokens...');
+      await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+      
+      console.log('Removendo payments...');
+      await db.delete(payments).where(eq(payments.userId, id));
+      
+      console.log('Removendo HWID reset logs...');
+      await db.delete(hwidResetLogs).where(
+        or(
+          eq(hwidResetLogs.userId, id),
+          eq(hwidResetLogs.adminId, id)
+        )
+      );
+      
+      console.log('Removendo license history...');
+      await db.delete(licenseHistory).where(
+        or(
+          eq(licenseHistory.userId, id),
+          eq(licenseHistory.admin_id, id)
+        )
+      );
+      
+      console.log('Atualizando system settings...');
+      await db.update(systemSettings)
+        .set({ updatedBy: null })
+        .where(eq(systemSettings.updatedBy, id));
+      
+      console.log('Deletando usuário...');
+      await db.delete(users).where(eq(users.id, id));
+      
       console.log(`Usuário ${id} deletado com sucesso`);
+    } catch (error) {
+      console.error(`Erro ao deletar usuário ${id}:`, error);
+      throw new Error(`Falha ao deletar usuário: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   }
 
