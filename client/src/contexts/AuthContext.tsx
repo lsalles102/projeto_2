@@ -53,12 +53,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // First, check if we have a stored token
         const token = getAuthToken();
-        if (token) {
-          setAuthToken(token);
-        }
+        console.log('AuthContext: Verificando token inicial:', token ? 'Presente' : 'Null');
         
-        const data = await authApi.getUser();
-        setUser(data.user || data);
+        if (token) {
+          // Verify token is valid by making API call
+          const data = await authApi.getUser();
+          console.log('AuthContext: Usuário verificado com token:', data.user?.email);
+          setUser(data.user || data);
+        } else {
+          console.log('AuthContext: Nenhum token encontrado');
+          setUser(null);
+        }
       } catch (error) {
         console.error('Auth check error:', error);
         setUser(null);
@@ -98,12 +103,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data && data.user) {
         console.log('AuthContext: Usuário logado com sucesso:', data.user.email);
-        setUser(data.user);
         
-        // Store token if provided
+        // Store token FIRST before setting user
         if (data.token) {
+          console.log('AuthContext: Salvando token JWT');
           setAuthToken(data.token);
         }
+        
+        // Then set user - this will trigger re-renders
+        setUser(data.user);
+        
+        // Verify token was stored
+        const storedToken = getAuthToken();
+        console.log('AuthContext: Token verificado:', storedToken ? 'OK' : 'ERRO');
         
         return data;
       } else if (data) {

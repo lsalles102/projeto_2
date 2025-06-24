@@ -3,21 +3,38 @@ import { queryClient } from './queryClient';
 
 const API_BASE = '';
 
-// Token storage
+// Token storage with improved reliability
 let authToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
+  console.log('API: Definindo token:', token ? 'Presente' : 'Null');
   authToken = token;
   if (token) {
-    localStorage.setItem('authToken', token);
+    try {
+      localStorage.setItem('authToken', token);
+      console.log('API: Token salvo no localStorage');
+    } catch (error) {
+      console.error('API: Erro ao salvar token:', error);
+    }
   } else {
-    localStorage.removeItem('authToken');
+    try {
+      localStorage.removeItem('authToken');
+      console.log('API: Token removido do localStorage');
+    } catch (error) {
+      console.error('API: Erro ao remover token:', error);
+    }
   }
 }
 
 export function getAuthToken(): string | null {
   if (!authToken) {
-    authToken = localStorage.getItem('authToken');
+    try {
+      authToken = localStorage.getItem('authToken');
+      console.log('API: Token recuperado do localStorage:', authToken ? 'Presente' : 'Null');
+    } catch (error) {
+      console.error('API: Erro ao recuperar token:', error);
+      authToken = null;
+    }
   }
   return authToken;
 }
