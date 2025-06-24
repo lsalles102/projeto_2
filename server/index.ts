@@ -140,13 +140,18 @@ app.use((req, res, next) => {
     'http://localhost:3000'
   ];
   
+  // Adicionar domínio Replit dinamicamente se existir
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+  }
+  
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin as string)) {
     res.setHeader('Access-Control-Allow-Origin', origin as string);
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-signature, x-request-id');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
   

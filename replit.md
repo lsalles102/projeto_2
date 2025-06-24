@@ -4,15 +4,13 @@
 Sistema de gerenciamento de licenças para cheats/hacks com interface administrativa completa, integração com Supabase e Mercado Pago.
 
 ## Recent Changes
-- ✓ 2025-06-24 19:37: Migração completa do Replit Agent para ambiente Replit padrão
-- ✓ 2025-06-24 19:40: Configuração PostgreSQL local para desenvolvimento
-- ✓ 2025-06-24 19:45: Sistema de rotas API corrigido e funcionando
-- ✓ 2025-06-24 19:45: Endpoint de pagamentos PIX /api/payments/pix adicionado
-- ✓ 2025-06-24 19:45: Sistema de autenticação JWT operacional
-- ✓ 2025-06-24 19:45: Banco de dados limpo e otimizado
-- ✓ 2025-06-24 19:45: Health check endpoint /api/health funcionando
-- ✓ 2025-06-24 19:45: Sistema de monitoramento de licenças ativo
-- ✓ 2025-06-24 19:45: Webhook Mercado Pago configurado corretamente
+- ✓ 2025-06-24 19:37: Migração completa do Replit Agent para ambiente Replit
+- ✓ 2025-06-24 19:40: PostgreSQL configurado e funcionando localmente
+- ✓ 2025-06-24 19:45: Sistema de rotas API restaurado e operacional
+- ✓ 2025-06-24 19:49: Rotas de pagamento PIX configuradas para produção (https://fovdark.shop)
+- ✓ 2025-06-24 19:49: Webhook Mercado Pago funcional em produção e desenvolvimento
+- ✓ 2025-06-24 19:49: CORS configurado para domínio de produção
+- ✓ 2025-06-24 19:49: Sistema de pagamentos totalmente operacional com QR Code PIX
 
 ## User Preferences
 - Comunicação em português brasileiro
@@ -24,8 +22,10 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 ### Backend (Node.js/Express)
 - Autenticação JWT + Passport
 - Sistema de licenças integrado
-- Webhook Mercado Pago
+- Webhook Mercado Pago configurado para https://fovdark.shop
 - API REST para frontend
+- Rotas de pagamento: /api/payments/create-pix e /api/payments/pix
+- CORS configurado para produção e desenvolvimento
 
 ### Frontend (React/Vite)
 - Dashboard de usuário

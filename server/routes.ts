@@ -913,7 +913,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PIX Payment creation route
+  // Rota principal de criação de pagamento PIX (compatível com frontend)
+  app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      console.log("=== CRIAÇÃO DE PAGAMENTO PIX (create-pix) ===");
+      const user = req.user as any;
+      console.log(`Usuário: ${user.id} - ${user.email}`);
+      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
+      
+      const validationResult = createPixPaymentSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.log("❌ Dados inválidos:", validationResult.error.errors);
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const requestData = validationResult.data;
+      
+      const paymentData = {
+        userId: user.id,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays,
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+      };
+      
+      console.log("Criando pagamento no Mercado Pago...");
+      const pixPayment = await createPixPayment(paymentData);
+      console.log("Pagamento PIX criado:", pixPayment);
+      
+      // Salvar no banco de dados
+      const payment = await storage.createPayment({
+        userId: user.id,
+        preferenceId: pixPayment.preferenceId,
+        externalReference: pixPayment.externalReference,
+        status: "pending",
+        transactionAmount: pixPayment.transactionAmount,
+        currency: pixPayment.currency,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays.toString(),
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+        pixQrCode: pixPayment.pixQrCode,
+        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
+      });
+      
+      console.log("✅ Pagamento salvo no banco:", payment.id);
+      
+      // Resposta compatível com o frontend existente
+      res.json({
+        success: true,
+        payment: {
+          id: payment.id,
+          externalReference: payment.externalReference,
+          transactionAmount: payment.transactionAmount,
+          currency: payment.currency,
+          plan: payment.plan,
+          durationDays: payment.durationDays,
+          status: payment.status,
+          pixQrCode: payment.pixQrCode,
+          pixQrCodeBase64: payment.pixQrCodeBase64,
+          preferenceId: payment.preferenceId,
+          createdAt: payment.createdAt
+        },
+        initPoint: pixPayment.initPoint
+      });
+    } catch (error) {
+      console.error("❌ Erro na criação do pagamento PIX:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno ao criar pagamento",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Rota alternativa de criação de pagamento PIX (compatibilidade)
   app.post("/api/payments/pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
     try {
       console.log("=== CRIAÇÃO DE PAGAMENTO PIX ===");
