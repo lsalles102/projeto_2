@@ -13,7 +13,8 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 19:49: Sistema de pagamentos totalmente operacional com QR Code PIX
 - ✓ 2025-06-24 19:54: Problema de exclusão de usuários no Supabase resolvido
 - ✓ 2025-06-24 19:54: Função SQL segura criada para deletar usuários respeitando foreign keys
-- ✓ 2025-06-24 19:54: Banco de dados limpo - apenas usuários administradores mantidos
+- ✓ 2025-06-24 19:55: Usuários regulares restaurados, admins extras removidos
+- ✓ 2025-06-24 19:55: Mantido apenas admin@fovdark.com como administrador principal
 
 ## User Preferences
 - Comunicação em português brasileiro
@@ -37,7 +38,7 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - Interface para downloads
 
 ### Database (PostgreSQL/Supabase)
-- Usuários e permissões (3 administradores ativos)
+- Usuários e permissões (1 administrador, 5 usuários regulares)
 - Licenças e pagamentos (29 registros de pagamento)
 - Configurações do sistema
 - Logs de auditoria
