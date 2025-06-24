@@ -157,7 +157,10 @@ export default function Payment() {
 
       const response = await fetch("/api/payments/create-pix", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('authToken') || ''}`
+        },
         credentials: "include",
         body: JSON.stringify(requestBody),
       });
@@ -245,6 +248,9 @@ export default function Payment() {
         const response = await fetch(
           `/api/payments/${pixData.id}/status`,
           {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem('authToken') || ''}`
+            },
             credentials: "include",
           },
         );
