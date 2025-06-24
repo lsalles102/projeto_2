@@ -1,0 +1,166 @@
+Auth: Verificando autenticação para GET /api/auth/user
+Auth: Authorization header: Bearer eyJhbGciOiJIU...
+Auth: Token válido para usuário: 7c1b3ccc-006c-4c61-82c2-f1d2b8c509e5
+Auth: Usuário autenticado com sucesso: lsalles102@gmail.com
+Auth: Retornando dados do usuário: lsalles102@gmail.com
+9:42:12 PM [express] GET /api/auth/user 304 in 544ms :: {"user":{"id":"7c1b3ccc-006c-4c61-82c2-f1d2b…
+Auth: Token não encontrado. Headers: undefined
+Auth: Verificando autenticação para GET /api/auth/user
+Auth: Authorization header: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:16 PM [express] GET /api/auth/user 401 in 191ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Authorization header: undefined
+Auth: Token não encontrado. Headers: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:18 PM [express] GET /api/dashboard 401 in 187ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Authorization header: undefined
+Auth: Token não encontrado. Headers: undefined
+9:42:19 PM [express] GET /api/dashboard 401 in 183ms :: {"message":"Não autorizado"}
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Authorization header: undefined
+Auth: Token não encontrado. Headers: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:22 PM [express] GET /api/dashboard 401 in 182ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/auth/user
+Auth: Authorization header: undefined
+Auth: Token não encontrado. Headers: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:25 PM [express] GET /api/auth/user 401 in 179ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Token não encontrado. Headers: undefined
+Auth: Authorization header: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:25 PM [express] GET /api/dashboard 401 in 180ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Token não encontrado. Headers: undefined
+Auth: Authorization header: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:27 PM [express] GET /api/dashboard 401 in 179ms :: {"message":"Não autorizado"}
+Auth: Verificando autenticação para GET /api/dashboard
+Auth: Token não encontrado. Headers: undefined
+Auth: Authorization header: undefined
+Auth: Todas as headers: [
+  'host',             'user-agent',
+  'accept',           'accept-encoding',
+  'accept-language',  'cdn-loop',
+  'cf-connecting-ip', 'cf-ipcountry',
+  'cf-ray',           'cf-visitor',
+  'cookie',           'dnt',
+  'if-none-match',    'priority',
+  'referer',          'render-proxy-ttl',
+  'rndr-id',          'sec-ch-ua',
+  'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+  'sec-fetch-dest',   'sec-fetch-mode',
+  'sec-fetch-site',   'true-client-ip',
+  'x-forwarded-for',  'x-forwarded-proto',
+  'x-request-start'
+]
+9:42:29 PM [express] GET /api/dashboard 401 in 180ms :: {"message":"Não autorizado"}

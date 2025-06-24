@@ -125,18 +125,19 @@ export default function Checkout() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/payments/pix/create', {
+      // Use the correct API endpoint that we know works
+      const response = await fetch('/api/payments/create-pix', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
         },
         credentials: 'include',
         body: JSON.stringify({
           plan: plan.id,
-          durationDays: plan.durationDays,
           payerEmail: user.email,
-          payerFirstName: user.firstName,
-          payerLastName: user.lastName,
+          payerFirstName: user.firstName || user.first_name || 'Nome',
+          payerLastName: user.lastName || user.last_name || 'Sobrenome',
         }),
       });
 

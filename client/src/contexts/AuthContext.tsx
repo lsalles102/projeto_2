@@ -62,8 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await authApi.getUser();
             console.log('AuthContext: Usuário verificado com token:', data.user?.email || data.email);
             setUser(data.user || data);
-          } catch (apiError) {
+          } catch (apiError: any) {
             console.log('AuthContext: Token inválido ou expirado, removendo');
+            console.error('AuthContext: Erro na verificação:', apiError.message);
             setAuthToken(null);
             setUser(null);
           }
@@ -116,14 +117,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.token) {
           console.log('AuthContext: Salvando token JWT');
           setAuthToken(data.token);
+          
+          // Force immediate verification
+          const verifyToken = getAuthToken();
+          console.log('AuthContext: Token imediatamente verificado:', verifyToken ? 'OK' : 'ERRO');
+          
+          if (!verifyToken) {
+            throw new Error('Falha ao salvar token de autenticação');
+          }
+        } else {
+          throw new Error('Token não recebido do servidor');
         }
         
         // Then set user - this will trigger re-renders
         setUser(data.user);
-        
-        // Verify token was stored
-        const storedToken = getAuthToken();
-        console.log('AuthContext: Token verificado:', storedToken ? 'OK' : 'ERRO');
         
         return data;
       } else if (data) {

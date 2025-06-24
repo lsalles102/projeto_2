@@ -19,6 +19,7 @@ export function setAuthToken(token: string | null) {
   } else {
     try {
       localStorage.removeItem('authToken');
+      authToken = null;
       console.log('API: Token removido do localStorage');
     } catch (error) {
       console.error('API: Erro ao remover token:', error);
@@ -27,14 +28,18 @@ export function setAuthToken(token: string | null) {
 }
 
 export function getAuthToken(): string | null {
-  if (!authToken) {
-    try {
-      authToken = localStorage.getItem('authToken');
-      console.log('API: Token recuperado do localStorage:', authToken ? 'Presente' : 'Null');
-    } catch (error) {
-      console.error('API: Erro ao recuperar token:', error);
+  // Always check localStorage first to ensure consistency
+  try {
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken && storedToken !== authToken) {
+      authToken = storedToken;
+      console.log('API: Token sincronizado do localStorage:', authToken ? 'Presente' : 'Null');
+    } else if (!storedToken) {
       authToken = null;
     }
+  } catch (error) {
+    console.error('API: Erro ao recuperar token:', error);
+    authToken = null;
   }
   return authToken;
 }
@@ -56,8 +61,9 @@ export async function fetchApi<T = any>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   
+  // Always get fresh token for each request
   const token = getAuthToken();
-  console.log(`API: Fazendo requisição para ${endpoint} com token:`, token ? 'Presente' : 'Ausente');
+  console.log(`API: Fazendo requisição para ${endpoint} com token:`, token ? `${token.substring(0, 20)}...` : 'Ausente');
   
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
@@ -67,7 +73,7 @@ export async function fetchApi<T = any>(
     defaultHeaders['Authorization'] = `Bearer ${token}`;
     console.log(`API: Header Authorization adicionado para ${endpoint}`);
   } else {
-    console.warn(`API: Nenhum token disponível para ${endpoint}`);
+    console.warn(`API: Nenhum token disponível para ${endpoint} - usuário precisa fazer login`);
   }
 
   const config: RequestInit = {
@@ -79,6 +85,8 @@ export async function fetchApi<T = any>(
     credentials: 'include', // Always include cookies for session auth
   };
 
+  console.log(`API: Headers finais para ${endpoint}:`, Object.keys(config.headers || {}));
+
   try {
     const response = await fetch(url, config);
     
@@ -88,6 +96,12 @@ export async function fetchApi<T = any>(
         errorData = await response.json();
       } catch {
         errorData = { message: response.statusText };
+      }
+      
+      // Handle 401 errors by clearing invalid tokens
+      if (response.status === 401) {
+        console.warn('API: Token inválido ou expirado, limpando...');
+        setAuthToken(null);
       }
       
       throw new ApiError(
