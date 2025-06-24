@@ -56,20 +56,11 @@ export default function Dashboard() {
     license?.hwid
   );
 
-  // Download cheat mutation
+  // Download cheat mutation with proper authentication
   const downloadMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/download/cheat", {
-        method: "GET",
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Falha no download");
-      }
-      
-      return response.json();
+      // Use apiRequest to ensure token is included
+      return await apiRequest("GET", "/api/download/cheat");
     },
     onSuccess: (data: any) => {
       // Trigger actual file download using the secure URL

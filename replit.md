@@ -17,6 +17,10 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 22:05: Sistema de pagamento PIX unificado e testado
 - ✓ 2025-06-24 22:05: Autenticação funcionando em todas as páginas
 - ✓ 2025-06-24 22:05: Criação de pagamentos testada e confirmada (ID: 61)
+- ✓ 2025-06-24 23:23: Sistema de download com licença ativa corrigido
+- ✓ 2025-06-24 23:23: Autenticação JWT funcionando em endpoint de download
+- ✓ 2025-06-24 23:23: API unificada com tokens automáticos em todas as requisições
+- ✓ 2025-06-24 23:23: Fluxo completo testado: login → pagamento → ativação → download
 
 ## User Preferences
 - Comunicação em português brasileiro
