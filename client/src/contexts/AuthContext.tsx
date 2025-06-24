@@ -56,13 +56,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Verificando token inicial:', token ? 'Presente' : 'Null');
         
         if (token) {
+          console.log('AuthContext: Token encontrado, verificando validade...');
           // Verify token is valid by making API call - but don't block page rendering
           try {
             const data = await authApi.getUser();
-            console.log('AuthContext: Usuário verificado com token:', data.user?.email);
+            console.log('AuthContext: Usuário verificado com token:', data.user?.email || data.email);
             setUser(data.user || data);
           } catch (apiError) {
-            console.log('AuthContext: Token inválido, removendo');
+            console.log('AuthContext: Token inválido ou expirado, removendo');
             setAuthToken(null);
             setUser(null);
           }

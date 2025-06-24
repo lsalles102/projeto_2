@@ -7,6 +7,39 @@ import fs from "fs";
 
 const app = express();
 
+// CORS configuration for Render production environment
+app.use((req, res, next) => {
+  const isDevelopment = !process.env.RENDER && !process.env.NODE_ENV?.includes('production');
+  
+  if (isDevelopment) {
+    // Development CORS - more permissive
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else {
+    // Production CORS - strict
+    const allowedOrigins = [
+      'https://fovdark.shop',
+      'https://www.fovdark.shop'
+    ];
+    
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin as string)) {
+      res.setHeader('Access-Control-Allow-Origin', origin as string);
+    }
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
 // Add proper error handling for malformed JSON
 app.use(express.json({
   limit: '10mb'
@@ -130,49 +163,6 @@ function serveStatic(app: express.Express) {
 
 // Serve attached assets first (before any middleware)
 app.use('/attached_assets', express.static(path.resolve('.', 'attached_assets')));
-
-// CORS e Security headers middleware
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://fovdark.shop',
-    'https://www.fovdark.shop',
-    'http://localhost:5000',
-    'http://localhost:3000'
-  ];
-  
-  // Adicionar domínio Replit dinamicamente se existir
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
-  }
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin as string)) {
-    res.setHeader('Access-Control-Allow-Origin', origin as string);
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-signature, x-request-id');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
-  // Remove potentially revealing headers
-  res.removeHeader('X-Powered-By');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  
-  next();
-});
 
 app.use((req, res, next) => {
   const start = Date.now();

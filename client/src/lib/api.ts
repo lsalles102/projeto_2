@@ -57,12 +57,17 @@ export async function fetchApi<T = any>(
   const url = `${API_BASE}${endpoint}`;
   
   const token = getAuthToken();
+  console.log(`API: Fazendo requisição para ${endpoint} com token:`, token ? 'Presente' : 'Ausente');
+  
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
 
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
+    console.log(`API: Header Authorization adicionado para ${endpoint}`);
+  } else {
+    console.warn(`API: Nenhum token disponível para ${endpoint}`);
   }
 
   const config: RequestInit = {

@@ -114,8 +114,12 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
     // Verificar token JWT no header Authorization
     const authHeader = req.headers.authorization;
+    console.log(`Auth: Verificando autenticação para ${req.method} ${req.path}`);
+    console.log(`Auth: Authorization header:`, authHeader ? authHeader.substring(0, 20) + '...' : 'undefined');
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.error(`Auth: Token não encontrado. Headers: ${JSON.stringify(req.headers.authorization)}`);
+      console.error(`Auth: Todas as headers:`, Object.keys(req.headers));
       return res.status(401).json({ message: "Não autorizado" });
     }
 

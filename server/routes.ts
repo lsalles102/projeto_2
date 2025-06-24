@@ -492,14 +492,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User profile
   app.get("/api/auth/user", isAuthenticated, async (req, res) => {
-    const user = req.user as any;
-    res.json({
-      user: {
-        ...user,
-        password: undefined,
-        isAdmin: user.is_admin, // Mapear is_admin para isAdmin para o frontend
-      },
-    });
+    try {
+      const user = req.user as any;
+      console.log(`Auth: Retornando dados do usuário: ${user.email}`);
+      res.json({
+        user: {
+          ...user,
+          password: undefined,
+          isAdmin: user.is_admin, // Mapear is_admin para isAdmin para o frontend
+        },
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Erro ao buscar dados do usuário" });
+    }
   });
 
   // Dashboard with license info
