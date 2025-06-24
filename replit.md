@@ -16,6 +16,9 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 19:55: Usuários regulares restaurados, admins extras removidos
 - ✓ 2025-06-24 19:55: Mantido apenas admin@fovdark.com como administrador principal
 - ✓ 2025-06-24 19:56: Senhas dos usuários regulares corrigidas para "senha123"
+- ✓ 2025-06-24 20:01: Sistema de pagamentos simplificado para uma única rota funcional
+- ✓ 2025-06-24 20:01: Corrigido problema de autenticação durante compras
+- ✓ 2025-06-24 20:01: Rota /api/payments/create-pix otimizada e estável
 
 ## User Preferences
 - Comunicação em português brasileiro

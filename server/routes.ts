@@ -2,6 +2,7 @@ import { Express, Request, Response, RequestHandler } from "express";
 import { Server } from "http";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import jwt from "jsonwebtoken";
 
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, generateToken } from "./auth";
@@ -560,19 +561,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PIX payment creation
+  // ÚNICA ROTA DE PAGAMENTO PIX - FUNCIONAL
   app.post("/api/payments/create-pix", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const { plan, durationDays, payerEmail, payerFirstName, payerLastName } =
-        createPixPaymentSchema.parse(req.body);
+      console.log(`PIX: Usuário ${user.email} criando pagamento`);
+      
+      const { plan, payerEmail, payerFirstName, payerLastName } = req.body;
+      
+      if (!plan || !payerEmail || !payerFirstName || !payerLastName) {
+        return res.status(400).json({
+          success: false,
+          message: "Dados obrigatórios em falta"
+        });
+      }
 
-      console.log(
-        `🔥 Criando pagamento PIX para usuário ${user.id}, plano: ${plan}`,
-      );
-
+      const durationDays = plan === "test" ? 0.021 : plan === "7days" ? 7 : 15;
+      
       const pixData = await createPixPayment({
-        userId: parseInt(user.id),
+        userId: user.id,
         plan,
         durationDays,
         payerEmail,
@@ -580,8 +587,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payerLastName,
       });
 
-      // Save payment to database
-      console.log("💾 Salvando pagamento no banco de dados...");
       const payment = await storage.createPayment({
         userId: user.id,
         preferenceId: pixData.preferenceId,
@@ -598,8 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pixQrCodeBase64: pixData.pixQrCodeBase64,
       });
 
-      console.log(`✅ Pagamento salvo no banco: ID ${payment.id}`);
-      console.log(`🔗 External Reference: ${pixData.externalReference}`);
+      console.log(`PIX: Pagamento criado ID ${payment.id}`);
 
       res.json({
         success: true,
@@ -609,7 +613,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionAmount: pixData.transactionAmount,
           currency: pixData.currency,
           plan,
-          durationDays: durationDays.toString(),
           status: "pending",
           pixQrCode: pixData.pixQrCode,
           pixQrCodeBase64: pixData.pixQrCodeBase64,
@@ -619,29 +622,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         initPoint: pixData.initPoint,
       });
     } catch (error) {
-      console.error("❌ Erro ao criar pagamento PIX:", error);
-      res.status(500).json({ message: "Erro ao criar pagamento PIX" });
+      console.error("PIX: Erro -", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao criar pagamento",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
     }
   });
 
-  // Webhook handler for Mercado Pago
+  // Webhook Mercado Pago
   app.post("/api/payments/webhook", async (req, res) => {
     try {
-      console.log(`🚀 === WEBHOOK MERCADO PAGO RECEBIDO ===`);
-      console.log(`📅 Timestamp: ${new Date().toISOString()}`);
-      console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
+      console.log("WEBHOOK recebido:", JSON.stringify(req.body, null, 2));
 
-      const webhookData = mercadoPagoWebhookSchema.parse(req.body);
+      let paymentId;
+      if (req.body.data?.id) {
+        paymentId = req.body.data.id;
+      } else if (req.body.resource) {
+        paymentId = req.body.resource;
+      } else {
+        return res.json({ received: true });
+      }
 
-      if (webhookData.type === "payment" && webhookData.data?.id) {
-        const paymentId = webhookData.data.id;
-        console.log(`🔍 Processando pagamento Mercado Pago ID: ${paymentId}`);
-
-        const paymentInfo = await getPaymentInfo(paymentId);
-        console.log(`📊 Status do pagamento MP: ${paymentInfo?.status}`);
-        console.log(
-          `🔗 External Reference: ${paymentInfo?.external_reference}`,
-        );
+      console.log(`🔍 Processando pagamento: ${paymentId}`);
+      
+      const paymentInfo = await getPaymentInfo(paymentId);
+      console.log(`📊 Status: ${paymentInfo?.status}`);
+      console.log(`🔗 External Reference: ${paymentInfo?.external_reference}`);
 
         if (paymentInfo?.status === "approved") {
           console.log(`🎉 === PAGAMENTO APROVADO NO MERCADO PAGO! ===`);
@@ -713,13 +721,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`❌ External reference não encontrada no pagamento MP`);
           }
         } else {
-          console.log(
-            `ℹ️ Pagamento não aprovado - Status: ${paymentInfo?.status}`,
-          );
+          console.log(`ℹ️ Pagamento não aprovado - Status: ${paymentInfo?.status}`);
         }
-      } else {
-        console.log(`ℹ️ Webhook ignorado - Tipo: ${webhookData.type}`);
-      }
 
       res.status(200).json({ received: true });
     } catch (error) {
@@ -913,170 +916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rota principal de criação de pagamento PIX (compatível com frontend)
-  app.post("/api/payments/create-pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
-    try {
-      console.log("=== CRIAÇÃO DE PAGAMENTO PIX (create-pix) ===");
-      const user = req.user as any;
-      console.log(`Usuário: ${user.id} - ${user.email}`);
-      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
-      
-      const validationResult = createPixPaymentSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        console.log("❌ Dados inválidos:", validationResult.error.errors);
-        return res.status(400).json({ 
-          message: "Dados inválidos", 
-          errors: validationResult.error.errors 
-        });
-      }
-      
-      const requestData = validationResult.data;
-      
-      const paymentData = {
-        userId: user.id,
-        plan: requestData.plan,
-        durationDays: requestData.durationDays,
-        payerEmail: requestData.payerEmail,
-        payerFirstName: requestData.payerFirstName,
-        payerLastName: requestData.payerLastName,
-      };
-      
-      console.log("Criando pagamento no Mercado Pago...");
-      const pixPayment = await createPixPayment(paymentData);
-      console.log("Pagamento PIX criado:", pixPayment);
-      
-      // Salvar no banco de dados
-      const payment = await storage.createPayment({
-        userId: user.id,
-        preferenceId: pixPayment.preferenceId,
-        externalReference: pixPayment.externalReference,
-        status: "pending",
-        transactionAmount: pixPayment.transactionAmount,
-        currency: pixPayment.currency,
-        plan: requestData.plan,
-        durationDays: requestData.durationDays.toString(),
-        payerEmail: requestData.payerEmail,
-        payerFirstName: requestData.payerFirstName,
-        payerLastName: requestData.payerLastName,
-        pixQrCode: pixPayment.pixQrCode,
-        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
-      });
-      
-      console.log("✅ Pagamento salvo no banco:", payment.id);
-      
-      // Resposta compatível com o frontend existente
-      res.json({
-        success: true,
-        payment: {
-          id: payment.id,
-          externalReference: payment.externalReference,
-          transactionAmount: payment.transactionAmount,
-          currency: payment.currency,
-          plan: payment.plan,
-          durationDays: payment.durationDays,
-          status: payment.status,
-          pixQrCode: payment.pixQrCode,
-          pixQrCodeBase64: payment.pixQrCodeBase64,
-          preferenceId: payment.preferenceId,
-          createdAt: payment.createdAt
-        },
-        initPoint: pixPayment.initPoint
-      });
-    } catch (error) {
-      console.error("❌ Erro na criação do pagamento PIX:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Dados inválidos", 
-          errors: error.errors 
-        });
-      }
-      res.status(500).json({ 
-        success: false,
-        message: "Erro interno ao criar pagamento",
-        error: error instanceof Error ? error.message : "Erro desconhecido"
-      });
-    }
-  });
 
-  // Rota alternativa de criação de pagamento PIX (compatibilidade)
-  app.post("/api/payments/pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
-    try {
-      console.log("=== CRIAÇÃO DE PAGAMENTO PIX ===");
-      const user = req.user as any;
-      console.log(`Usuário: ${user.id} - ${user.email}`);
-      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
-      
-      const validationResult = createPixPaymentSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        console.log("❌ Dados inválidos:", validationResult.error.errors);
-        return res.status(400).json({ 
-          message: "Dados inválidos", 
-          errors: validationResult.error.errors 
-        });
-      }
-      
-      const requestData = validationResult.data;
-      
-      const paymentData = {
-        userId: user.id,
-        plan: requestData.plan,
-        durationDays: requestData.durationDays,
-        payerEmail: requestData.payerEmail,
-        payerFirstName: requestData.payerFirstName,
-        payerLastName: requestData.payerLastName,
-      };
-      
-      console.log("Criando pagamento no Mercado Pago...");
-      const pixPayment = await createPixPayment(paymentData);
-      console.log("Pagamento PIX criado:", pixPayment);
-      
-      // Salvar no banco de dados
-      const payment = await storage.createPayment({
-        userId: user.id,
-        preferenceId: pixPayment.preferenceId,
-        externalReference: pixPayment.externalReference,
-        status: "pending",
-        transactionAmount: pixPayment.transactionAmount,
-        currency: pixPayment.currency,
-        plan: requestData.plan,
-        durationDays: requestData.durationDays.toString(),
-        payerEmail: requestData.payerEmail,
-        payerFirstName: requestData.payerFirstName,
-        payerLastName: requestData.payerLastName,
-        pixQrCode: pixPayment.pixQrCode,
-        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
-      });
-      
-      console.log("✅ Pagamento salvo no banco:", payment.id);
-      
-      res.json({
-        success: true,
-        paymentId: payment.id,
-        preferenceId: pixPayment.preferenceId,
-        initPoint: pixPayment.initPoint,
-        pixQrCode: pixPayment.pixQrCode,
-        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
-        amount: pixPayment.transactionAmount / 100,
-        currency: pixPayment.currency,
-        externalReference: pixPayment.externalReference,
-      });
-    } catch (error) {
-      console.error("❌ Erro na criação do pagamento PIX:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Dados inválidos", 
-          errors: error.errors 
-        });
-      }
-      res.status(500).json({ 
-        success: false,
-        message: "Erro interno ao criar pagamento",
-        error: error instanceof Error ? error.message : "Erro desconhecido"
-      });
-    }
-  });
 
   // Add webhook endpoint for MercadoPago
   app.post("/api/webhooks/mercadopago", async (req, res) => {

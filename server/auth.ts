@@ -36,10 +36,9 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Disable secure for compatibility
-      sameSite: 'lax', // Use lax for better compatibility
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 semana
-      // Remove domain restriction for compatibility
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 horas
     },
   };
 
