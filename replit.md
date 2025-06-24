@@ -8,6 +8,9 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-01-24 17:12: Usuário admin criado (admin@fovdark.com / admin123)
 - ✓ 2025-01-24 17:13: Sistema de autenticação administrativo funcionando
 - ✓ 2025-01-24 17:13: Painel admin com controle de URL de download operacional
+- ✓ 2025-01-24 17:44: Sistema de pagamentos PIX funcionando com Mercado Pago
+- ✓ 2025-01-24 17:45: Corrigido redirecionamento para Mercado Pago
+- ✓ 2025-01-24 17:46: Adicionados botões de redirecionamento e página de falha de pagamento
 
 ## User Preferences
 - Comunicação em português brasileiro

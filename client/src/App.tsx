@@ -25,6 +25,7 @@ const Plans = lazy(() => import("@/pages/Plans"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
 const Payment = lazy(() => import("@/pages/Payment"));
 const PaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
+const PaymentFailure = lazy(() => import("@/pages/PaymentFailure"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Support = lazy(() => import("@/pages/Support"));
 const Terms = lazy(() => import("@/pages/Terms"));
@@ -72,6 +73,11 @@ function Router() {
             <Route path="/payment/success">
               <ProtectedRoute>
                 <PaymentSuccess />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/payment/failure">
+              <ProtectedRoute>
+                <PaymentFailure />
               </ProtectedRoute>
             </Route>
             <Route path="/settings">

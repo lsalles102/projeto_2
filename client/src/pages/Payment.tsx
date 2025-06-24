@@ -202,11 +202,14 @@ export default function Payment() {
       console.log("Dados do pagamento extraídos:", JSON.stringify(paymentData, null, 2));
       console.log("QR Code Base64 disponível:", !!paymentData.pixQrCodeBase64);
       console.log("QR Code texto disponível:", !!paymentData.pixQrCode);
-      setPixData(paymentData);
+      setPixData({
+        ...paymentData,
+        initPoint: data.initPoint, // Adicionar initPoint dos dados principais
+      });
       setPaymentStatus("qrcode");
       toast({
         title: "Pagamento PIX criado",
-        description: "Escaneie o QR Code para realizar o pagamento",
+        description: "Escaneie o QR Code ou clique para ir ao Mercado Pago",
       });
     },
     onError: (error: Error) => {
@@ -434,18 +437,44 @@ export default function Payment() {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Aguardando pagamento...</span>
               </div>
+              
+              {/* Botão para Mercado Pago */}
+              {pixData.initPoint && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-800 font-medium mb-2">
+                    Prefere pagar pelo site do Mercado Pago?
+                  </p>
+                  <Button
+                    onClick={() => window.open(pixData.initPoint, '_blank')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Ir para Mercado Pago
+                  </Button>
+                </div>
+              )}
             </div>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPaymentStatus("form");
-                setPixData(null);
-              }}
-              className="w-full"
-            >
-              Voltar
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPaymentStatus("form");
+                  setPixData(null);
+                }}
+                className="flex-1"
+              >
+                Voltar
+              </Button>
+              
+              {pixData.initPoint && (
+                <Button
+                  onClick={() => window.open(pixData.initPoint, '_blank')}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  Pagar no Mercado Pago
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

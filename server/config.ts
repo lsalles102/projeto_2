@@ -5,12 +5,12 @@ export function getBaseUrl(): string {
     return 'https://fovdark.shop';
   }
   
-  // Replit environment - usar a URL correta do domínio
+  // Replit environment - usar REPLIT_DEV_DOMAIN que é a URL correta
   if (process.env.REPLIT_DEV_DOMAIN) {
     return `https://${process.env.REPLIT_DEV_DOMAIN}`;
   }
   
-  // Desenvolvimento local - usar URL externa do Replit para webhooks
+  // Fallback para REPL_SLUG + REPL_OWNER
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
     return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
