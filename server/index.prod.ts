@@ -53,12 +53,50 @@ function log(message: string, source = "express") {
 }
 
 function serveStatic(app: express.Express) {
-  const distPath = path.resolve(process.cwd(), "dist", "public");
+  // Tenta primeiro dist/public, depois public, depois fallback
+  const possiblePaths = [
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve(process.cwd(), "public"),
+    path.resolve(process.cwd(), "dist", "client")
+  ];
 
-  if (!fs.existsSync(distPath)) {
-    console.warn(`Build directory not found: ${distPath}, serving API only`);
-    app.use("*", (_req, res) => {
-      res.status(404).json({ message: "Frontend not built" });
+  let distPath = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      console.log(`Frontend encontrado em: ${distPath}`);
+      break;
+    }
+  }
+
+  if (!distPath) {
+    console.warn(`Frontend não encontrado. Testados: ${possiblePaths.join(', ')}`);
+    app.use("/", (_req, res) => {
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>FovDark - Sistema de Licenças</title>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .status { padding: 20px; background: #f0f0f0; border-radius: 8px; }
+            .api-status { color: #28a745; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>FovDark - Sistema de Licenças</h1>
+            <div class="status">
+              <h2 class="api-status">✓ API Funcionando</h2>
+              <p>Sistema backend operacional em https://fovdark.shop</p>
+              <p>Frontend em construção - API endpoints disponíveis</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
     });
     return;
   }
@@ -67,7 +105,12 @@ function serveStatic(app: express.Express) {
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({ message: "Frontend index.html not found" });
+    }
   });
 }
 
