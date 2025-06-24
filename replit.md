@@ -4,20 +4,15 @@
 Sistema de gerenciamento de licenças para cheats/hacks com interface administrativa completa, integração com Supabase e Mercado Pago.
 
 ## Recent Changes
-- ✓ 2025-01-24 17:12: Migração completa do Replit Agent para ambiente Replit padrão
-- ✓ 2025-01-24 17:12: Usuário admin criado (admin@fovdark.com / admin123)
-- ✓ 2025-01-24 17:13: Sistema de autenticação administrativo funcionando
-- ✓ 2025-01-24 17:13: Painel admin com controle de URL de download operacional
-- ✓ 2025-01-24 17:44: Sistema de pagamentos PIX funcionando com Mercado Pago
-- ✓ 2025-01-24 17:45: Corrigido redirecionamento para Mercado Pago
-- ✓ 2025-01-24 17:46: Adicionados botões de redirecionamento e página de falha de pagamento
-- ✓ 2025-01-24 18:10: Corrigido problema de autenticação no frontend
-- ✓ 2025-01-24 18:10: Sistema de pagamentos totalmente funcional e testado
-- ✓ 2025-01-24 18:43: Preços atualizados - 7 dias: R$ 9,90 / 15 dias: R$ 18,90
-- ✓ 2025-01-24 18:53: Diagnosticado Render - API funcionando, PIX gerando, precisando de redeploy do frontend
-- ✓ 2025-01-24 18:57: Corrigido redirecionamento automático no Render - RouteGuard implementado
-- ✓ 2025-01-24 19:00: Corrigido erro de chave duplicada no banco de dados payments
-- ✓ 2025-01-24 19:00: Sistema de tokens JWT funcionando corretamente
+- ✓ 2025-06-24 19:37: Migração completa do Replit Agent para ambiente Replit padrão
+- ✓ 2025-06-24 19:40: Configuração PostgreSQL local para desenvolvimento
+- ✓ 2025-06-24 19:45: Sistema de rotas API corrigido e funcionando
+- ✓ 2025-06-24 19:45: Endpoint de pagamentos PIX /api/payments/pix adicionado
+- ✓ 2025-06-24 19:45: Sistema de autenticação JWT operacional
+- ✓ 2025-06-24 19:45: Banco de dados limpo e otimizado
+- ✓ 2025-06-24 19:45: Health check endpoint /api/health funcionando
+- ✓ 2025-06-24 19:45: Sistema de monitoramento de licenças ativo
+- ✓ 2025-06-24 19:45: Webhook Mercado Pago configurado corretamente
 
 ## User Preferences
 - Comunicação em português brasileiro

@@ -913,9 +913,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PIX Payment creation route
+  app.post("/api/payments/pix", isAuthenticated, rateLimit(5, 60 * 1000), async (req, res) => {
+    try {
+      console.log("=== CRIAÇÃO DE PAGAMENTO PIX ===");
+      const user = req.user as any;
+      console.log(`Usuário: ${user.id} - ${user.email}`);
+      console.log("Dados recebidos:", JSON.stringify(req.body, null, 2));
+      
+      const validationResult = createPixPaymentSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.log("❌ Dados inválidos:", validationResult.error.errors);
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const requestData = validationResult.data;
+      
+      const paymentData = {
+        userId: user.id,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays,
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+      };
+      
+      console.log("Criando pagamento no Mercado Pago...");
+      const pixPayment = await createPixPayment(paymentData);
+      console.log("Pagamento PIX criado:", pixPayment);
+      
+      // Salvar no banco de dados
+      const payment = await storage.createPayment({
+        userId: user.id,
+        preferenceId: pixPayment.preferenceId,
+        externalReference: pixPayment.externalReference,
+        status: "pending",
+        transactionAmount: pixPayment.transactionAmount,
+        currency: pixPayment.currency,
+        plan: requestData.plan,
+        durationDays: requestData.durationDays.toString(),
+        payerEmail: requestData.payerEmail,
+        payerFirstName: requestData.payerFirstName,
+        payerLastName: requestData.payerLastName,
+        pixQrCode: pixPayment.pixQrCode,
+        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
+      });
+      
+      console.log("✅ Pagamento salvo no banco:", payment.id);
+      
+      res.json({
+        success: true,
+        paymentId: payment.id,
+        preferenceId: pixPayment.preferenceId,
+        initPoint: pixPayment.initPoint,
+        pixQrCode: pixPayment.pixQrCode,
+        pixQrCodeBase64: pixPayment.pixQrCodeBase64,
+        amount: pixPayment.transactionAmount / 100,
+        currency: pixPayment.currency,
+        externalReference: pixPayment.externalReference,
+      });
+    } catch (error) {
+      console.error("❌ Erro na criação do pagamento PIX:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        success: false,
+        message: "Erro interno ao criar pagamento",
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
   // Add webhook endpoint for MercadoPago
   app.post("/api/webhooks/mercadopago", async (req, res) => {
     await handlePaymentWebhook(req, res);
+  });
+
+  // Alternative webhook endpoint for MercadoPago
+  app.post("/api/payments/webhook", async (req, res) => {
+    await handlePaymentWebhook(req, res);
+  });
+
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      res.json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        database: "connected",
+        stats
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        database: "disconnected",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   // Add license status endpoint
