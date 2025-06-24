@@ -103,10 +103,19 @@ function serveStatic(app: express.Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Serve React app for all non-API routes
+  app.get("*", (req, res) => {
+    // Don't interfere with API routes
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.status(404).json({ message: "API endpoint not found" });
+    }
+    
     const indexPath = path.resolve(distPath, "index.html");
     if (fs.existsSync(indexPath)) {
+      // Ensure proper headers for SPA
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(indexPath);
     } else {
       res.status(404).json({ message: "Frontend index.html not found" });

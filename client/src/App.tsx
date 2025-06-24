@@ -13,6 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
+import RouteGuard from "@/components/RouteGuard";
 
 // Lazy load components for better performance
 const Home = lazy(() => import("@/pages/Home"));
@@ -55,8 +56,9 @@ function Router() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <main className="pt-20">
-        <Suspense fallback={<PageSkeleton />}>
-          <Switch>
+        <RouteGuard>
+          <Suspense fallback={<PageSkeleton />}>
+            <Switch>
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
@@ -104,6 +106,7 @@ function Router() {
             <Route component={NotFound} />
           </Switch>
         </Suspense>
+        </RouteGuard>
       </main>
       <Footer />
     </div>

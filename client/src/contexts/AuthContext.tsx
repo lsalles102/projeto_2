@@ -56,10 +56,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Verificando token inicial:', token ? 'Presente' : 'Null');
         
         if (token) {
-          // Verify token is valid by making API call
-          const data = await authApi.getUser();
-          console.log('AuthContext: Usuário verificado com token:', data.user?.email);
-          setUser(data.user || data);
+          // Verify token is valid by making API call - but don't block page rendering
+          try {
+            const data = await authApi.getUser();
+            console.log('AuthContext: Usuário verificado com token:', data.user?.email);
+            setUser(data.user || data);
+          } catch (apiError) {
+            console.log('AuthContext: Token inválido, removendo');
+            setAuthToken(null);
+            setUser(null);
+          }
         } else {
           console.log('AuthContext: Nenhum token encontrado');
           setUser(null);
@@ -67,14 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Auth check error:', error);
         setUser(null);
-        setAuthToken(null); // Clear invalid token
-        // Don't throw error - just continue with unauthenticated state
+        setAuthToken(null);
       } finally {
         setLoading(false);
       }
     };
 
-    checkAuth();
+    // Add a small delay to prevent blocking page render
+    const timer = setTimeout(checkAuth, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {

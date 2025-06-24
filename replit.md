@@ -15,6 +15,7 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-01-24 18:10: Sistema de pagamentos totalmente funcional e testado
 - ✓ 2025-01-24 18:43: Preços atualizados - 7 dias: R$ 9,90 / 15 dias: R$ 18,90
 - ✓ 2025-01-24 18:53: Diagnosticado Render - API funcionando, PIX gerando, precisando de redeploy do frontend
+- ✓ 2025-01-24 18:57: Corrigido redirecionamento automático no Render - RouteGuard implementado
 
 ## User Preferences
 - Comunicação em português brasileiro
