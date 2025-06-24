@@ -19,6 +19,7 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 20:01: Sistema de pagamentos simplificado para uma única rota funcional
 - ✓ 2025-06-24 20:01: Corrigido problema de autenticação durante compras
 - ✓ 2025-06-24 20:01: Rota /api/payments/create-pix otimizada e estável
+- ✓ 2025-06-24 20:07: Preços atualizados - 7 dias: R$ 9,90 e 15 dias: R$ 18,90
 
 ## User Preferences
 - Comunicação em português brasileiro
