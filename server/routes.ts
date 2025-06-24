@@ -110,11 +110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseFloat(payment.durationDays),
       );
 
-      // Update payment status
+      // Update payment status with unique mercado_pago_id
+      const uniqueMercadoPagoId = `FORCE_APPROVED_${Date.now()}_${paymentId}`;
       await db.update(payments)
         .set({
           status: "approved",
-          mercadoPagoId: "FORCE_APPROVED_TEST",
+          mercadoPagoId: uniqueMercadoPagoId,
           updatedAt: new Date(),
         })
         .where(eq(payments.id, paymentId));
