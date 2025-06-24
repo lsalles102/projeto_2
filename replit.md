@@ -11,6 +11,9 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 19:49: Webhook Mercado Pago funcional em produção e desenvolvimento
 - ✓ 2025-06-24 19:49: CORS configurado para domínio de produção
 - ✓ 2025-06-24 19:49: Sistema de pagamentos totalmente operacional com QR Code PIX
+- ✓ 2025-06-24 19:54: Problema de exclusão de usuários no Supabase resolvido
+- ✓ 2025-06-24 19:54: Função SQL segura criada para deletar usuários respeitando foreign keys
+- ✓ 2025-06-24 19:54: Banco de dados limpo - apenas usuários administradores mantidos
 
 ## User Preferences
 - Comunicação em português brasileiro
@@ -33,11 +36,12 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - Sistema de autenticação
 - Interface para downloads
 
-### Database (Supabase)
-- Usuários e permissões
-- Licenças e pagamentos
+### Database (PostgreSQL/Supabase)
+- Usuários e permissões (3 administradores ativos)
+- Licenças e pagamentos (29 registros de pagamento)
 - Configurações do sistema
 - Logs de auditoria
+- Função SQL segura para limpeza de dados (delete_user_safely)
 
 ## Key Features
 - Sistema centralizado de licenças
