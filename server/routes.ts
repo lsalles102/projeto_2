@@ -286,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         externalReference: `test_${Date.now()}`,
         status: "approved",
         transactionAmount:
-          plan === "test" ? 100 : plan === "7days" ? 1490 : 2990,
+          plan === "test" ? 100 : plan === "7days" ? 990 : 1890,
         currency: "BRL",
         plan,
         durationDays: durationDays.toString(),

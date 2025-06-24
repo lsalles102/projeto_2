@@ -57,14 +57,14 @@ const PLAN_INFO = {
   },
   "7days": {
     name: "Plano 7 Dias",
-    price: 14.9,
+    price: 9.9,
     duration: 7,
     description: "Acesso por 7 dias",
     features: ["Download liberado", "Atualizações automáticas"],
   },
   "15days": {
     name: "Plano 15 Dias",
-    price: 29.9,
+    price: 18.9,
     duration: 15,
     description: "Acesso por 15 dias",
     features: [
