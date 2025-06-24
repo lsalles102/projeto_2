@@ -15,6 +15,7 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 19:54: Função SQL segura criada para deletar usuários respeitando foreign keys
 - ✓ 2025-06-24 19:55: Usuários regulares restaurados, admins extras removidos
 - ✓ 2025-06-24 19:55: Mantido apenas admin@fovdark.com como administrador principal
+- ✓ 2025-06-24 19:56: Senhas dos usuários regulares corrigidas para "senha123"
 
 ## User Preferences
 - Comunicação em português brasileiro
