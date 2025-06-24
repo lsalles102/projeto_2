@@ -20,6 +20,11 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 20:01: Corrigido problema de autenticação durante compras
 - ✓ 2025-06-24 20:01: Rota /api/payments/create-pix otimizada e estável
 - ✓ 2025-06-24 20:07: Preços atualizados - 7 dias: R$ 9,90 e 15 dias: R$ 18,90
+- ✓ 2025-06-24 20:27: Correções de autenticação para produção Render
+- ✓ 2025-06-24 20:27: CORS e JWT configurados para ambiente de produção
+- ✓ 2025-06-24 20:27: Logs detalhados para debug de autenticação em produção
+- ✓ 2025-06-24 20:30: Guia completo de deploy Render criado
+- ⚠️ 2025-06-24 20:30: Aguardando configuração JWT_SECRET e SESSION_SECRET no Render
 
 ## User Preferences
 - Comunicação em português brasileiro

@@ -10,7 +10,9 @@ import { db } from "./db";
 import type { User } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
-  if (process.env.NODE_ENV === 'production') {
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+  if (isProduction) {
+    console.error('❌ JWT_SECRET não configurado em produção!');
     throw new Error('JWT_SECRET environment variable is required in production');
   }
   console.warn('⚠️ Using default JWT secret in development - CHANGE IN PRODUCTION');
@@ -19,7 +21,9 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
 
 export function getSession() {
   const sessionSecret = process.env.SESSION_SECRET || (() => {
-    if (process.env.NODE_ENV === 'production') {
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+    if (isProduction) {
+      console.error('❌ SESSION_SECRET não configurado em produção!');
       throw new Error('SESSION_SECRET environment variable is required in production');
     }
     console.warn('⚠️ Using default session secret in development - CHANGE IN PRODUCTION');
@@ -29,15 +33,15 @@ export function getSession() {
   // Configurar store PostgreSQL para sessões
   const PgSession = ConnectPgSimple(session);
   
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
   const sessionConfig: session.SessionOptions = {
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: false, // Manter false para compatibilidade
+      sameSite: 'lax', // Configuração padrão
       maxAge: 24 * 60 * 60 * 1000, // 24 horas
     },
   };
@@ -108,36 +112,50 @@ export async function setupAuth(app: Express): Promise<any> {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
-    // Verificar token JWT no header primeiro (para compatibilidade com frontend)
+    // Verificar token JWT no header Authorization
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const decoded = verifyToken(token);
-      
-      if (decoded) {
-        // Buscar usuário pelo ID do token
-        const user = await storage.getUser(decoded.userId);
-        if (user) {
-          req.user = user;
-          return next();
-        }
-      }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error(`Auth: Token não encontrado. Headers: ${JSON.stringify(req.headers.authorization)}`);
+      return res.status(401).json({ message: "Não autorizado" });
     }
 
-    // Fallback para autenticação via sessão do Passport
-    if (req.isAuthenticated() && req.user) {
-      return next();
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      console.error('Auth: Token vazio após split');
+      return res.status(401).json({ message: "Token inválido" });
     }
 
-    res.status(401).json({ message: "Não autorizado" });
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      console.log(`Auth: Token válido para usuário: ${decoded.userId}`);
+    } catch (jwtError) {
+      console.error('Auth: Erro na verificação JWT:', jwtError);
+      return res.status(401).json({ message: "Token inválido ou expirado" });
+    }
+    
+    // Buscar usuário no banco
+    const user = await storage.getUser(decoded.userId);
+    if (!user) {
+      console.error('Auth: Usuário não encontrado para ID:', decoded.userId);
+      return res.status(401).json({ message: "Usuário não encontrado" });
+    }
+
+    console.log(`Auth: Usuário autenticado com sucesso: ${user.email}`);
+    // Adicionar usuário à requisição
+    req.user = user;
+    next();
   } catch (error) {
-    console.error("Erro no middleware de autenticação:", error);
-    res.status(401).json({ message: "Não autorizado" });
+    console.error('Auth: Erro geral na autenticação:', error);
+    res.status(401).json({ message: "Erro de autenticação" });
   }
 };
 
 export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+  const expiresIn = isProduction ? "24h" : "7d"; // Mais conservador em produção
+  console.log(`JWT: Gerando token com expiração de ${expiresIn}`);
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn });
 }
 
 export function verifyToken(token: string): { userId: string } | null {
