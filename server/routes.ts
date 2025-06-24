@@ -53,6 +53,93 @@ const rateLimit = (maxRequests: number, windowMs: number): RequestHandler => {
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = await setupAuth(app);
 
+  // Admin middleware - definido antes do uso
+  const isAdmin: RequestHandler = (req, res, next) => {
+    const user = req.user as any;
+    if (!user) {
+      return res.status(403).json({ message: "Acesso negado. Usuário não autenticado." });
+    }
+
+    const isUserAdmin = user.is_admin === true || user.isAdmin === true;
+    if (!isUserAdmin) {
+      return res.status(403).json({ message: "Acesso negado. Apenas administradores." });
+    }
+
+    next();
+  };
+
+  // Force approve payment for development/testing
+  app.post("/api/test/force-approve-payment", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { paymentId } = req.body;
+      
+      if (!paymentId) {
+        return res.status(400).json({ message: "Payment ID is required" });
+      }
+
+      console.log(`🔧 === FORÇANDO APROVAÇÃO DE PAGAMENTO ===`);
+      console.log(`Payment ID: ${paymentId}`);
+
+      // Get payment from database
+      const { db } = await import("./db");
+      const { payments } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const paymentResult = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
+      const payment = paymentResult[0];
+
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      console.log(`💳 Pagamento encontrado: ${payment.externalReference}`);
+
+      // Get user
+      const user = await storage.getUser(payment.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`👤 Usuário: ${user.email}`);
+
+      // Activate license
+      const { activateLicenseForUser } = await import("./license-simple");
+      const result = await activateLicenseForUser(
+        user.id,
+        payment.plan,
+        parseFloat(payment.durationDays),
+      );
+
+      // Update payment status
+      await db.update(payments)
+        .set({
+          status: "approved",
+          mercadoPagoId: "FORCE_APPROVED_TEST",
+          updatedAt: new Date(),
+        })
+        .where(eq(payments.id, paymentId));
+
+      console.log(`✅ Licença ativada para usuário ${user.email}`);
+      console.log(`🔑 License Key: ${result.licenseKey}`);
+
+      res.json({
+        success: true,
+        message: "Payment approved and license activated",
+        licenseKey: result.licenseKey,
+        user: user.email,
+        plan: payment.plan
+      });
+
+    } catch (error) {
+      console.error("❌ Erro ao forçar aprovação:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error forcing payment approval",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Create admin user endpoint for debugging
   app.post("/api/test/create-admin", async (req, res) => {
     try {
@@ -1184,43 +1271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // Middleware de verificação de admin
-  const isAdmin: RequestHandler = (req, res, next) => {
-    const user = req.user as any;
-    console.log(
-      `[ADMIN CHECK] User:`,
-      user
-        ? {
-            id: user.id,
-            email: user.email,
-            is_admin: user.is_admin,
-            isAdmin: user.isAdmin,
-          }
-        : "null",
-    );
 
-    if (!user) {
-      console.log(`[ADMIN CHECK] Usuário não autenticado`);
-      return res
-        .status(403)
-        .json({ message: "Acesso negado. Usuário não autenticado." });
-    }
-
-    // Verificar ambos os campos possíveis (is_admin e isAdmin)
-    const isUserAdmin = user.is_admin === true || user.isAdmin === true;
-
-    if (!isUserAdmin) {
-      console.log(
-        `[ADMIN CHECK] Usuário ${user.email} não é admin. is_admin: ${user.is_admin}, isAdmin: ${user.isAdmin}`,
-      );
-      return res
-        .status(403)
-        .json({ message: "Acesso negado. Apenas administradores." });
-    }
-
-    console.log(`[ADMIN CHECK] Admin verificado: ${user.email}`);
-    next();
-  };
 
   // Admin dashboard data
   app.get(
