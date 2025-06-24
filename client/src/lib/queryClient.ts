@@ -15,12 +15,25 @@ export async function apiRequest(
   try {
     console.log(`[API] Fazendo requisição ${method} para ${url}`, data ? { method, body: data } : { method });
     
+    // Import getAuthToken dynamically to avoid circular dependencies
+    const { getAuthToken } = await import('./api');
+    const token = getAuthToken();
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log(`[API] Token incluído na requisição ${method} ${url}`);
+    } else {
+      console.warn(`[API] Sem token para requisição ${method} ${url}`);
+    }
+    
     const res = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
+      headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
     });
@@ -54,8 +67,24 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Import getAuthToken dynamically to avoid circular dependencies
+    const { getAuthToken } = await import('./api');
+    const token = getAuthToken();
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log(`QueryFn: Enviando token para ${queryKey[0]}`);
+    } else {
+      console.warn(`QueryFn: Sem token para ${queryKey[0]}`);
+    }
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

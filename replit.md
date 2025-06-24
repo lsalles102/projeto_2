@@ -13,6 +13,10 @@ Sistema de gerenciamento de licenças para cheats/hacks com interface administra
 - ✓ 2025-06-24 21:03: Sistema de licenças operacional com monitoramento automático
 - ✓ 2025-06-24 21:03: Integração Mercado Pago mantida e funcional
 - ✓ 2025-06-24 21:03: Projeto pronto para ambiente de produção Render
+- ✓ 2025-06-24 22:05: Problema de tokens não enviados em requisições resolvido
+- ✓ 2025-06-24 22:05: Sistema de pagamento PIX unificado e testado
+- ✓ 2025-06-24 22:05: Autenticação funcionando em todas as páginas
+- ✓ 2025-06-24 22:05: Criação de pagamentos testada e confirmada (ID: 61)
 
 ## User Preferences
 - Comunicação em português brasileiro

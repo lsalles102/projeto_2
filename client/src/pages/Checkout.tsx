@@ -125,31 +125,19 @@ export default function Checkout() {
     setIsLoading(true);
 
     try {
-      // Use the correct API endpoint that we know works
-      const response = await fetch('/api/payments/create-pix', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          plan: plan.id,
-          payerEmail: user.email,
-          payerFirstName: user.firstName || user.first_name || 'Nome',
-          payerLastName: user.lastName || user.last_name || 'Sobrenome',
-        }),
+      // Use apiRequest from queryClient for consistent token handling
+      const { apiRequest } = await import('@/lib/queryClient');
+      
+      const data = await apiRequest('POST', '/api/payments/create-pix', {
+        plan: plan.id,
+        payerEmail: user.email,
+        payerFirstName: user.firstName || user.first_name || 'Nome',
+        payerLastName: user.lastName || user.last_name || 'Sobrenome',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao processar pagamento');
-      }
-
-      const data = await response.json();
+      
       setPaymentData(data);
       setStep('pix');
-      
+
       toast({
         title: "Pagamento PIX criado",
         description: "Escaneie o QR Code ou copie o código PIX",

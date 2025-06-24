@@ -100,6 +100,7 @@ export default function Payment() {
   // Verificar autenticação
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["/api/auth/user"],
+    retry: false, // Don't retry auth failures
   });
 
   // Processar parâmetros da URL
@@ -155,45 +156,11 @@ export default function Payment() {
 
       console.log("Corpo da requisição:", requestBody);
 
-      const response = await fetch("/api/payments/create-pix", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('authToken') || ''}`
-        },
-        credentials: "include",
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log("Status da resposta:", response.status);
-
-      if (!response.ok) {
-        let errorMessage = "Erro ao criar pagamento";
-        try {
-          const error = await response.json();
-          errorMessage = error.message || errorMessage;
-        } catch {
-          // Se não conseguir fazer parse do JSON, usar mensagem baseada no status
-          if (response.status === 401) {
-            errorMessage = "Você precisa fazer login primeiro";
-          } else if (response.status === 403) {
-            errorMessage = "Acesso negado";
-          } else {
-            errorMessage = `Erro do servidor (${response.status})`;
-          }
-        }
-        console.error("Erro da API:", errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error("Erro ao fazer parse da resposta:", parseError);
-        throw new Error("Resposta inválida do servidor");
-      }
-
+      // Use apiRequest from queryClient for consistent token handling
+      const { apiRequest } = await import('@/lib/queryClient');
+      
+      const result = await apiRequest('POST', '/api/payments/create-pix', requestBody);
+      
       console.log("Resposta da API:", result);
       return result;
     },

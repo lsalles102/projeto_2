@@ -155,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setAuthToken(null);
+      queryClient.clear();
     }
   };
 
